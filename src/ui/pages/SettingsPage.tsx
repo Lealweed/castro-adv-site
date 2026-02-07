@@ -12,7 +12,7 @@ export function SettingsPage() {
         <Card>
           <div className="text-sm font-semibold text-white">Organização</div>
           <div className="mt-3 grid gap-3">
-            <Field label="Nome" value="Lima Lopes & Diógenes" />
+            <Field label="Nome" value="Castro de Oliveira Advocacia" />
             <Field label="Plano" value="Pro" />
             <Field label="Fuso" value="America/Sao_Paulo" />
           </div>

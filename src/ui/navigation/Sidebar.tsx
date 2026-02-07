@@ -56,7 +56,7 @@ export function Sidebar() {
       <div className="mt-auto p-4">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
           <div className="text-xs font-semibold text-white">Organização</div>
-          <div className="mt-1 text-sm text-white/80">Lima Lopes & Diógenes</div>
+          <div className="mt-1 text-sm text-white/80">Castro de Oliveira Advocacia</div>
           <div className="mt-2 text-xs text-white/60">Plano: Pro • 12 usuários</div>
         </div>
       </div>
