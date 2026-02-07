@@ -26,7 +26,7 @@ export function Sidebar() {
     <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-black/20 backdrop-blur-xl md:block">
       <div className="flex h-16 items-center gap-3 px-4">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-          <BarChart3 className="h-5 w-5 text-emerald-300" />
+          <BarChart3 className="h-5 w-5 text-amber-300" />
         </div>
         <div className="leading-tight">
           <div className="text-sm font-semibold text-white">CRM Jurídico</div>

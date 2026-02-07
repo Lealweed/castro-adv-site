@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { BrowserRouter } from 'react-router-dom';
 
 import { AppLayout } from '@/ui/layouts/AppLayout';
+import { AuthLayout } from '@/ui/layouts/AuthLayout';
 import { PublicLayout } from '@/ui/layouts/PublicLayout';
 
 import { LandingPage } from '@/ui/pages/LandingPage';
@@ -27,12 +28,14 @@ export function AppRouter() {
           <Route path="/" element={<LandingPage />} />
         </Route>
 
-        {/* Auth */}
-        <Route element={<AppLayout />}>
+        {/* Auth (no sidebar) */}
+        <Route element={<AuthLayout />}>
           <Route path="/app/login" element={<LoginPage />} />
           <Route path="/app/selecionar-organizacao" element={<OrgSelectPage />} />
+        </Route>
 
-          {/* App (protected) */}
+        {/* App (protected) */}
+        <Route element={<AppLayout />}>
           <Route element={<RequireAuth />}>
             <Route path="/app" element={<DashboardPage />} />
             <Route path="/app/clientes" element={<ClientsPage />} />

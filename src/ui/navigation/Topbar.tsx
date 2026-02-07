@@ -38,7 +38,7 @@ export function Topbar() {
             </button>
           ) : null}
 
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-400/30 to-white/5" />
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-amber-300/30 to-white/5" />
         </div>
       </div>
     </header>
