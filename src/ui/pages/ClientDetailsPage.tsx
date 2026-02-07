@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { DocumentsSection } from '@/ui/widgets/DocumentsSection';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type ClientRow = {
@@ -135,6 +136,12 @@ export function ClientDetailsPage() {
           ))}
         </div>
       </Card>
+
+      {clientId ? (
+        <Card>
+          <DocumentsSection clientId={clientId} />
+        </Card>
+      ) : null}
     </div>
   );
 }
