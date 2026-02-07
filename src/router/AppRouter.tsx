@@ -15,6 +15,8 @@ import { SettingsPage } from '@/ui/pages/SettingsPage';
 import { LoginPage } from '@/ui/pages/LoginPage';
 import { OrgSelectPage } from '@/ui/pages/OrgSelectPage';
 import { RequireAuth } from '@/auth/RequireAuth';
+import { CasesPage } from '@/ui/pages/CasesPage';
+import { CaseDetailsPage } from '@/ui/pages/CaseDetailsPage';
 
 export function AppRouter() {
   return (
@@ -35,6 +37,8 @@ export function AppRouter() {
             <Route path="/app" element={<DashboardPage />} />
             <Route path="/app/clientes" element={<ClientsPage />} />
             <Route path="/app/clientes/:clientId" element={<ClientDetailsPage />} />
+            <Route path="/app/casos" element={<CasesPage />} />
+            <Route path="/app/casos/:caseId" element={<CaseDetailsPage />} />
             <Route path="/app/financeiro" element={<FinancePage />} />
             <Route path="/app/relatorios-ia" element={<AiReportsPage />} />
             <Route path="/app/portal" element={<ClientPortalPage />} />

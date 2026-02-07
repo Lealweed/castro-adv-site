@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   BarChart3,
+  Briefcase,
   Building2,
   Cog,
   Coins,
@@ -13,6 +14,7 @@ import { cn } from '@/ui/utils/cn';
 const items = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/app/clientes', label: 'Clientes', icon: Users },
+  { to: '/app/casos', label: 'Casos', icon: Briefcase },
   { to: '/app/financeiro', label: 'Financeiro', icon: Coins },
   { to: '/app/relatorios-ia', label: 'Relatórios com IA', icon: Sparkles },
   { to: '/app/portal', label: 'Portal do Cliente', icon: Building2 },
