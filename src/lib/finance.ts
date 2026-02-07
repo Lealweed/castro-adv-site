@@ -5,10 +5,12 @@ export type FinanceTx = {
   type: 'income' | 'expense' | string;
   status: 'planned' | 'paid' | 'cancelled' | string;
   occurred_on: string;
+  due_date: string | null;
   description: string;
   amount_cents: number;
   payment_method: string | null;
   notes: string | null;
+  reminder_1d_sent_at: string | null;
   created_at: string;
 };
 
@@ -31,7 +33,7 @@ export async function listFinanceTx(limit = 50): Promise<FinanceTx[]> {
   await getAuthedUser();
   const { data, error } = await sb
     .from('finance_transactions')
-    .select('id,type,status,occurred_on,description,amount_cents,payment_method,notes,created_at')
+    .select('id,type,status,occurred_on,due_date,description,amount_cents,payment_method,notes,reminder_1d_sent_at,created_at')
     .order('occurred_on', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -43,6 +45,7 @@ export async function createFinanceTx(payload: {
   type: 'income' | 'expense';
   status: 'planned' | 'paid';
   occurred_on: string;
+  due_date?: string | null;
   description: string;
   amount_cents: number;
   payment_method?: string | null;
@@ -54,6 +57,7 @@ export async function createFinanceTx(payload: {
   const { error } = await sb.from('finance_transactions').insert({
     user_id: user.id,
     ...payload,
+    due_date: payload.due_date || null,
     payment_method: payload.payment_method || null,
     notes: payload.notes || null,
   });

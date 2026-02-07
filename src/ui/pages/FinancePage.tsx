@@ -3,6 +3,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/ui/widgets/Card';
 import { brlToCents, centsToBRL, createFinanceTx, listFinanceTx, type FinanceTx } from '@/lib/finance';
 
+function todayStr() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export function FinancePage() {
   const [rows, setRows] = useState<FinanceTx[]>([]);
   const [loading, setLoading] = useState(true);
@@ -11,13 +19,8 @@ export function FinancePage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [type, setType] = useState<'income' | 'expense'>('income');
   const [status, setStatus] = useState<'planned' | 'paid'>('planned');
-  const [occurredOn, setOccurredOn] = useState(() => {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  });
+  const [occurredOn, setOccurredOn] = useState(() => todayStr());
+  const [dueDate, setDueDate] = useState(() => todayStr());
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('pix');
@@ -44,10 +47,18 @@ export function FinancePage() {
   }, []);
 
   const summary = useMemo(() => {
-    const plannedIncome = rows.filter((r) => r.type === 'income' && r.status === 'planned').reduce((a, r) => a + r.amount_cents, 0);
-    const plannedExpense = rows.filter((r) => r.type === 'expense' && r.status === 'planned').reduce((a, r) => a + r.amount_cents, 0);
-    const paidIncome = rows.filter((r) => r.type === 'income' && r.status === 'paid').reduce((a, r) => a + r.amount_cents, 0);
-    const paidExpense = rows.filter((r) => r.type === 'expense' && r.status === 'paid').reduce((a, r) => a + r.amount_cents, 0);
+    const plannedIncome = rows
+      .filter((r) => r.type === 'income' && r.status === 'planned')
+      .reduce((a, r) => a + r.amount_cents, 0);
+    const plannedExpense = rows
+      .filter((r) => r.type === 'expense' && r.status === 'planned')
+      .reduce((a, r) => a + r.amount_cents, 0);
+    const paidIncome = rows
+      .filter((r) => r.type === 'income' && r.status === 'paid')
+      .reduce((a, r) => a + r.amount_cents, 0);
+    const paidExpense = rows
+      .filter((r) => r.type === 'expense' && r.status === 'paid')
+      .reduce((a, r) => a + r.amount_cents, 0);
     return { plannedIncome, plannedExpense, paidIncome, paidExpense };
   }, [rows]);
 
@@ -59,6 +70,14 @@ export function FinancePage() {
       return;
     }
 
+    // For receivable/payable items, due_date drives reminders.
+    const effectiveDueDate = status === 'planned' ? dueDate : null;
+
+    if (status === 'planned' && !effectiveDueDate) {
+      setError('Informe o vencimento.');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -67,6 +86,7 @@ export function FinancePage() {
         type,
         status,
         occurred_on: occurredOn,
+        due_date: effectiveDueDate,
         description: description.trim(),
         amount_cents: cents,
         payment_method: paymentMethod,
@@ -80,6 +100,8 @@ export function FinancePage() {
       setStatus('planned');
       setType('income');
       setPaymentMethod('pix');
+      setOccurredOn(todayStr());
+      setDueDate(todayStr());
       setSaving(false);
       await load();
     } catch (err: any) {
@@ -93,7 +115,10 @@ export function FinancePage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-white">Financeiro</h1>
-          <p className="text-sm text-white/60">Lançamentos reais + base para repasses/parcerias.</p>
+          <p className="text-sm text-white/60">
+            Lançamentos reais. Avisos: enviaremos WhatsApp + e-mail 1 dia antes do vencimento (quando a integração estiver
+            ligada).
+          </p>
         </div>
         <button onClick={() => setCreateOpen(true)} className="btn-primary">
           Novo lançamento
@@ -142,11 +167,18 @@ export function FinancePage() {
                 </select>
               </label>
               <label className="text-sm text-white/80">
-                Data
+                Data (lançamento)
                 <input type="date" className="input" value={occurredOn} onChange={(e) => setOccurredOn(e.target.value)} />
               </label>
 
-              <label className="md:col-span-2 text-sm text-white/80">
+              {status === 'planned' ? (
+                <label className="text-sm text-white/80">
+                  Vencimento
+                  <input type="date" className="input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                </label>
+              ) : null}
+
+              <label className={status === 'planned' ? 'md:col-span-2 text-sm text-white/80' : 'md:col-span-2 text-sm text-white/80'}>
                 Descrição
                 <input className="input" value={description} onChange={(e) => setDescription(e.target.value)} />
               </label>
@@ -200,8 +232,11 @@ export function FinancePage() {
                       </span>
                     </div>
                     <div className="mt-1 text-xs text-white/60">
-                      {r.occurred_on} · {r.status === 'paid' ? 'Pago' : r.status === 'planned' ? 'Previsto' : r.status}
+                      Lançamento: {r.occurred_on}
+                      {r.due_date ? ` · Venc.: ${r.due_date}` : ''} ·{' '}
+                      {r.status === 'paid' ? 'Pago' : r.status === 'planned' ? 'Previsto' : r.status}
                       {r.payment_method ? ` · ${r.payment_method}` : ''}
+                      {r.reminder_1d_sent_at ? ' · Aviso 1d: enviado' : ''}
                     </div>
                     {r.notes ? <div className="mt-1 text-xs text-white/50">Obs: {r.notes}</div> : null}
                   </div>
