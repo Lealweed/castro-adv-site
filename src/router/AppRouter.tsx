@@ -6,6 +6,7 @@ import { AppLayout } from '@/ui/layouts/AppLayout';
 import { PublicLayout } from '@/ui/layouts/PublicLayout';
 
 import { LandingPage } from '@/ui/pages/LandingPage';
+import { HelixDemoPage } from '@/ui/pages/HelixDemoPage';
 import { LoginPage } from '@/ui/pages/LoginPage';
 
 import { DashboardPage } from '@/ui/pages/DashboardPage';
@@ -28,6 +29,7 @@ export function AppRouter() {
         {/* Public */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/demo" element={<HelixDemoPage />} />
         </Route>
 
         {/* Auth (no sidebar) */}
