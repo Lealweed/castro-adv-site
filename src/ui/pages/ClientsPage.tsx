@@ -1,26 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { apiFetch } from '@/lib/apiClient';
 import { Card } from '@/ui/widgets/Card';
+import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
-type Contact = {
+type ClientRow = {
   id: string;
   name: string;
-  kind: 'PERSON' | 'COMPANY';
-  email?: string | null;
-  phone?: string | null;
-  createdAt?: string;
+  phone: string | null;
+  email: string | null;
+  created_at: string;
 };
 
 export function ClientsPage() {
-  const [rows, setRows] = useState<Contact[]>([]);
+  const [rows, setRows] = useState<ClientRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newKind, setNewKind] = useState<'PERSON' | 'COMPANY'>('PERSON');
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [saving, setSaving] = useState(false);
@@ -31,17 +29,22 @@ export function ClientsPage() {
     setLoading(true);
     setError(null);
 
-    const res = await apiFetch('/contacts', { method: 'GET' });
-    const json = await res.json().catch(() => null);
+    try {
+      const sb = requireSupabase();
+      await getAuthedUser();
 
-    if (!res.ok) {
-      setError((json as any)?.message || (json as any)?.error || 'Falha ao carregar clientes.');
+      const { data, error: qErr } = await sb
+        .from('clients')
+        .select('id,name,phone,email,created_at')
+        .order('created_at', { ascending: false });
+
+      if (qErr) throw new Error(qErr.message);
+      setRows((data || []) as ClientRow[]);
       setLoading(false);
-      return;
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao carregar clientes.');
+      setLoading(false);
     }
-
-    setRows(((json as any) ?? []) as Contact[]);
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -54,31 +57,29 @@ export function ClientsPage() {
     setSaving(true);
     setError(null);
 
-    const res = await apiFetch('/contacts', {
-      method: 'POST',
-      body: JSON.stringify({
+    try {
+      const sb = requireSupabase();
+      const user = await getAuthedUser();
+
+      const { error: iErr } = await sb.from('clients').insert({
+        user_id: user.id,
         name: newName.trim(),
-        kind: newKind,
         email: newEmail.trim() || null,
         phone: newPhone.trim() || null,
-      }),
-    });
+      });
 
-    const json = await res.json().catch(() => ({} as any));
+      if (iErr) throw new Error(iErr.message);
 
-    if (!res.ok) {
-      setError(json?.message || json?.error || 'Falha ao criar cliente.');
+      setCreateOpen(false);
+      setNewName('');
+      setNewEmail('');
+      setNewPhone('');
       setSaving(false);
-      return;
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao criar cliente.');
+      setSaving(false);
     }
-
-    setCreateOpen(false);
-    setNewName('');
-    setNewEmail('');
-    setNewPhone('');
-    setNewKind('PERSON');
-    setSaving(false);
-    await load();
   }
 
   return (
@@ -86,7 +87,7 @@ export function ClientsPage() {
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-white">Clientes</h1>
-          <p className="text-sm text-white/60">Lista conectada na API.</p>
+          <p className="text-sm text-white/60">Base real (Supabase).</p>
         </div>
         <button
           onClick={() => setCreateOpen(true)}
@@ -108,17 +109,6 @@ export function ClientsPage() {
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                 />
-              </label>
-              <label className="text-sm text-white/80">
-                Tipo
-                <select
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-                  value={newKind}
-                  onChange={(e) => setNewKind(e.target.value as any)}
-                >
-                  <option value="PERSON">Pessoa</option>
-                  <option value="COMPANY">Empresa</option>
-                </select>
               </label>
               <label className="text-sm text-white/80">
                 E-mail
@@ -170,7 +160,6 @@ export function ClientsPage() {
               <thead className="text-xs text-white/50">
                 <tr>
                   <th className="px-4 py-3">Nome</th>
-                  <th className="px-4 py-3">Tipo</th>
                   <th className="px-4 py-3">Contato</th>
                   <th className="px-4 py-3" />
                 </tr>
@@ -179,7 +168,6 @@ export function ClientsPage() {
                 {ordered.map((c) => (
                   <tr key={c.id} className="border-t border-white/10">
                     <td className="px-4 py-3 font-medium text-white">{c.name}</td>
-                    <td className="px-4 py-3 text-white/70">{c.kind === 'PERSON' ? 'Pessoa' : 'Empresa'}</td>
                     <td className="px-4 py-3 text-white/70">
                       <div className="grid gap-0.5">
                         <div>{c.phone || '—'}</div>
@@ -199,7 +187,7 @@ export function ClientsPage() {
 
                 {ordered.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-6 text-sm text-white/60" colSpan={4}>
+                    <td className="px-4 py-6 text-sm text-white/60" colSpan={3}>
                       Nenhum cliente cadastrado.
                     </td>
                   </tr>

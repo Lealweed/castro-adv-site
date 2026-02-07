@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { apiFetch } from '@/lib/apiClient';
 import { Card } from '@/ui/widgets/Card';
+import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type CaseRow = {
   id: string;
   title: string;
-  status: 'OPEN' | 'ON_HOLD' | 'CLOSED';
-  description?: string | null;
-  clientId?: string | null;
-  createdAt?: string;
+  status: string;
+  created_at: string;
+  client_id: string | null;
 };
 
 export function CasesPage() {
@@ -19,9 +18,8 @@ export function CasesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [status, setStatus] = useState<CaseRow['status']>('OPEN');
-  const [description, setDescription] = useState('');
+  const [newTitle, setNewTitle] = useState('');
+  const [newStatus, setNewStatus] = useState('aberto');
   const [saving, setSaving] = useState(false);
 
   const ordered = useMemo(() => rows, [rows]);
@@ -30,17 +28,22 @@ export function CasesPage() {
     setLoading(true);
     setError(null);
 
-    const res = await apiFetch('/cases', { method: 'GET' });
-    const json = await res.json().catch(() => null);
+    try {
+      const sb = requireSupabase();
+      await getAuthedUser();
 
-    if (!res.ok) {
-      setError((json as any)?.message || (json as any)?.error || 'Falha ao carregar casos.');
+      const { data, error: qErr } = await sb
+        .from('cases')
+        .select('id,title,status,created_at,client_id')
+        .order('created_at', { ascending: false });
+
+      if (qErr) throw new Error(qErr.message);
+      setRows((data || []) as CaseRow[]);
       setLoading(false);
-      return;
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao carregar casos.');
+      setLoading(false);
     }
-
-    setRows(((json as any) ?? []) as CaseRow[]);
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -49,38 +52,31 @@ export function CasesPage() {
   }, []);
 
   async function onCreate() {
-    if (!title.trim()) return;
+    if (!newTitle.trim()) return;
     setSaving(true);
     setError(null);
 
-    const res = await apiFetch('/cases', {
-      method: 'POST',
-      body: JSON.stringify({
-        title: title.trim(),
-        status,
-        description: description.trim() || null,
-      }),
-    });
+    try {
+      const sb = requireSupabase();
+      const user = await getAuthedUser();
 
-    const json = await res.json().catch(() => ({} as any));
-    if (!res.ok) {
-      setError(json?.message || json?.error || 'Falha ao criar caso.');
+      const { error: iErr } = await sb.from('cases').insert({
+        user_id: user.id,
+        title: newTitle.trim(),
+        status: newStatus.trim() || 'aberto',
+      });
+
+      if (iErr) throw new Error(iErr.message);
+
+      setCreateOpen(false);
+      setNewTitle('');
+      setNewStatus('aberto');
       setSaving(false);
-      return;
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao criar caso.');
+      setSaving(false);
     }
-
-    setCreateOpen(false);
-    setTitle('');
-    setStatus('OPEN');
-    setDescription('');
-    setSaving(false);
-    await load();
-  }
-
-  function statusLabel(s: CaseRow['status']) {
-    if (s === 'OPEN') return 'Aberto';
-    if (s === 'ON_HOLD') return 'Em espera';
-    return 'Encerrado';
   }
 
   return (
@@ -88,7 +84,7 @@ export function CasesPage() {
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-white">Casos</h1>
-          <p className="text-sm text-white/60">Lista conectada na API.</p>
+          <p className="text-sm text-white/60">Base real (Supabase).</p>
         </div>
         <button
           onClick={() => setCreateOpen(true)}
@@ -102,37 +98,21 @@ export function CasesPage() {
         <Card>
           <div className="grid gap-4">
             <div className="text-sm font-semibold text-white">Novo caso</div>
-            <div className="grid gap-3">
+            <div className="grid gap-3 md:grid-cols-2">
               <label className="text-sm text-white/80">
                 Título
                 <input
                   className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
                 />
               </label>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="text-sm text-white/80">
-                  Status
-                  <select
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as any)}
-                  >
-                    <option value="OPEN">Aberto</option>
-                    <option value="ON_HOLD">Em espera</option>
-                    <option value="CLOSED">Encerrado</option>
-                  </select>
-                </label>
-              </div>
-
               <label className="text-sm text-white/80">
-                Descrição
-                <textarea
-                  className="mt-1 min-h-[120px] w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                Status
+                <input
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value)}
                 />
               </label>
             </div>
@@ -177,11 +157,7 @@ export function CasesPage() {
                 {ordered.map((c) => (
                   <tr key={c.id} className="border-t border-white/10">
                     <td className="px-4 py-3 font-medium text-white">{c.title}</td>
-                    <td className="px-4 py-3">
-                      <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-white/80">
-                        {statusLabel(c.status)}
-                      </span>
-                    </td>
+                    <td className="px-4 py-3 text-white/70">{c.status}</td>
                     <td className="px-4 py-3 text-right">
                       <Link
                         className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80 hover:bg-white/10"

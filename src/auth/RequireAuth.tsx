@@ -10,9 +10,5 @@ export function RequireAuth() {
     return <Navigate to="/app/login" replace state={{ from: loc.pathname }} />;
   }
 
-  if (!auth.orgId) {
-    return <Navigate to="/app/selecionar-organizacao" replace />;
-  }
-
   return <Outlet />;
 }

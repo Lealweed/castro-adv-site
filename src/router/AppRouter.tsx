@@ -1,30 +1,23 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
-import { AppLayout } from '@/ui/layouts/AppLayout';
+import { RequireAuth } from '@/auth/RequireAuth';
 import { AuthLayout } from '@/ui/layouts/AuthLayout';
+import { AppLayout } from '@/ui/layouts/AppLayout';
 import { PublicLayout } from '@/ui/layouts/PublicLayout';
 
 import { LandingPage } from '@/ui/pages/LandingPage';
-import { HelixDemoPage } from '@/ui/pages/HelixDemoPage';
+import { LoginPage } from '@/ui/pages/LoginPage';
+
 import { DashboardPage } from '@/ui/pages/DashboardPage';
 import { ClientsPage } from '@/ui/pages/ClientsPage';
 import { ClientDetailsPage } from '@/ui/pages/ClientDetailsPage';
+import { CasesPage } from '@/ui/pages/CasesPage';
+import { CaseDetailsPage } from '@/ui/pages/CaseDetailsPage';
+
 import { FinancePage } from '@/ui/pages/FinancePage';
 import { AiReportsPage } from '@/ui/pages/AiReportsPage';
 import { ClientPortalPage } from '@/ui/pages/ClientPortalPage';
 import { SettingsPage } from '@/ui/pages/SettingsPage';
-import { LoginPage } from '@/ui/pages/LoginPage';
-import { OrgSelectPage } from '@/ui/pages/OrgSelectPage';
-import { RequireAuth } from '@/auth/RequireAuth';
-import { CasesPage } from '@/ui/pages/CasesPage';
-import { CaseDetailsPage } from '@/ui/pages/CaseDetailsPage';
-
-import { DemoDashboardPage } from '@/ui/pages/demo/DemoDashboardPage';
-import { DemoClientsPage } from '@/ui/pages/demo/DemoClientsPage';
-import { DemoClientDetailsPage } from '@/ui/pages/demo/DemoClientDetailsPage';
-import { DemoCasesPage } from '@/ui/pages/demo/DemoCasesPage';
-import { DemoCaseDetailsPage } from '@/ui/pages/demo/DemoCaseDetailsPage';
 
 export function AppRouter() {
   return (
@@ -33,22 +26,11 @@ export function AppRouter() {
         {/* Public */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/demo" element={<HelixDemoPage />} />
         </Route>
 
         {/* Auth (no sidebar) */}
         <Route element={<AuthLayout />}>
           <Route path="/app/login" element={<LoginPage />} />
-          <Route path="/app/selecionar-organizacao" element={<OrgSelectPage />} />
-        </Route>
-
-        {/* Demo (no auth) */}
-        <Route element={<AppLayout />}>
-          <Route path="/app/demo" element={<DemoDashboardPage />} />
-          <Route path="/app/demo/clientes" element={<DemoClientsPage />} />
-          <Route path="/app/demo/clientes/:clientId" element={<DemoClientDetailsPage />} />
-          <Route path="/app/demo/casos" element={<DemoCasesPage />} />
-          <Route path="/app/demo/casos/:caseId" element={<DemoCaseDetailsPage />} />
         </Route>
 
         {/* App (protected) */}
@@ -71,4 +53,3 @@ export function AppRouter() {
     </BrowserRouter>
   );
 }
-

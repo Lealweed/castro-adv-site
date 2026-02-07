@@ -33,8 +33,7 @@ export function LoginPage() {
       return;
     }
 
-    // org selection still required for tenant header in the API calls
-    nav('/app/selecionar-organizacao');
+    nav('/app');
     setLoading(false);
   }
 
