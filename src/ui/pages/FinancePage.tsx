@@ -1,61 +1,215 @@
+import { useEffect, useMemo, useState } from 'react';
+
 import { Card } from '@/ui/widgets/Card';
+import { brlToCents, centsToBRL, createFinanceTx, listFinanceTx, type FinanceTx } from '@/lib/finance';
 
 export function FinancePage() {
+  const [rows, setRows] = useState<FinanceTx[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [type, setType] = useState<'income' | 'expense'>('income');
+  const [status, setStatus] = useState<'planned' | 'paid'>('planned');
+  const [occurredOn, setOccurredOn] = useState(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  });
+  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('pix');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await listFinanceTx(50);
+      setRows(data);
+      setLoading(false);
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao carregar financeiro.');
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const summary = useMemo(() => {
+    const plannedIncome = rows.filter((r) => r.type === 'income' && r.status === 'planned').reduce((a, r) => a + r.amount_cents, 0);
+    const plannedExpense = rows.filter((r) => r.type === 'expense' && r.status === 'planned').reduce((a, r) => a + r.amount_cents, 0);
+    const paidIncome = rows.filter((r) => r.type === 'income' && r.status === 'paid').reduce((a, r) => a + r.amount_cents, 0);
+    const paidExpense = rows.filter((r) => r.type === 'expense' && r.status === 'paid').reduce((a, r) => a + r.amount_cents, 0);
+    return { plannedIncome, plannedExpense, paidIncome, paidExpense };
+  }, [rows]);
+
+  async function onCreate() {
+    if (!description.trim()) return;
+    const cents = brlToCents(amount);
+    if (cents === null) {
+      setError('Valor inválido. Ex: 1500,00');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      await createFinanceTx({
+        type,
+        status,
+        occurred_on: occurredOn,
+        description: description.trim(),
+        amount_cents: cents,
+        payment_method: paymentMethod,
+        notes: notes.trim() || null,
+      });
+
+      setCreateOpen(false);
+      setDescription('');
+      setAmount('');
+      setNotes('');
+      setStatus('planned');
+      setType('income');
+      setPaymentMethod('pix');
+      setSaving(false);
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao criar lançamento.');
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Financeiro</h1>
-        <p className="text-sm text-white/60">Receitas, despesas e previsões (mock).</p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Financeiro</h1>
+          <p className="text-sm text-white/60">Lançamentos reais + base para repasses/parcerias.</p>
+        </div>
+        <button onClick={() => setCreateOpen(true)} className="btn-primary">
+          Novo lançamento
+        </button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      {error ? <div className="text-sm text-red-200">{error}</div> : null}
+
+      <div className="grid gap-4 lg:grid-cols-4">
         <Card>
-          <div className="text-xs text-white/60">Recebido (mês)</div>
-          <div className="mt-2 text-2xl font-semibold text-white">R$ 24.300</div>
+          <div className="text-xs text-white/60">Receitas (pagas)</div>
+          <div className="mt-2 text-2xl font-semibold text-white">{centsToBRL(summary.paidIncome)}</div>
+        </Card>
+        <Card>
+          <div className="text-xs text-white/60">Despesas (pagas)</div>
+          <div className="mt-2 text-2xl font-semibold text-white">{centsToBRL(summary.paidExpense)}</div>
         </Card>
         <Card>
           <div className="text-xs text-white/60">A receber</div>
-          <div className="mt-2 text-2xl font-semibold text-white">R$ 11.800</div>
+          <div className="mt-2 text-2xl font-semibold text-white">{centsToBRL(summary.plannedIncome)}</div>
         </Card>
         <Card>
-          <div className="text-xs text-white/60">Inadimplência</div>
-          <div className="mt-2 text-2xl font-semibold text-white">R$ 2.100</div>
+          <div className="text-xs text-white/60">A pagar</div>
+          <div className="mt-2 text-2xl font-semibold text-white">{centsToBRL(summary.plannedExpense)}</div>
         </Card>
       </div>
 
+      {createOpen ? (
+        <Card>
+          <div className="grid gap-4">
+            <div className="text-sm font-semibold text-white">Novo lançamento</div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <label className="text-sm text-white/80">
+                Tipo
+                <select className="select" value={type} onChange={(e) => setType(e.target.value as any)}>
+                  <option value="income">Receita</option>
+                  <option value="expense">Despesa</option>
+                </select>
+              </label>
+              <label className="text-sm text-white/80">
+                Status
+                <select className="select" value={status} onChange={(e) => setStatus(e.target.value as any)}>
+                  <option value="planned">Previsto</option>
+                  <option value="paid">Pago</option>
+                </select>
+              </label>
+              <label className="text-sm text-white/80">
+                Data
+                <input type="date" className="input" value={occurredOn} onChange={(e) => setOccurredOn(e.target.value)} />
+              </label>
+
+              <label className="md:col-span-2 text-sm text-white/80">
+                Descrição
+                <input className="input" value={description} onChange={(e) => setDescription(e.target.value)} />
+              </label>
+              <label className="text-sm text-white/80">
+                Valor (R$)
+                <input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1500,00" />
+              </label>
+
+              <label className="text-sm text-white/80">
+                Método
+                <select className="select" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                  <option value="pix">PIX</option>
+                  <option value="cash">Dinheiro</option>
+                  <option value="card">Cartão</option>
+                  <option value="transfer">Transferência</option>
+                </select>
+              </label>
+              <label className="md:col-span-2 text-sm text-white/80">
+                Observações
+                <input className="input" value={notes} onChange={(e) => setNotes(e.target.value)} />
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button disabled={saving} onClick={onCreate} className="btn-primary">
+                {saving ? 'Salvando…' : 'Salvar'}
+              </button>
+              <button disabled={saving} onClick={() => setCreateOpen(false)} className="btn-ghost">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
       <Card>
-        <div className="text-sm font-semibold text-white">Últimos lançamentos</div>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs text-white/50">
-              <tr>
-                <th className="px-4 py-3">Data</th>
-                <th className="px-4 py-3">Cliente</th>
-                <th className="px-4 py-3">Descrição</th>
-                <th className="px-4 py-3">Valor</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { d: '05/02', c: 'Ana Souza', x: 'Honorários iniciais', v: 'R$ 1.500', s: 'Pago' },
-                { d: '03/02', c: 'Empresa Alfa', x: 'Aditivo contrato', v: 'R$ 3.200', s: 'A receber' },
-                { d: '01/02', c: 'Carlos Lima', x: 'Consulta', v: 'R$ 350', s: 'Pago' },
-              ].map((r, i) => (
-                <tr key={i} className="border-t border-white/10">
-                  <td className="px-4 py-3 text-white/70">{r.d}</td>
-                  <td className="px-4 py-3 font-medium text-white">{r.c}</td>
-                  <td className="px-4 py-3 text-white/70">{r.x}</td>
-                  <td className="px-4 py-3 text-white">{r.v}</td>
-                  <td className="px-4 py-3">
-                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-white/80">
-                      {r.s}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="text-sm font-semibold text-white">Lançamentos</div>
+        <div className="mt-3">
+          {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
+          {!loading && rows.length === 0 ? <div className="text-sm text-white/60">Nenhum lançamento ainda.</div> : null}
+
+          <div className="mt-3 grid gap-2">
+            {rows.map((r) => (
+              <div key={r.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-white">
+                      {r.description}{' '}
+                      <span className={r.type === 'income' ? 'badge badge-gold' : 'badge'}>
+                        {r.type === 'income' ? 'Receita' : 'Despesa'}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs text-white/60">
+                      {r.occurred_on} · {r.status === 'paid' ? 'Pago' : r.status === 'planned' ? 'Previsto' : r.status}
+                      {r.payment_method ? ` · ${r.payment_method}` : ''}
+                    </div>
+                    {r.notes ? <div className="mt-1 text-xs text-white/50">Obs: {r.notes}</div> : null}
+                  </div>
+                  <div className="text-sm font-semibold text-white">{centsToBRL(r.amount_cents)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </Card>
     </div>
