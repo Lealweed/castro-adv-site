@@ -2,6 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply btn bg-white text-neutral-950 hover:bg-white/90;
+  }
+  .btn-ghost {
+    @apply btn border border-white/10 bg-white/5 text-white/80 hover:bg-white/10;
+  }
+  .btn-icon {
+    @apply inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 p-2 text-white/80 hover:bg-white/10;
+  }
+
+  /* Inputs */
+  .input {
+    @apply mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none placeholder:text-white/40 focus:border-white/20;
+  }
+  .select {
+    @apply mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-white/20;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[11px] font-semibold text-white/70;
+  }
+  .badge-gold {
+    @apply border-amber-300/30 bg-amber-300/10 text-amber-200;
+  }
+}
+
 html,
 body {
   height: 100%;

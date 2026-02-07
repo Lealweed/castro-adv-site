@@ -130,7 +130,7 @@ export function TasksPage() {
         </div>
         <button
           onClick={() => setCreateOpen(true)}
-          className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-white/90"
+          className="btn-primary"
         >
           Nova tarefa
         </button>
@@ -144,7 +144,7 @@ export function TasksPage() {
               <label className="md:col-span-2 text-sm text-white/80">
                 Título
                 <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className="input"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
@@ -152,7 +152,7 @@ export function TasksPage() {
               <label className="text-sm text-white/80">
                 Prioridade
                 <select
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className="select"
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as any)}
                 >
@@ -165,7 +165,7 @@ export function TasksPage() {
                 Vencimento
                 <input
                   type="date"
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  className="input"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                 />
@@ -176,14 +176,14 @@ export function TasksPage() {
               <button
                 disabled={saving}
                 onClick={onCreate}
-                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-white/90 disabled:opacity-60"
+                className="btn-primary"
               >
                 {saving ? 'Salvando…' : 'Salvar'}
               </button>
               <button
                 disabled={saving}
                 onClick={() => setCreateOpen(false)}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/10 disabled:opacity-60"
+                className="btn-ghost"
               >
                 Cancelar
               </button>

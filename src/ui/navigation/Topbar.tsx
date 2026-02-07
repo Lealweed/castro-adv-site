@@ -6,7 +6,7 @@ export function Topbar() {
   const auth = useAuth();
 
   return (
-    <header className="sticky top-0 z-20 border-b border-white/10 bg-neutral-950/60 backdrop-blur-xl">
+    <header className="sticky top-0 z-20 border-b border-white/10 bg-neutral-950/80 backdrop-blur-xl">
       <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6">
         <div className="min-w-0">
           <div className="text-sm font-semibold text-white">Bem-vindo de volta</div>

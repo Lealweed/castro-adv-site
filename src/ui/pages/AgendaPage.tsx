@@ -38,7 +38,7 @@ function endOfDay(d: Date) {
 function startOfWeek(d: Date) {
   // Monday-based week
   const day = d.getDay(); // 0=Sun
-  const diff = (day === 0 ? -6 : 1 - day);
+  const diff = day === 0 ? -6 : 1 - day;
   const x = new Date(d);
   x.setDate(d.getDate() + diff);
   return startOfDay(x);
@@ -114,7 +114,6 @@ export function AgendaPage() {
       const startIso = range.start.toISOString();
       const endIso = range.end.toISOString();
 
-      // Load deadlines by due_date and commitments by starts_at, in a single query using OR.
       const orFilter = [
         `and(kind.eq.deadline,due_date.gte.${startDate},due_date.lte.${endDate})`,
         `and(kind.eq.commitment,starts_at.gte.${startIso},starts_at.lte.${endIso})`,
@@ -224,8 +223,7 @@ export function AgendaPage() {
     const first = new Date(y, m, 1);
     const lastDay = new Date(y, m + 1, 0).getDate();
 
-    // Monday=0..Sunday=6
-    const firstDow = (first.getDay() + 6) % 7;
+    const firstDow = (first.getDay() + 6) % 7; // Monday=0..Sunday=6
 
     const map = new Map<string, AgendaItem[]>();
     for (const it of rows) {
@@ -291,7 +289,7 @@ export function AgendaPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 hover:bg-white/10"
+                className="btn-ghost"
               >
                 ‹
               </button>
@@ -300,17 +298,14 @@ export function AgendaPage() {
               </div>
               <button
                 onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}
-                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 hover:bg-white/10"
+                className="btn-ghost"
               >
                 ›
               </button>
             </div>
           ) : null}
 
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-white/90"
-          >
+          <button onClick={() => setCreateOpen(true)} className="btn-primary">
             Novo
           </button>
         </div>
@@ -324,22 +319,14 @@ export function AgendaPage() {
             <div className="grid gap-3 md:grid-cols-3">
               <label className="text-sm text-white/80">
                 Tipo
-                <select
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-                  value={kind}
-                  onChange={(e) => setKind(e.target.value as any)}
-                >
+                <select className="select" value={kind} onChange={(e) => setKind(e.target.value as any)}>
                   <option value="commitment">Compromisso</option>
                   <option value="deadline">Prazo</option>
                 </select>
               </label>
               <label className="md:col-span-2 text-sm text-white/80">
                 Título
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
+                <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
               </label>
             </div>
 
@@ -349,7 +336,7 @@ export function AgendaPage() {
                   Início
                   <input
                     type="datetime-local"
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                    className="input"
                     value={startsAt}
                     onChange={(e) => setStartsAt(e.target.value)}
                   />
@@ -358,7 +345,7 @@ export function AgendaPage() {
                   Fim
                   <input
                     type="datetime-local"
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                    className="input"
                     value={endsAt}
                     onChange={(e) => setEndsAt(e.target.value)}
                   />
@@ -377,12 +364,7 @@ export function AgendaPage() {
               <div className="grid gap-3 md:grid-cols-3">
                 <label className="text-sm text-white/80">
                   Data do prazo
-                  <input
-                    type="date"
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                  />
+                  <input type="date" className="input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
                 </label>
               </div>
             )}
@@ -390,35 +372,19 @@ export function AgendaPage() {
             <div className="grid gap-3 md:grid-cols-2">
               <label className="text-sm text-white/80">
                 Local
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                />
+                <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} />
               </label>
               <label className="text-sm text-white/80">
                 Observações
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
+                <input className="input" value={notes} onChange={(e) => setNotes(e.target.value)} />
               </label>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <button
-                disabled={saving}
-                onClick={onCreate}
-                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-white/90 disabled:opacity-60"
-              >
+              <button disabled={saving} onClick={onCreate} className="btn-primary">
                 {saving ? 'Salvando…' : 'Salvar'}
               </button>
-              <button
-                disabled={saving}
-                onClick={() => setCreateOpen(false)}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/10 disabled:opacity-60"
-              >
+              <button disabled={saving} onClick={() => setCreateOpen(false)} className="btn-ghost">
                 Cancelar
               </button>
             </div>
@@ -480,10 +446,7 @@ export function AgendaPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-sm font-semibold text-white">
-                      {it.title}{' '}
-                      <span className="ml-2 rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[11px] font-semibold text-white/70">
-                        {it.kind === 'deadline' ? 'Prazo' : 'Compromisso'}
-                      </span>
+                      {it.title} <span className="badge">{it.kind === 'deadline' ? 'Prazo' : 'Compromisso'}</span>
                     </div>
                     <div className="mt-1 text-xs text-white/60">
                       {it.kind === 'deadline'
