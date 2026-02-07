@@ -11,6 +11,7 @@ type CaseRow = {
   description: string | null;
   created_at: string;
   client_id: string | null;
+  client?: { id: string; name: string } | null;
 };
 
 export function CaseDetailsPage() {
@@ -33,7 +34,7 @@ export function CaseDetailsPage() {
 
         const { data, error: qErr } = await sb
           .from('cases')
-          .select('id,title,status,description,created_at,client_id')
+          .select('id,title,status,description,created_at,client_id, client:clients(id,name)')
           .eq('id', caseId)
           .maybeSingle();
 
@@ -60,10 +61,7 @@ export function CaseDetailsPage() {
           <h1 className="text-2xl font-semibold text-white">Caso</h1>
           <p className="text-sm text-white/60">Detalhes (Supabase).</p>
         </div>
-        <Link
-          to="/app/casos"
-          className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/10"
-        >
+        <Link to="/app/casos" className="btn-ghost">
           Voltar
         </Link>
       </div>
@@ -71,12 +69,14 @@ export function CaseDetailsPage() {
       <Card>
         {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
         {error ? <div className="text-sm text-red-200">{error}</div> : null}
+
         {!loading && !error && row ? (
-          <div className="grid gap-3">
+          <div className="grid gap-4">
             <div>
               <div className="text-xs text-white/50">Título</div>
               <div className="text-lg font-semibold text-white">{row.title}</div>
             </div>
+
             <div className="grid gap-3 md:grid-cols-2">
               <div>
                 <div className="text-xs text-white/50">Status</div>
@@ -84,9 +84,16 @@ export function CaseDetailsPage() {
               </div>
               <div>
                 <div className="text-xs text-white/50">Cliente</div>
-                <div className="text-sm text-white/80">{row.client_id || '—'}</div>
+                {row.client ? (
+                  <Link to={`/app/clientes/${row.client.id}`} className="text-sm font-semibold text-amber-200 hover:underline">
+                    {row.client.name}
+                  </Link>
+                ) : (
+                  <div className="text-sm text-white/70">—</div>
+                )}
               </div>
             </div>
+
             <div>
               <div className="text-xs text-white/50">Descrição</div>
               <div className="text-sm text-white/80">{row.description || '—'}</div>

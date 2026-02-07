@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
+import { loadClientsLite } from '@/lib/loadClientsLite';
+import type { ClientLite } from '@/lib/types';
 
 type CaseRow = {
   id: string;
@@ -10,6 +12,7 @@ type CaseRow = {
   status: string;
   created_at: string;
   client_id: string | null;
+  client?: { name: string } | null;
 };
 
 function statusBadge(status: string) {
@@ -22,12 +25,15 @@ function statusBadge(status: string) {
 
 export function CasesPage() {
   const [rows, setRows] = useState<CaseRow[]>([]);
+  const [clients, setClients] = useState<ClientLite[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newStatus, setNewStatus] = useState('aberto');
+  const [newClientId, setNewClientId] = useState<string>('');
   const [saving, setSaving] = useState(false);
 
   const ordered = useMemo(() => rows, [rows]);
@@ -40,13 +46,17 @@ export function CasesPage() {
       const sb = requireSupabase();
       await getAuthedUser();
 
-      const { data, error: qErr } = await sb
-        .from('cases')
-        .select('id,title,status,created_at,client_id')
-        .order('created_at', { ascending: false });
+      const [{ data: casesData, error: qErr }, clientsLite] = await Promise.all([
+        sb
+          .from('cases')
+          .select('id,title,status,created_at,client_id, client:clients(name)')
+          .order('created_at', { ascending: false }),
+        loadClientsLite().catch(() => [] as ClientLite[]),
+      ]);
 
       if (qErr) throw new Error(qErr.message);
-      setRows((data || []) as CaseRow[]);
+      setRows((casesData || []) as any);
+      setClients(clientsLite);
       setLoading(false);
     } catch (err: any) {
       setError(err?.message || 'Falha ao carregar casos.');
@@ -72,6 +82,7 @@ export function CasesPage() {
         user_id: user.id,
         title: newTitle.trim(),
         status: newStatus.trim() || 'aberto',
+        client_id: newClientId || null,
       });
 
       if (iErr) throw new Error(iErr.message);
@@ -79,6 +90,7 @@ export function CasesPage() {
       setCreateOpen(false);
       setNewTitle('');
       setNewStatus('aberto');
+      setNewClientId('');
       setSaving(false);
       await load();
     } catch (err: any) {
@@ -112,6 +124,17 @@ export function CasesPage() {
                 Status
                 <input className="input" value={newStatus} onChange={(e) => setNewStatus(e.target.value)} />
               </label>
+              <label className="md:col-span-2 text-sm text-white/80">
+                Cliente
+                <select className="select" value={newClientId} onChange={(e) => setNewClientId(e.target.value)}>
+                  <option value="">Sem cliente vinculado</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             <div className="flex flex-wrap gap-3">
@@ -140,6 +163,7 @@ export function CasesPage() {
                 <thead className="text-xs text-white/50">
                   <tr>
                     <th className="px-4 py-3">Título</th>
+                    <th className="px-4 py-3">Cliente</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3" />
                   </tr>
@@ -148,6 +172,7 @@ export function CasesPage() {
                   {ordered.map((c) => (
                     <tr key={c.id} className="border-t border-white/10">
                       <td className="px-4 py-3 font-medium text-white">{c.title}</td>
+                      <td className="px-4 py-3 text-white/70">{c.client?.name || '—'}</td>
                       <td className="px-4 py-3">
                         <span className={statusBadge(c.status)}>{c.status}</span>
                       </td>
@@ -161,7 +186,7 @@ export function CasesPage() {
 
                   {ordered.length === 0 ? (
                     <tr>
-                      <td className="px-4 py-6 text-sm text-white/60" colSpan={3}>
+                      <td className="px-4 py-6 text-sm text-white/60" colSpan={4}>
                         Nenhum caso cadastrado.
                       </td>
                     </tr>
@@ -179,7 +204,10 @@ export function CasesPage() {
                   className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="text-sm font-semibold text-white">{c.title}</div>
+                    <div>
+                      <div className="text-sm font-semibold text-white">{c.title}</div>
+                      <div className="mt-1 text-xs text-white/60">{c.client?.name || '—'}</div>
+                    </div>
                     <span className={statusBadge(c.status)}>{c.status}</span>
                   </div>
                   <div className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-amber-200">

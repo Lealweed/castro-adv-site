@@ -13,9 +13,17 @@ type ClientRow = {
   created_at: string;
 };
 
+type CaseLite = {
+  id: string;
+  title: string;
+  status: string;
+  created_at: string;
+};
+
 export function ClientDetailsPage() {
   const { clientId } = useParams();
   const [row, setRow] = useState<ClientRow | null>(null);
+  const [cases, setCases] = useState<CaseLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,15 +39,21 @@ export function ClientDetailsPage() {
         const sb = requireSupabase();
         await getAuthedUser();
 
-        const { data, error: qErr } = await sb
-          .from('clients')
-          .select('id,name,phone,email,notes,created_at')
-          .eq('id', clientId)
-          .maybeSingle();
+        const [c1, c2] = await Promise.all([
+          sb.from('clients').select('id,name,phone,email,notes,created_at').eq('id', clientId).maybeSingle(),
+          sb
+            .from('cases')
+            .select('id,title,status,created_at')
+            .eq('client_id', clientId)
+            .order('created_at', { ascending: false }),
+        ]);
 
-        if (qErr) throw new Error(qErr.message);
+        if (c1.error) throw new Error(c1.error.message);
+        if (c2.error) throw new Error(c2.error.message);
+
         if (!alive) return;
-        setRow((data as any) || null);
+        setRow((c1.data as any) || null);
+        setCases((c2.data || []) as CaseLite[]);
         setLoading(false);
       } catch (err: any) {
         if (!alive) return;
@@ -60,10 +74,7 @@ export function ClientDetailsPage() {
           <h1 className="text-2xl font-semibold text-white">Cliente</h1>
           <p className="text-sm text-white/60">Detalhes (Supabase).</p>
         </div>
-        <Link
-          to="/app/clientes"
-          className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/10"
-        >
+        <Link to="/app/clientes" className="btn-ghost">
           Voltar
         </Link>
       </div>
@@ -71,6 +82,7 @@ export function ClientDetailsPage() {
       <Card>
         {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
         {error ? <div className="text-sm text-red-200">{error}</div> : null}
+
         {!loading && !error && row ? (
           <div className="grid gap-3">
             <div>
@@ -95,6 +107,33 @@ export function ClientDetailsPage() {
         ) : null}
 
         {!loading && !error && !row ? <div className="text-sm text-white/70">Não encontrado.</div> : null}
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-semibold text-white">Casos do cliente</div>
+            <div className="text-xs text-white/60">Vinculados pelo client_id</div>
+          </div>
+          <Link to="/app/casos" className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs">
+            Ver todos
+          </Link>
+        </div>
+
+        <div className="mt-4 grid gap-2">
+          {loading ? null : null}
+          {!loading && cases.length === 0 ? <div className="text-sm text-white/60">Nenhum caso vinculado.</div> : null}
+          {cases.map((c) => (
+            <Link
+              key={c.id}
+              to={`/app/casos/${c.id}`}
+              className="rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10"
+            >
+              <div className="text-sm font-semibold text-white">{c.title}</div>
+              <div className="mt-1 text-xs text-white/60">Status: {c.status}</div>
+            </Link>
+          ))}
+        </div>
       </Card>
     </div>
   );
