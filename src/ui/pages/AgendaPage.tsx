@@ -17,16 +17,59 @@ type AgendaItem = {
   created_at: string;
 };
 
+type ViewMode = 'today' | 'week' | 'month';
+
+function pad2(n: number) {
+  return String(n).padStart(2, '0');
+}
+
+function toDateStr(d: Date) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+}
+
+function endOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+}
+
+function startOfWeek(d: Date) {
+  // Monday-based week
+  const day = d.getDay(); // 0=Sun
+  const diff = (day === 0 ? -6 : 1 - day);
+  const x = new Date(d);
+  x.setDate(d.getDate() + diff);
+  return startOfDay(x);
+}
+
 function fmtDateTime(iso: string | null) {
   if (!iso) return '—';
   const d = new Date(iso);
-  return d.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString(undefined, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function fmtMonthLabel(d: Date) {
+  return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
 
 export function AgendaPage() {
   const [rows, setRows] = useState<AgendaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [view, setView] = useState<ViewMode>('today');
+  const [monthCursor, setMonthCursor] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [kind, setKind] = useState<'commitment' | 'deadline'>('commitment');
@@ -39,7 +82,24 @@ export function AgendaPage() {
   const [dueDate, setDueDate] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const upcoming = useMemo(() => rows, [rows]);
+  const range = useMemo(() => {
+    const now = new Date();
+
+    if (view === 'today') {
+      return { start: startOfDay(now), end: endOfDay(now), label: 'Hoje' };
+    }
+
+    if (view === 'week') {
+      const s = startOfWeek(now);
+      const e = endOfDay(new Date(s.getFullYear(), s.getMonth(), s.getDate() + 6));
+      return { start: s, end: e, label: 'Semana' };
+    }
+
+    // month
+    const s = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
+    const e = endOfDay(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 0));
+    return { start: s, end: e, label: 'Mês' };
+  }, [view, monthCursor]);
 
   async function load() {
     setLoading(true);
@@ -49,12 +109,23 @@ export function AgendaPage() {
       const sb = requireSupabase();
       await getAuthedUser();
 
-      // For MVP: just load last 50 items; later we add proper date-range filters.
+      const startDate = toDateStr(range.start);
+      const endDate = toDateStr(range.end);
+      const startIso = range.start.toISOString();
+      const endIso = range.end.toISOString();
+
+      // Load deadlines by due_date and commitments by starts_at, in a single query using OR.
+      const orFilter = [
+        `and(kind.eq.deadline,due_date.gte.${startDate},due_date.lte.${endDate})`,
+        `and(kind.eq.commitment,starts_at.gte.${startIso},starts_at.lte.${endIso})`,
+      ].join(',');
+
       const { data, error: qErr } = await sb
         .from('agenda_items')
         .select('id,kind,title,notes,location,all_day,starts_at,ends_at,due_date,status,created_at')
+        .or(orFilter)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(500);
 
       if (qErr) throw new Error(qErr.message);
       setRows((data || []) as AgendaItem[]);
@@ -68,12 +139,11 @@ export function AgendaPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [view, monthCursor.getTime()]);
 
   async function onCreate() {
     if (!title.trim()) return;
 
-    // Basic validations
     if (kind === 'commitment') {
       if (!startsAt) {
         setError('Informe o início do compromisso.');
@@ -137,19 +207,113 @@ export function AgendaPage() {
     }
   }
 
+  const itemsSorted = useMemo(() => {
+    const score = (it: AgendaItem) => {
+      if (it.kind === 'deadline') return it.due_date ? new Date(it.due_date + 'T00:00:00').getTime() : 0;
+      return it.starts_at ? new Date(it.starts_at).getTime() : 0;
+    };
+
+    return [...rows].sort((a, b) => score(a) - score(b));
+  }, [rows]);
+
+  const monthGrid = useMemo(() => {
+    if (view !== 'month') return null;
+
+    const y = monthCursor.getFullYear();
+    const m = monthCursor.getMonth();
+    const first = new Date(y, m, 1);
+    const lastDay = new Date(y, m + 1, 0).getDate();
+
+    // Monday=0..Sunday=6
+    const firstDow = (first.getDay() + 6) % 7;
+
+    const map = new Map<string, AgendaItem[]>();
+    for (const it of rows) {
+      const key =
+        it.kind === 'deadline'
+          ? it.due_date
+          : it.starts_at
+            ? toDateStr(new Date(it.starts_at))
+            : null;
+      if (!key) continue;
+      const arr = map.get(key) || [];
+      arr.push(it);
+      map.set(key, arr);
+    }
+
+    const cells: Array<{ day: number | null; key: string | null; count: number; hasDeadline: boolean }> = [];
+    for (let i = 0; i < firstDow; i++) cells.push({ day: null, key: null, count: 0, hasDeadline: false });
+    for (let day = 1; day <= lastDay; day++) {
+      const key = `${y}-${pad2(m + 1)}-${pad2(day)}`;
+      const list = map.get(key) || [];
+      cells.push({
+        day,
+        key,
+        count: list.length,
+        hasDeadline: list.some((x) => x.kind === 'deadline'),
+      });
+    }
+
+    return { cells };
+  }, [view, monthCursor, rows]);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-white">Agenda</h1>
-          <p className="text-sm text-white/60">Compromissos e prazos (Supabase).</p>
+          <p className="text-sm text-white/60">Hoje · Semana · Mês</p>
         </div>
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-white/90"
-        >
-          Novo
-        </button>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1">
+            {(
+              [
+                { id: 'today', label: 'Hoje' },
+                { id: 'week', label: 'Semana' },
+                { id: 'month', label: 'Mês' },
+              ] as const
+            ).map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setView(t.id)}
+                className={
+                  'rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ' +
+                  (view === t.id ? 'bg-white text-neutral-950' : 'text-white/70 hover:text-white')
+                }
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {view === 'month' ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))}
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 hover:bg-white/10"
+              >
+                ‹
+              </button>
+              <div className="min-w-[180px] text-center text-sm font-semibold text-white">
+                {fmtMonthLabel(monthCursor)}
+              </div>
+              <button
+                onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 hover:bg-white/10"
+              >
+                ›
+              </button>
+            </div>
+          ) : null}
+
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-white/90"
+          >
+            Novo
+          </button>
+        </div>
       </div>
 
       {createOpen ? (
@@ -264,13 +428,54 @@ export function AgendaPage() {
         </Card>
       ) : null}
 
+      {view === 'month' && monthGrid ? (
+        <Card>
+          <div className="grid grid-cols-7 gap-2 text-xs text-white/60">
+            {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((d) => (
+              <div key={d} className="px-2 py-1 text-center font-semibold text-white/70">
+                {d}
+              </div>
+            ))}
+
+            {monthGrid.cells.map((c, idx) => (
+              <div
+                key={c.key || `empty-${idx}`}
+                className={
+                  'min-h-[64px] rounded-xl border border-white/10 bg-white/5 p-2 ' +
+                  (c.day ? 'text-white' : 'opacity-30')
+                }
+              >
+                {c.day ? (
+                  <div className="flex items-start justify-between">
+                    <div className="text-xs font-semibold text-white/80">{c.day}</div>
+                    {c.count ? (
+                      <div
+                        className={
+                          'rounded-full px-2 py-0.5 text-[11px] font-semibold ' +
+                          (c.hasDeadline ? 'bg-amber-300/15 text-amber-200' : 'bg-white/10 text-white/70')
+                        }
+                      >
+                        {c.count}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 text-xs text-white/50">
+            Dica: o número no canto indica quantos itens existem no dia (prazos ficam em destaque dourado).
+          </div>
+        </Card>
+      ) : null}
+
       <Card>
         {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
         {error && !createOpen ? <div className="text-sm text-red-200">{error}</div> : null}
 
         {!loading && !error ? (
           <div className="grid gap-2">
-            {upcoming.map((it) => (
+            {itemsSorted.map((it) => (
               <div key={it.id} className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -293,9 +498,7 @@ export function AgendaPage() {
               </div>
             ))}
 
-            {upcoming.length === 0 ? (
-              <div className="text-sm text-white/60">Nada na agenda ainda.</div>
-            ) : null}
+            {itemsSorted.length === 0 ? <div className="text-sm text-white/60">Nada nesse período.</div> : null}
           </div>
         ) : null}
       </Card>
