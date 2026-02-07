@@ -79,6 +79,14 @@ export function LoginPage() {
             {loading ? 'Entrando…' : 'Entrar'}
           </button>
 
+          <button
+            type="button"
+            onClick={() => nav('/app/demo')}
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/80 hover:bg-white/10"
+          >
+            Entrar em modo demonstração
+          </button>
+
           {error ? <div className="text-sm text-red-200">{error}</div> : null}
         </form>
       </div>

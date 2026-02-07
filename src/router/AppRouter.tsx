@@ -19,6 +19,12 @@ import { RequireAuth } from '@/auth/RequireAuth';
 import { CasesPage } from '@/ui/pages/CasesPage';
 import { CaseDetailsPage } from '@/ui/pages/CaseDetailsPage';
 
+import { DemoDashboardPage } from '@/ui/pages/demo/DemoDashboardPage';
+import { DemoClientsPage } from '@/ui/pages/demo/DemoClientsPage';
+import { DemoClientDetailsPage } from '@/ui/pages/demo/DemoClientDetailsPage';
+import { DemoCasesPage } from '@/ui/pages/demo/DemoCasesPage';
+import { DemoCaseDetailsPage } from '@/ui/pages/demo/DemoCaseDetailsPage';
+
 export function AppRouter() {
   return (
     <BrowserRouter>
@@ -32,6 +38,15 @@ export function AppRouter() {
         <Route element={<AuthLayout />}>
           <Route path="/app/login" element={<LoginPage />} />
           <Route path="/app/selecionar-organizacao" element={<OrgSelectPage />} />
+        </Route>
+
+        {/* Demo (no auth) */}
+        <Route element={<AppLayout />}>
+          <Route path="/app/demo" element={<DemoDashboardPage />} />
+          <Route path="/app/demo/clientes" element={<DemoClientsPage />} />
+          <Route path="/app/demo/clientes/:clientId" element={<DemoClientDetailsPage />} />
+          <Route path="/app/demo/casos" element={<DemoCasesPage />} />
+          <Route path="/app/demo/casos/:caseId" element={<DemoCaseDetailsPage />} />
         </Route>
 
         {/* App (protected) */}
