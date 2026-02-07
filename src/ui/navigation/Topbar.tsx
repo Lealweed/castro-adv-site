@@ -31,7 +31,7 @@ export function Topbar() {
 
           {auth.isAuthenticated ? (
             <button
-              onClick={() => auth.signOut()}
+              onClick={() => void auth.signOut()}
               className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80 hover:bg-white/10"
             >
               Sair

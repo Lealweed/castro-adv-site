@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { apiFetch } from '@/lib/apiClient';
 import { useAuth } from '@/auth/authStore';
+import { signInWithPassword } from '@/auth/supabaseAuth';
+import { env } from '@/env';
 
 export function LoginPage() {
   const nav = useNavigate();
-  const auth = useAuth();
+  // Auth state is handled by Supabase session listener (AuthProvider)
+  useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,25 +20,20 @@ export function LoginPage() {
     setLoading(true);
     setError(null);
 
-    const res = await apiFetch('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-
-    const json = await res.json().catch(() => ({} as any));
-    if (!res.ok) {
-      setError(json?.message || json?.error || 'Falha no login.');
+    if (!env.supabaseUrl || !env.supabaseAnonKey) {
+      setError('Supabase não configurado (env vars).');
       setLoading(false);
       return;
     }
 
-    if (!json?.accessToken || !json?.refreshToken) {
-      setError('Resposta inválida do servidor.');
+    const { error } = await signInWithPassword(email, password);
+    if (error) {
+      setError(error.message || 'Falha no login.');
       setLoading(false);
       return;
     }
 
-    auth.signIn({ accessToken: json.accessToken, refreshToken: json.refreshToken });
+    // org selection still required for tenant header in the API calls
     nav('/app/selecionar-organizacao');
     setLoading(false);
   }
