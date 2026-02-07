@@ -2,17 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
-}
-
 html,
 body {
   height: 100%;
 }
 
+/* Default to light to avoid flash on the public site.
+   App screens set their own theme wrapper (theme-dark). */
 body {
   @apply bg-[#fbfaf7] text-neutral-950;
+}
+
+.theme-light {
+  color-scheme: light;
+}
+
+.theme-dark {
+  color-scheme: dark;
 }
 
 /* Public site background (ivory + subtle gold glow) */

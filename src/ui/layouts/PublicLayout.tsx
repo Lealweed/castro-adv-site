@@ -5,7 +5,7 @@ import { PublicFooter } from '@/ui/navigation/PublicFooter';
 
 export function PublicLayout() {
   return (
-    <div className="min-h-dvh app-bg">
+    <div className="min-h-dvh app-bg theme-light">
       <PublicNavbar />
       <main>
         <Outlet />
