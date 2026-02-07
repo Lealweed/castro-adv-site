@@ -12,6 +12,9 @@ import { FinancePage } from '@/ui/pages/FinancePage';
 import { AiReportsPage } from '@/ui/pages/AiReportsPage';
 import { ClientPortalPage } from '@/ui/pages/ClientPortalPage';
 import { SettingsPage } from '@/ui/pages/SettingsPage';
+import { LoginPage } from '@/ui/pages/LoginPage';
+import { OrgSelectPage } from '@/ui/pages/OrgSelectPage';
+import { RequireAuth } from '@/auth/RequireAuth';
 
 export function AppRouter() {
   return (
@@ -22,15 +25,21 @@ export function AppRouter() {
           <Route path="/" element={<LandingPage />} />
         </Route>
 
-        {/* App */}
+        {/* Auth */}
         <Route element={<AppLayout />}>
-          <Route path="/app" element={<DashboardPage />} />
-          <Route path="/app/clientes" element={<ClientsPage />} />
-          <Route path="/app/clientes/:clientId" element={<ClientDetailsPage />} />
-          <Route path="/app/financeiro" element={<FinancePage />} />
-          <Route path="/app/relatorios-ia" element={<AiReportsPage />} />
-          <Route path="/app/portal" element={<ClientPortalPage />} />
-          <Route path="/app/configuracoes" element={<SettingsPage />} />
+          <Route path="/app/login" element={<LoginPage />} />
+          <Route path="/app/selecionar-organizacao" element={<OrgSelectPage />} />
+
+          {/* App (protected) */}
+          <Route element={<RequireAuth />}>
+            <Route path="/app" element={<DashboardPage />} />
+            <Route path="/app/clientes" element={<ClientsPage />} />
+            <Route path="/app/clientes/:clientId" element={<ClientDetailsPage />} />
+            <Route path="/app/financeiro" element={<FinancePage />} />
+            <Route path="/app/relatorios-ia" element={<AiReportsPage />} />
+            <Route path="/app/portal" element={<ClientPortalPage />} />
+            <Route path="/app/configuracoes" element={<SettingsPage />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
