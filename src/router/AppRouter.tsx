@@ -18,6 +18,7 @@ import { FinancePage } from '@/ui/pages/FinancePage';
 import { AiReportsPage } from '@/ui/pages/AiReportsPage';
 import { ClientPortalPage } from '@/ui/pages/ClientPortalPage';
 import { SettingsPage } from '@/ui/pages/SettingsPage';
+import { TasksPage } from '@/ui/pages/TasksPage';
 
 export function AppRouter() {
   return (
@@ -41,6 +42,7 @@ export function AppRouter() {
             <Route path="/app/clientes/:clientId" element={<ClientDetailsPage />} />
             <Route path="/app/casos" element={<CasesPage />} />
             <Route path="/app/casos/:caseId" element={<CaseDetailsPage />} />
+            <Route path="/app/tarefas" element={<TasksPage />} />
             <Route path="/app/financeiro" element={<FinancePage />} />
             <Route path="/app/relatorios-ia" element={<AiReportsPage />} />
             <Route path="/app/portal" element={<ClientPortalPage />} />
