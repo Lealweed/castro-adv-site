@@ -89,10 +89,7 @@ export function ClientsPage() {
           <h1 className="text-2xl font-semibold text-white">Clientes</h1>
           <p className="text-sm text-white/60">Base real (Supabase).</p>
         </div>
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-white/90"
-        >
+        <button onClick={() => setCreateOpen(true)} className="btn-primary">
           Novo cliente
         </button>
       </div>
@@ -104,43 +101,23 @@ export function ClientsPage() {
             <div className="grid gap-3 md:grid-cols-2">
               <label className="text-sm text-white/80">
                 Nome
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                />
+                <input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} />
               </label>
               <label className="text-sm text-white/80">
                 E-mail
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                />
+                <input className="input" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
               </label>
               <label className="text-sm text-white/80">
                 Telefone
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-                  value={newPhone}
-                  onChange={(e) => setNewPhone(e.target.value)}
-                />
+                <input className="input" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
               </label>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <button
-                disabled={saving}
-                onClick={onCreate}
-                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-white/90 disabled:opacity-60"
-              >
+              <button disabled={saving} onClick={onCreate} className="btn-primary">
                 {saving ? 'Salvando…' : 'Salvar'}
               </button>
-              <button
-                disabled={saving}
-                onClick={() => setCreateOpen(false)}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/10 disabled:opacity-60"
-              >
+              <button disabled={saving} onClick={() => setCreateOpen(false)} className="btn-ghost">
                 Cancelar
               </button>
             </div>
@@ -155,46 +132,68 @@ export function ClientsPage() {
         {error && !createOpen ? <div className="text-sm text-red-200">{error}</div> : null}
 
         {!loading && !error ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs text-white/50">
-                <tr>
-                  <th className="px-4 py-3">Nome</th>
-                  <th className="px-4 py-3">Contato</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody>
-                {ordered.map((c) => (
-                  <tr key={c.id} className="border-t border-white/10">
-                    <td className="px-4 py-3 font-medium text-white">{c.name}</td>
-                    <td className="px-4 py-3 text-white/70">
-                      <div className="grid gap-0.5">
-                        <div>{c.phone || '—'}</div>
-                        <div className="text-xs text-white/50">{c.email || '—'}</div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80 hover:bg-white/10"
-                        to={`/app/clientes/${c.id}`}
-                      >
-                        Abrir
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-
-                {ordered.length === 0 ? (
+          <>
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-left text-sm">
+                <thead className="text-xs text-white/50">
                   <tr>
-                    <td className="px-4 py-6 text-sm text-white/60" colSpan={3}>
-                      Nenhum cliente cadastrado.
-                    </td>
+                    <th className="px-4 py-3">Nome</th>
+                    <th className="px-4 py-3">Contato</th>
+                    <th className="px-4 py-3" />
                   </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {ordered.map((c) => (
+                    <tr key={c.id} className="border-t border-white/10">
+                      <td className="px-4 py-3 font-medium text-white">{c.name}</td>
+                      <td className="px-4 py-3 text-white/70">
+                        <div className="grid gap-0.5">
+                          <div>{c.phone || '—'}</div>
+                          <div className="text-xs text-white/50">{c.email || '—'}</div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs" to={`/app/clientes/${c.id}`}>
+                          Abrir
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {ordered.length === 0 ? (
+                    <tr>
+                      <td className="px-4 py-6 text-sm text-white/60" colSpan={3}>
+                        Nenhum cliente cadastrado.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="grid gap-3 md:hidden">
+              {ordered.map((c) => (
+                <Link
+                  key={c.id}
+                  to={`/app/clientes/${c.id}`}
+                  className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10"
+                >
+                  <div className="text-sm font-semibold text-white">{c.name}</div>
+                  <div className="mt-2 text-xs text-white/60">
+                    <div>{c.phone || '—'}</div>
+                    <div className="mt-0.5 text-white/50">{c.email || '—'}</div>
+                  </div>
+                  <div className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-amber-200">
+                    Abrir →
+                  </div>
+                </Link>
+              ))}
+
+              {ordered.length === 0 ? <div className="text-sm text-white/60">Nenhum cliente cadastrado.</div> : null}
+            </div>
+          </>
         ) : null}
       </Card>
     </div>

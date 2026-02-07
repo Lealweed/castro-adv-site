@@ -12,6 +12,14 @@ type CaseRow = {
   client_id: string | null;
 };
 
+function statusBadge(status: string) {
+  const s = (status || '').toLowerCase();
+  if (s.includes('abert')) return 'badge badge-gold';
+  if (s.includes('and')) return 'badge';
+  if (s.includes('encerr') || s.includes('final')) return 'badge';
+  return 'badge';
+}
+
 export function CasesPage() {
   const [rows, setRows] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,10 +94,7 @@ export function CasesPage() {
           <h1 className="text-2xl font-semibold text-white">Casos</h1>
           <p className="text-sm text-white/60">Base real (Supabase).</p>
         </div>
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-white/90"
-        >
+        <button onClick={() => setCreateOpen(true)} className="btn-primary">
           Novo caso
         </button>
       </div>
@@ -101,35 +106,19 @@ export function CasesPage() {
             <div className="grid gap-3 md:grid-cols-2">
               <label className="text-sm text-white/80">
                 Título
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                />
+                <input className="input" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
               </label>
               <label className="text-sm text-white/80">
                 Status
-                <input
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
-                />
+                <input className="input" value={newStatus} onChange={(e) => setNewStatus(e.target.value)} />
               </label>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <button
-                disabled={saving}
-                onClick={onCreate}
-                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-white/90 disabled:opacity-60"
-              >
+              <button disabled={saving} onClick={onCreate} className="btn-primary">
                 {saving ? 'Salvando…' : 'Salvar'}
               </button>
-              <button
-                disabled={saving}
-                onClick={() => setCreateOpen(false)}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/10 disabled:opacity-60"
-              >
+              <button disabled={saving} onClick={() => setCreateOpen(false)} className="btn-ghost">
                 Cancelar
               </button>
             </div>
@@ -144,41 +133,64 @@ export function CasesPage() {
         {error && !createOpen ? <div className="text-sm text-red-200">{error}</div> : null}
 
         {!loading && !error ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs text-white/50">
-                <tr>
-                  <th className="px-4 py-3">Título</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody>
-                {ordered.map((c) => (
-                  <tr key={c.id} className="border-t border-white/10">
-                    <td className="px-4 py-3 font-medium text-white">{c.title}</td>
-                    <td className="px-4 py-3 text-white/70">{c.status}</td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80 hover:bg-white/10"
-                        to={`/app/casos/${c.id}`}
-                      >
-                        Abrir
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-
-                {ordered.length === 0 ? (
+          <>
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-left text-sm">
+                <thead className="text-xs text-white/50">
                   <tr>
-                    <td className="px-4 py-6 text-sm text-white/60" colSpan={3}>
-                      Nenhum caso cadastrado.
-                    </td>
+                    <th className="px-4 py-3">Título</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3" />
                   </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {ordered.map((c) => (
+                    <tr key={c.id} className="border-t border-white/10">
+                      <td className="px-4 py-3 font-medium text-white">{c.title}</td>
+                      <td className="px-4 py-3">
+                        <span className={statusBadge(c.status)}>{c.status}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs" to={`/app/casos/${c.id}`}>
+                          Abrir
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {ordered.length === 0 ? (
+                    <tr>
+                      <td className="px-4 py-6 text-sm text-white/60" colSpan={3}>
+                        Nenhum caso cadastrado.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="grid gap-3 md:hidden">
+              {ordered.map((c) => (
+                <Link
+                  key={c.id}
+                  to={`/app/casos/${c.id}`}
+                  className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="text-sm font-semibold text-white">{c.title}</div>
+                    <span className={statusBadge(c.status)}>{c.status}</span>
+                  </div>
+                  <div className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-amber-200">
+                    Abrir →
+                  </div>
+                </Link>
+              ))}
+
+              {ordered.length === 0 ? <div className="text-sm text-white/60">Nenhum caso cadastrado.</div> : null}
+            </div>
+          </>
         ) : null}
       </Card>
     </div>
