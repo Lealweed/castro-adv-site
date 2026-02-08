@@ -1,5 +1,11 @@
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
+export type FinanceCategory = {
+  id: string;
+  type: 'income' | 'expense' | string;
+  name: string;
+};
+
 export type FinanceTx = {
   id: string;
   type: 'income' | 'expense' | string;
@@ -11,6 +17,8 @@ export type FinanceTx = {
   payment_method: string | null;
   notes: string | null;
   reminder_1d_sent_at: string | null;
+  category_id: string | null;
+  category?: { name: string }[] | null;
   created_at: string;
 };
 
@@ -33,7 +41,9 @@ export async function listFinanceTx(limit = 50): Promise<FinanceTx[]> {
   await getAuthedUser();
   const { data, error } = await sb
     .from('finance_transactions')
-    .select('id,type,status,occurred_on,due_date,description,amount_cents,payment_method,notes,reminder_1d_sent_at,created_at')
+    .select(
+      'id,type,status,occurred_on,due_date,description,amount_cents,payment_method,notes,reminder_1d_sent_at,category_id,category:finance_categories(name),created_at',
+    )
     .order('occurred_on', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -41,11 +51,44 @@ export async function listFinanceTx(limit = 50): Promise<FinanceTx[]> {
   return (data || []) as FinanceTx[];
 }
 
+export async function listCategories(type: 'income' | 'expense'): Promise<FinanceCategory[]> {
+  const sb = requireSupabase();
+  await getAuthedUser();
+  const { data, error } = await sb
+    .from('finance_categories')
+    .select('id,type,name')
+    .eq('type', type)
+    .order('name', { ascending: true })
+    .limit(200);
+  if (error) throw new Error(error.message);
+  return (data || []) as FinanceCategory[];
+}
+
+export async function ensureCategory(type: 'income' | 'expense', name: string): Promise<string> {
+  const sb = requireSupabase();
+  const user = await getAuthedUser();
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error('Categoria inválida.');
+
+  const { data, error } = await sb
+    .from('finance_categories')
+    .upsert({ user_id: user.id, type, name: trimmed } as any, {
+      onConflict: 'user_id,type,name',
+    })
+    .select('id')
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data?.id) throw new Error('Falha ao criar categoria.');
+  return data.id as string;
+}
+
 export async function createFinanceTx(payload: {
   type: 'income' | 'expense';
   status: 'planned' | 'paid';
   occurred_on: string;
   due_date?: string | null;
+  category_id?: string | null;
   description: string;
   amount_cents: number;
   payment_method?: string | null;
@@ -58,6 +101,7 @@ export async function createFinanceTx(payload: {
     user_id: user.id,
     ...payload,
     due_date: payload.due_date || null,
+    category_id: payload.category_id || null,
     payment_method: payload.payment_method || null,
     notes: payload.notes || null,
   });

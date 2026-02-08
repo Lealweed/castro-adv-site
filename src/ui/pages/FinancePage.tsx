@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { Card } from '@/ui/widgets/Card';
-import { brlToCents, centsToBRL, createFinanceTx, listFinanceTx, type FinanceTx } from '@/lib/finance';
+import {
+  brlToCents,
+  centsToBRL,
+  createFinanceTx,
+  ensureCategory,
+  listCategories,
+  listFinanceTx,
+  type FinanceCategory,
+  type FinanceTx,
+} from '@/lib/finance';
 
 function todayStr() {
   const d = new Date();
@@ -24,6 +33,9 @@ export function FinancePage() {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('pix');
+  const [categoryId, setCategoryId] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [categories, setCategories] = useState<FinanceCategory[]>([]);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -45,6 +57,22 @@ export function FinancePage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const data = await listCategories(type);
+        if (!alive) return;
+        setCategories(data);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [type]);
 
   const summary = useMemo(() => {
     const plannedIncome = rows
@@ -82,11 +110,17 @@ export function FinancePage() {
     setError(null);
 
     try {
+      let catId: string | null = categoryId || null;
+      if (!catId && newCategoryName.trim()) {
+        catId = await ensureCategory(type, newCategoryName.trim());
+      }
+
       await createFinanceTx({
         type,
         status,
         occurred_on: occurredOn,
         due_date: effectiveDueDate,
+        category_id: catId,
         description: description.trim(),
         amount_cents: cents,
         payment_method: paymentMethod,
@@ -97,6 +131,8 @@ export function FinancePage() {
       setDescription('');
       setAmount('');
       setNotes('');
+      setCategoryId('');
+      setNewCategoryName('');
       setStatus('planned');
       setType('income');
       setPaymentMethod('pix');
@@ -196,7 +232,30 @@ export function FinancePage() {
                   <option value="transfer">Transferência</option>
                 </select>
               </label>
+
+              <label className="text-sm text-white/80">
+                Categoria
+                <select className="select" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                  <option value="">Sem categoria</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
               <label className="md:col-span-2 text-sm text-white/80">
+                Criar categoria (opcional)
+                <input
+                  className="input"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder={type === 'income' ? 'Ex: Honorários' : 'Ex: Custas'}
+                />
+              </label>
+
+              <label className="md:col-span-3 text-sm text-white/80">
                 Observações
                 <input className="input" value={notes} onChange={(e) => setNotes(e.target.value)} />
               </label>

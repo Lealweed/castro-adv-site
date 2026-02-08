@@ -64,7 +64,7 @@ export function FinanceCharts({ months = 6 }: { months?: number }) {
     };
   }, []);
 
-  const { monthly, buckets } = useMemo(() => {
+  const { monthly, buckets, topCategories } = useMemo(() => {
     const now = new Date();
     const start = startOfMonth(addMonths(now, -(months - 1)));
 
@@ -85,6 +85,8 @@ export function FinanceCharts({ months = 6 }: { months?: number }) {
 
     const bucketsAcc = { dueToday: 0, due7: 0, due30: 0, plannedTotal: 0 };
 
+    const catMap = new Map<string, { name: string; totalPaidCents: number }>();
+
     for (const r of rows) {
       // monthly paid
       if (r.status === 'paid') {
@@ -94,6 +96,12 @@ export function FinanceCharts({ months = 6 }: { months?: number }) {
           if (r.type === 'income') slot.incomePaid += r.amount_cents;
           if (r.type === 'expense') slot.expensePaid += r.amount_cents;
         }
+
+        // top categories (paid)
+        const catName = r.category?.[0]?.name || 'Sem categoria';
+        const bucket = catMap.get(catName) || { name: catName, totalPaidCents: 0 };
+        bucket.totalPaidCents += r.amount_cents;
+        catMap.set(catName, bucket);
       }
 
       // receivables buckets (planned income)
@@ -112,9 +120,15 @@ export function FinanceCharts({ months = 6 }: { months?: number }) {
       expensePaid: Math.round(x.expensePaid / 100) / 100,
     }));
 
+    const topCategories = Array.from(catMap.values())
+      .sort((a, b) => b.totalPaidCents - a.totalPaidCents)
+      .slice(0, 5)
+      .map((c) => ({ name: c.name, totalPaid: Math.round((c.totalPaidCents / 100) * 100) / 100 }));
+
     return {
       monthly: monthlyArr,
       buckets: bucketsAcc,
+      topCategories,
     };
   }, [rows, months]);
 
@@ -178,6 +192,38 @@ export function FinanceCharts({ months = 6 }: { months?: number }) {
             <div className="mt-1 text-lg font-semibold text-white">{centsToBRL(buckets.plannedTotal)}</div>
           </div>
         </div>
+      </Card>
+
+      <Card className="lg:col-span-3">
+        <div className="text-sm font-semibold text-white">Top categorias (pagas)</div>
+        <div className="text-xs text-white/60">Soma de lançamentos pagos por categoria</div>
+
+        {loading ? <div className="mt-4 text-sm text-white/70">Carregando…</div> : null}
+        {!loading && !error && topCategories.length === 0 ? (
+          <div className="mt-4 text-sm text-white/60">Sem dados suficientes. Cadastre categorias no Financeiro.</div>
+        ) : null}
+
+        {!loading && !error && topCategories.length ? (
+          <div className="mt-4 h-[240px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={topCategories} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                <CartesianGrid stroke="rgba(255,255,255,0.08)" horizontal={false} />
+                <XAxis type="number" stroke="rgba(255,255,255,0.35)" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="name" stroke="rgba(255,255,255,0.55)" fontSize={12} tickLine={false} axisLine={false} width={120} />
+                <Tooltip
+                  contentStyle={{
+                    background: 'rgba(10,10,10,0.9)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    borderRadius: 12,
+                  }}
+                  labelStyle={{ color: 'rgba(255,255,255,0.8)' }}
+                  formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR')}`, 'Total']}
+                />
+                <Bar dataKey="totalPaid" fill="rgba(212,175,55,0.85)" radius={[10, 10, 10, 10]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : null}
       </Card>
     </div>
   );
