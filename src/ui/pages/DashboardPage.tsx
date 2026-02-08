@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { FinanceCharts } from '@/ui/widgets/FinanceCharts';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type TaskRow = {
@@ -136,6 +137,8 @@ export function DashboardPage() {
           </div>
         </Card>
       </div>
+
+      <FinanceCharts months={6} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
