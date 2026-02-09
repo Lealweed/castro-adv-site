@@ -78,7 +78,7 @@ export function PayablesPage() {
                     <div className="mt-1 text-xs text-white/60">
                       {r.kind === 'fixed' ? 'Fixo' : `${r.value}%`} · Lançamento:{' '}
                       {r.tx ? (
-                        <Link className="text-amber-200 hover:underline" to={`/app/financeiro/${r.tx.id}`}>
+                        <Link className="link-accent" to={`/app/financeiro/${r.tx.id}`}>
                           {r.tx.description}
                         </Link>
                       ) : (

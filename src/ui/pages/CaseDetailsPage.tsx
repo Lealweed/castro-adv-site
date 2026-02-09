@@ -149,7 +149,7 @@ export function CaseDetailsPage() {
                 {row.client?.[0] ? (
                   <Link
                     to={`/app/clientes/${row.client[0].id}`}
-                    className="text-sm font-semibold text-amber-200 hover:underline"
+                    className="link-accent"
                   >
                     {row.client[0].name}
                   </Link>

@@ -443,7 +443,7 @@ export function TasksPage() {
                       {client ? (
                         <div className="mt-1 text-xs text-white/50">
                           Cliente:{' '}
-                          <Link className="text-amber-200 hover:underline" to={`/app/clientes/${client.id}`}>
+                          <Link className="link-accent" to={`/app/clientes/${client.id}`}>
                             {client.name}
                           </Link>
                         </div>
@@ -452,7 +452,7 @@ export function TasksPage() {
                       {kase ? (
                         <div className="mt-1 text-xs text-white/50">
                           Caso:{' '}
-                          <Link className="text-amber-200 hover:underline" to={`/app/casos/${kase.id}`}>
+                          <Link className="link-accent" to={`/app/casos/${kase.id}`}>
                             {kase.title}
                           </Link>
                         </div>

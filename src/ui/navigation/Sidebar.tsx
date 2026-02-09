@@ -30,7 +30,7 @@ export function Sidebar() {
     <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-neutral-950/70 backdrop-blur-xl md:block">
       <div className="flex h-16 items-center gap-3 px-4">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-          <BarChart3 className="h-5 w-5 text-amber-300" />
+          <BarChart3 className="h-5 w-5 text-amber-400" />
         </div>
         <div className="leading-tight">
           <div className="text-sm font-semibold text-white">CRM Jurídico</div>
@@ -48,7 +48,7 @@ export function Sidebar() {
               cn(
                 'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-white/10 text-white'
+                  ? 'bg-amber-400/10 text-white ring-1 ring-amber-400/20'
                   : 'text-white/70 hover:bg-white/5 hover:text-white'
               )
             }
