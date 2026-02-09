@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
-import { FinanceCharts } from '@/ui/widgets/FinanceCharts';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type TaskRow = {
@@ -138,7 +137,7 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      <FinanceCharts months={6} />
+      {/* Heavy finance charts removed from Dashboard to keep mobile fast. */}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 
 import { Card } from '@/ui/widgets/Card';
 import {
@@ -12,6 +12,7 @@ import {
   type FinanceTx,
 } from '@/lib/finance';
 
+
 function todayStr() {
   const d = new Date();
   const y = d.getFullYear();
@@ -20,10 +21,13 @@ function todayStr() {
   return `${y}-${m}-${day}`;
 }
 
+const FinanceChartsLazy = lazy(() => import('@/ui/widgets/FinanceCharts').then((m) => ({ default: m.FinanceCharts })));
+
 export function FinancePage() {
   const [rows, setRows] = useState<FinanceTx[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCharts, setShowCharts] = useState(false);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [type, setType] = useState<'income' | 'expense'>('income');
@@ -171,7 +175,9 @@ export function FinancePage() {
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
 
-      <div className="grid gap-4 lg:grid-cols-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="grid flex-1 gap-4 lg:grid-cols-4">
+
         <Card>
           <div className="text-xs text-white/60">Receitas (pagas)</div>
           <div className="mt-2 text-2xl font-semibold text-white">{centsToBRL(summary.paidIncome)}</div>
@@ -188,7 +194,23 @@ export function FinancePage() {
           <div className="text-xs text-white/60">A pagar</div>
           <div className="mt-2 text-2xl font-semibold text-white">{centsToBRL(summary.plannedExpense)}</div>
         </Card>
+        </div>
+        <button onClick={() => setShowCharts((v) => !v)} className="btn-ghost">
+          {showCharts ? 'Ocultar gráficos' : 'Ver gráficos'}
+        </button>
       </div>
+
+      {showCharts ? (
+        <Card>
+          <div className="text-sm font-semibold text-white">Gráficos</div>
+          <div className="mt-2 text-xs text-white/60">(Carrega mais pesado — recomendado no Wi‑Fi.)</div>
+          <div className="mt-4">
+            <Suspense fallback={<div className="text-sm text-white/70">Carregando gráficos…</div>}>
+              <FinanceChartsLazy months={6} />
+            </Suspense>
+          </div>
+        </Card>
+      ) : null}
 
       {createOpen ? (
         <Card>
