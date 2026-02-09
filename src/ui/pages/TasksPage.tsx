@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { loadCasesLite, type CaseLite } from '@/lib/loadCasesLite';
+import { loadClientsLite } from '@/lib/loadClientsLite';
+import type { ClientLite } from '@/lib/types';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type TaskStatus = 'open' | 'in_progress' | 'paused' | 'done' | 'cancelled';
@@ -23,6 +27,9 @@ type TaskRow = {
 
   created_by_user_id: string | null;
   assigned_to_user_id: string | null;
+
+  client_id: string | null;
+  case_id: string | null;
 
   done_at: string | null;
   completed_by_user_id: string | null;
@@ -56,6 +63,9 @@ export function TasksPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [myUserId, setMyUserId] = useState<string>('');
 
+  const [clients, setClients] = useState<ClientLite[]>([]);
+  const [cases, setCases] = useState<CaseLite[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,9 +77,13 @@ export function TasksPage() {
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [dueAtLocal, setDueAtLocal] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
+  const [clientId, setClientId] = useState('');
+  const [caseId, setCaseId] = useState('');
   const [saving, setSaving] = useState(false);
 
   const profileMap = useMemo(() => new Map(profiles.map((p) => [p.user_id, p] as const)), [profiles]);
+  const clientsMap = useMemo(() => new Map(clients.map((c) => [c.id, c] as const)), [clients]);
+  const casesMap = useMemo(() => new Map(cases.map((c) => [c.id, c] as const)), [cases]);
 
   async function ensureMyProfile() {
     const sb = requireSupabase();
@@ -118,16 +132,22 @@ export function TasksPage() {
       const sb = requireSupabase();
       await getAuthedUser();
 
-      const { data, error: qErr } = await sb
-        .from('tasks')
-        .select(
-          'id,title,description,priority,status_v2,due_at,created_by_user_id,assigned_to_user_id,done_at,completed_by_user_id,paused_at,pause_reason,cancelled_at,cancel_reason,created_at',
-        )
-        .order('created_at', { ascending: false })
-        .limit(500);
+      const [{ data, error: qErr }, clientsLite, casesLite] = await Promise.all([
+        sb
+          .from('tasks')
+          .select(
+            'id,title,description,priority,status_v2,due_at,created_by_user_id,assigned_to_user_id,client_id,case_id,done_at,completed_by_user_id,paused_at,pause_reason,cancelled_at,cancel_reason,created_at',
+          )
+          .order('created_at', { ascending: false })
+          .limit(500),
+        loadClientsLite().catch(() => [] as ClientLite[]),
+        loadCasesLite().catch(() => [] as CaseLite[]),
+      ]);
 
       if (qErr) throw new Error(qErr.message);
       setRows((data || []) as TaskRow[]);
+      setClients(clientsLite);
+      setCases(casesLite);
       setLoading(false);
     } catch (err: any) {
       setError(err?.message || 'Falha ao carregar tarefas.');
@@ -173,6 +193,8 @@ export function TasksPage() {
         priority,
         status_v2: 'open',
         due_at: dueIso,
+        client_id: clientId || null,
+        case_id: caseId || null,
       } as any);
 
       if (iErr) throw new Error(iErr.message);
@@ -183,6 +205,8 @@ export function TasksPage() {
       setPriority('medium');
       setDueAtLocal('');
       setAssignedTo(user.id);
+      setClientId('');
+      setCaseId('');
       setSaving(false);
       await load();
     } catch (err: any) {
@@ -342,9 +366,33 @@ export function TasksPage() {
               </label>
 
               <label className="md:col-span-3 text-sm text-white/80">
+                Cliente (opcional)
+                <select className="select" value={clientId} onChange={(e) => setClientId(e.target.value)}>
+                  <option value="">Sem cliente</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="md:col-span-3 text-sm text-white/80">
+                Caso/Processo (opcional)
+                <select className="select" value={caseId} onChange={(e) => setCaseId(e.target.value)}>
+                  <option value="">Sem caso</option>
+                  {cases.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                      {c.client?.[0]?.name ? ` — ${c.client[0].name}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="md:col-span-3 text-sm text-white/80">
                 Executada por
                 <select className="select" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}>
-                  {/* If no profiles available, fallback to myself */}
                   {(profiles.length ? profiles : [{ user_id: myUserId, display_name: null, email: null, office_id: null }]).map(
                     (p) => (
                       <option key={p.user_id} value={p.user_id}>
@@ -377,6 +425,8 @@ export function TasksPage() {
             {filtered.map((t) => {
               const createdBy = t.created_by_user_id ? profileMap.get(t.created_by_user_id) : null;
               const assignedToP = t.assigned_to_user_id ? profileMap.get(t.assigned_to_user_id) : null;
+              const client = t.client_id ? clientsMap.get(t.client_id) : null;
+              const kase = t.case_id ? casesMap.get(t.case_id) : null;
 
               return (
                 <div key={t.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -384,19 +434,35 @@ export function TasksPage() {
                     <div>
                       <div className="text-sm font-semibold text-white">{t.title}</div>
                       {t.description ? <div className="mt-1 text-xs text-white/60">{t.description}</div> : null}
+
                       <div className="mt-2 text-xs text-white/50">
                         Status: <span className="badge">{t.status_v2}</span> · Prioridade: {t.priority}
                       </div>
-                      <div className="mt-1 text-xs text-white/50">
-                        Prazo: {fmtDT(t.due_at)}
-                      </div>
+                      <div className="mt-1 text-xs text-white/50">Prazo: {fmtDT(t.due_at)}</div>
+
+                      {client ? (
+                        <div className="mt-1 text-xs text-white/50">
+                          Cliente:{' '}
+                          <Link className="text-amber-200 hover:underline" to={`/app/clientes/${client.id}`}>
+                            {client.name}
+                          </Link>
+                        </div>
+                      ) : null}
+
+                      {kase ? (
+                        <div className="mt-1 text-xs text-white/50">
+                          Caso:{' '}
+                          <Link className="text-amber-200 hover:underline" to={`/app/casos/${kase.id}`}>
+                            {kase.title}
+                          </Link>
+                        </div>
+                      ) : null}
+
                       <div className="mt-1 text-xs text-white/50">
                         Criada por: {createdBy ? profileLabel(createdBy) : t.created_by_user_id || '—'} · Executada por:{' '}
                         {assignedToP ? profileLabel(assignedToP) : t.assigned_to_user_id || '—'}
                       </div>
-                      <div className="mt-1 text-xs text-white/50">
-                        Finalizada em: {fmtDT(t.done_at)}
-                      </div>
+                      <div className="mt-1 text-xs text-white/50">Finalizada em: {fmtDT(t.done_at)}</div>
 
                       {t.status_v2 === 'paused' ? (
                         <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-3 text-xs text-white/70">
