@@ -3,49 +3,112 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/ui/widgets/Card';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
+type TaskStatus = 'open' | 'in_progress' | 'paused' | 'done' | 'cancelled';
+
+type Profile = {
+  user_id: string;
+  display_name: string | null;
+  email: string | null;
+  office_id: string | null;
+};
+
 type TaskRow = {
   id: string;
   title: string;
   description: string | null;
-  status: 'open' | 'done' | string;
   priority: 'low' | 'medium' | 'high' | string;
-  due_date: string | null;
+
+  status_v2: TaskStatus;
+  due_at: string | null;
+
+  created_by_user_id: string | null;
+  assigned_to_user_id: string | null;
+
   done_at: string | null;
+  completed_by_user_id: string | null;
+
+  paused_at: string | null;
+  pause_reason: string | null;
+
+  cancelled_at: string | null;
+  cancel_reason: string | null;
+
   created_at: string;
 };
 
-function isOverdue(due: string | null) {
-  if (!due) return false;
-  const today = new Date();
-  const d = new Date(due + 'T00:00:00');
-  // compare date-only
-  return d.getTime() < new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+function fmtDT(iso: string | null) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString();
 }
 
-function isToday(due: string | null) {
-  if (!due) return false;
-  const today = new Date();
-  const d = new Date(due + 'T00:00:00');
-  return (
-    d.getFullYear() === today.getFullYear() &&
-    d.getMonth() === today.getMonth() &&
-    d.getDate() === today.getDate()
-  );
+function toIsoFromDatetimeLocal(value: string) {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isFinite(d.getTime()) ? d.toISOString() : null;
+}
+
+function profileLabel(p: Profile) {
+  return p.display_name || p.email || p.user_id;
 }
 
 export function TasksPage() {
   const [rows, setRows] = useState<TaskRow[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [myUserId, setMyUserId] = useState<string>('');
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [filter, setFilter] = useState<TaskStatus | 'all'>('open');
+
   const [createOpen, setCreateOpen] = useState(false);
   const [title, setTitle] = useState('');
-  const [dueDate, setDueDate] = useState('');
+  const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [dueAtLocal, setDueAtLocal] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const openTasks = useMemo(() => rows.filter((r) => r.status !== 'done'), [rows]);
-  const doneTasks = useMemo(() => rows.filter((r) => r.status === 'done'), [rows]);
+  const profileMap = useMemo(() => new Map(profiles.map((p) => [p.user_id, p] as const)), [profiles]);
+
+  async function ensureMyProfile() {
+    const sb = requireSupabase();
+    const user = await getAuthedUser();
+    setMyUserId(user.id);
+
+    // best-effort upsert profile (so we can show names/emails)
+    try {
+      await sb
+        .from('user_profiles')
+        .upsert(
+          {
+            user_id: user.id,
+            email: (user as any)?.email || null,
+            display_name: (user as any)?.user_metadata?.full_name || (user as any)?.user_metadata?.name || null,
+          } as any,
+          { onConflict: 'user_id' },
+        )
+        .select('user_id')
+        .maybeSingle();
+    } catch {
+      // ignore
+    }
+
+    // Load profiles that the current user can see (own + office members when office_id exists)
+    try {
+      const { data } = await sb
+        .from('user_profiles')
+        .select('user_id,display_name,email,office_id')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      setProfiles((data || []) as Profile[]);
+    } catch {
+      setProfiles([]);
+    }
+
+    // set default assignedTo = me
+    setAssignedTo((prev) => prev || user.id);
+  }
 
   async function load() {
     setLoading(true);
@@ -57,8 +120,11 @@ export function TasksPage() {
 
       const { data, error: qErr } = await sb
         .from('tasks')
-        .select('id,title,description,status,priority,due_date,done_at,created_at')
-        .order('created_at', { ascending: false });
+        .select(
+          'id,title,description,priority,status_v2,due_at,created_by_user_id,assigned_to_user_id,done_at,completed_by_user_id,paused_at,pause_reason,cancelled_at,cancel_reason,created_at',
+        )
+        .order('created_at', { ascending: false })
+        .limit(500);
 
       if (qErr) throw new Error(qErr.message);
       setRows((data || []) as TaskRow[]);
@@ -70,12 +136,27 @@ export function TasksPage() {
   }
 
   useEffect(() => {
-    load();
+    (async () => {
+      await ensureMyProfile();
+      await load();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const filtered = useMemo(() => {
+    if (filter === 'all') return rows;
+    return rows.filter((r) => r.status_v2 === filter);
+  }, [rows, filter]);
+
   async function onCreate() {
     if (!title.trim()) return;
+
+    const dueIso = dueAtLocal ? toIsoFromDatetimeLocal(dueAtLocal) : null;
+    if (dueAtLocal && !dueIso) {
+      setError('Prazo inválido.');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -85,16 +166,23 @@ export function TasksPage() {
 
       const { error: iErr } = await sb.from('tasks').insert({
         user_id: user.id,
+        created_by_user_id: user.id,
+        assigned_to_user_id: assignedTo || user.id,
         title: title.trim(),
+        description: description.trim() || null,
         priority,
-        due_date: dueDate ? dueDate : null,
-      });
+        status_v2: 'open',
+        due_at: dueIso,
+      } as any);
 
       if (iErr) throw new Error(iErr.message);
+
       setCreateOpen(false);
       setTitle('');
-      setDueDate('');
+      setDescription('');
       setPriority('medium');
+      setDueAtLocal('');
+      setAssignedTo(user.id);
       setSaving(false);
       await load();
     } catch (err: any) {
@@ -103,38 +191,122 @@ export function TasksPage() {
     }
   }
 
-  async function toggleDone(t: TaskRow) {
+  async function updateTask(id: string, patch: Partial<TaskRow>) {
+    const sb = requireSupabase();
+    await getAuthedUser();
+    const { error: uErr } = await sb.from('tasks').update(patch as any).eq('id', id);
+    if (uErr) throw new Error(uErr.message);
+  }
+
+  async function markDone(t: TaskRow) {
     try {
-      const sb = requireSupabase();
-      await getAuthedUser();
-
-      const nextDone = t.status !== 'done';
-      const { error: uErr } = await sb
-        .from('tasks')
-        .update({ status: nextDone ? 'done' : 'open', done_at: nextDone ? new Date().toISOString() : null })
-        .eq('id', t.id);
-
-      if (uErr) throw new Error(uErr.message);
+      const user = await getAuthedUser();
+      await updateTask(t.id, {
+        status_v2: 'done',
+        done_at: new Date().toISOString(),
+        completed_by_user_id: user.id,
+      } as any);
       await load();
     } catch (err: any) {
-      setError(err?.message || 'Falha ao atualizar tarefa.');
+      setError(err?.message || 'Falha ao concluir tarefa.');
+    }
+  }
+
+  async function pauseTask(t: TaskRow) {
+    const reason = prompt('Motivo da pausa:');
+    if (!reason?.trim()) return;
+
+    try {
+      await updateTask(t.id, {
+        status_v2: 'paused',
+        paused_at: new Date().toISOString(),
+        pause_reason: reason.trim(),
+      } as any);
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao pausar tarefa.');
+    }
+  }
+
+  async function cancelTask(t: TaskRow) {
+    const reason = prompt('Motivo do cancelamento:');
+    if (!reason?.trim()) return;
+
+    try {
+      await updateTask(t.id, {
+        status_v2: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        cancel_reason: reason.trim(),
+      } as any);
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao cancelar tarefa.');
+    }
+  }
+
+  async function startTask(t: TaskRow) {
+    try {
+      await updateTask(t.id, { status_v2: 'in_progress' } as any);
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao iniciar tarefa.');
+    }
+  }
+
+  async function reopenTask(t: TaskRow) {
+    try {
+      await updateTask(t.id, {
+        status_v2: 'open',
+        done_at: null,
+        completed_by_user_id: null,
+        cancelled_at: null,
+        cancel_reason: null,
+        paused_at: null,
+        pause_reason: null,
+      } as any);
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao reabrir tarefa.');
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-white">Tarefas</h1>
-          <p className="text-sm text-white/60">Suas tarefas (Supabase).</p>
+          <p className="text-sm text-white/60">Criada por / Executada por · prazos · pausas/cancelamentos com motivo.</p>
         </div>
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="btn-primary"
-        >
+        <button onClick={() => setCreateOpen(true)} className="btn-primary">
           Nova tarefa
         </button>
       </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {(
+          [
+            { id: 'open', label: 'Abertas' },
+            { id: 'in_progress', label: 'Em andamento' },
+            { id: 'paused', label: 'Pausadas' },
+            { id: 'done', label: 'Concluídas' },
+            { id: 'cancelled', label: 'Canceladas' },
+            { id: 'all', label: 'Todas' },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setFilter(t.id)}
+            className={
+              'rounded-xl border border-white/10 px-3 py-1.5 text-sm font-semibold ' +
+              (filter === t.id ? 'bg-white text-neutral-950' : 'bg-white/5 text-white/80 hover:bg-white/10')
+            }
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {error ? <div className="text-sm text-red-200">{error}</div> : null}
 
       {createOpen ? (
         <Card>
@@ -143,123 +315,140 @@ export function TasksPage() {
             <div className="grid gap-3 md:grid-cols-3">
               <label className="md:col-span-2 text-sm text-white/80">
                 Título
-                <input
-                  className="input"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
+                <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
               </label>
               <label className="text-sm text-white/80">
                 Prioridade
-                <select
-                  className="select"
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as any)}
-                >
+                <select className="select" value={priority} onChange={(e) => setPriority(e.target.value as any)}>
                   <option value="low">Baixa</option>
                   <option value="medium">Média</option>
                   <option value="high">Alta</option>
                 </select>
               </label>
+
+              <label className="md:col-span-2 text-sm text-white/80">
+                Descrição
+                <input className="input" value={description} onChange={(e) => setDescription(e.target.value)} />
+              </label>
+
               <label className="text-sm text-white/80">
-                Vencimento
+                Prazo (data e hora)
                 <input
-                  type="date"
+                  type="datetime-local"
                   className="input"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  value={dueAtLocal}
+                  onChange={(e) => setDueAtLocal(e.target.value)}
                 />
+              </label>
+
+              <label className="md:col-span-3 text-sm text-white/80">
+                Executada por
+                <select className="select" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}>
+                  {/* If no profiles available, fallback to myself */}
+                  {(profiles.length ? profiles : [{ user_id: myUserId, display_name: null, email: null, office_id: null }]).map(
+                    (p) => (
+                      <option key={p.user_id} value={p.user_id}>
+                        {profileLabel(p)}
+                      </option>
+                    ),
+                  )}
+                </select>
               </label>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <button
-                disabled={saving}
-                onClick={onCreate}
-                className="btn-primary"
-              >
+              <button disabled={saving} onClick={onCreate} className="btn-primary">
                 {saving ? 'Salvando…' : 'Salvar'}
               </button>
-              <button
-                disabled={saving}
-                onClick={() => setCreateOpen(false)}
-                className="btn-ghost"
-              >
+              <button disabled={saving} onClick={() => setCreateOpen(false)} className="btn-ghost">
                 Cancelar
               </button>
             </div>
-
-            {error ? <div className="text-sm text-red-200">{error}</div> : null}
           </div>
         </Card>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <div className="text-sm font-semibold text-white">Em aberto</div>
-          <div className="mt-4 grid gap-2">
-            {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
-            {!loading && openTasks.length === 0 ? (
-              <div className="text-sm text-white/60">Nenhuma tarefa em aberto.</div>
-            ) : null}
-            {openTasks.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => void toggleDone(t)}
-                className="flex w-full items-start justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left hover:bg-white/10"
-              >
-                <div>
-                  <div className="text-sm font-semibold text-white">{t.title}</div>
-                  <div className="mt-1 text-xs text-white/60">
-                    {t.due_date ? (
-                      <span
-                        className={
-                          isOverdue(t.due_date)
-                            ? 'text-red-200'
-                            : isToday(t.due_date)
-                              ? 'text-amber-200'
-                              : 'text-white/60'
-                        }
-                      >
-                        Vence em: {t.due_date}
-                      </span>
-                    ) : (
-                      'Sem vencimento'
-                    )}
-                    {' · '}Prioridade: {t.priority}
+      <Card>
+        {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
+        {!loading && filtered.length === 0 ? <div className="text-sm text-white/60">Nenhuma tarefa.</div> : null}
+
+        {!loading && filtered.length ? (
+          <div className="grid gap-2">
+            {filtered.map((t) => {
+              const createdBy = t.created_by_user_id ? profileMap.get(t.created_by_user_id) : null;
+              const assignedToP = t.assigned_to_user_id ? profileMap.get(t.assigned_to_user_id) : null;
+
+              return (
+                <div key={t.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-white">{t.title}</div>
+                      {t.description ? <div className="mt-1 text-xs text-white/60">{t.description}</div> : null}
+                      <div className="mt-2 text-xs text-white/50">
+                        Status: <span className="badge">{t.status_v2}</span> · Prioridade: {t.priority}
+                      </div>
+                      <div className="mt-1 text-xs text-white/50">
+                        Prazo: {fmtDT(t.due_at)}
+                      </div>
+                      <div className="mt-1 text-xs text-white/50">
+                        Criada por: {createdBy ? profileLabel(createdBy) : t.created_by_user_id || '—'} · Executada por:{' '}
+                        {assignedToP ? profileLabel(assignedToP) : t.assigned_to_user_id || '—'}
+                      </div>
+                      <div className="mt-1 text-xs text-white/50">
+                        Finalizada em: {fmtDT(t.done_at)}
+                      </div>
+
+                      {t.status_v2 === 'paused' ? (
+                        <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-3 text-xs text-white/70">
+                          Pausada em: {fmtDT(t.paused_at)} · Motivo: {t.pause_reason || '—'}
+                        </div>
+                      ) : null}
+
+                      {t.status_v2 === 'cancelled' ? (
+                        <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-3 text-xs text-white/70">
+                          Cancelada em: {fmtDT(t.cancelled_at)} · Motivo: {t.cancel_reason || '—'}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {t.status_v2 === 'open' ? (
+                        <button onClick={() => void startTask(t)} className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs">
+                          Iniciar
+                        </button>
+                      ) : null}
+
+                      {t.status_v2 === 'in_progress' || t.status_v2 === 'open' ? (
+                        <button onClick={() => void pauseTask(t)} className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs">
+                          Pausar
+                        </button>
+                      ) : null}
+
+                      {t.status_v2 !== 'done' && t.status_v2 !== 'cancelled' ? (
+                        <button onClick={() => void markDone(t)} className="btn-primary !rounded-lg !px-3 !py-1.5 !text-xs">
+                          Concluir
+                        </button>
+                      ) : null}
+
+                      {t.status_v2 !== 'cancelled' && t.status_v2 !== 'done' ? (
+                        <button onClick={() => void cancelTask(t)} className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs">
+                          Cancelar
+                        </button>
+                      ) : null}
+
+                      {t.status_v2 === 'done' || t.status_v2 === 'cancelled' ? (
+                        <button onClick={() => void reopenTask(t)} className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs">
+                          Reabrir
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
-                <div className="mt-0.5 text-xs font-semibold text-white/70">Concluir</div>
-              </button>
-            ))}
+              );
+            })}
           </div>
-        </Card>
-
-        <Card>
-          <div className="text-sm font-semibold text-white">Concluídas</div>
-          <div className="mt-4 grid gap-2">
-            {loading ? null : null}
-            {!loading && doneTasks.length === 0 ? (
-              <div className="text-sm text-white/60">Nenhuma tarefa concluída ainda.</div>
-            ) : null}
-            {doneTasks.slice(0, 10).map((t) => (
-              <button
-                key={t.id}
-                onClick={() => void toggleDone(t)}
-                className="flex w-full items-start justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left opacity-80 hover:bg-white/10"
-              >
-                <div>
-                  <div className="text-sm font-semibold text-white line-through">{t.title}</div>
-                  <div className="mt-1 text-xs text-white/50">Clique para reabrir</div>
-                </div>
-                <div className="mt-0.5 text-xs font-semibold text-white/60">Reabrir</div>
-              </button>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      {error && !createOpen ? <div className="text-sm text-red-200">{error}</div> : null}
+        ) : null}
+      </Card>
     </div>
   );
 }
