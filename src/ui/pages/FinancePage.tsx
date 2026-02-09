@@ -156,9 +156,17 @@ export function FinancePage() {
             ligada).
           </p>
         </div>
-        <button onClick={() => setCreateOpen(true)} className="btn-primary">
-          Novo lançamento
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <a href="/app/financeiro/parceiros" className="btn-ghost">
+            Parceiros
+          </a>
+          <a href="/app/financeiro/a-pagar" className="btn-ghost">
+            A pagar
+          </a>
+          <button onClick={() => setCreateOpen(true)} className="btn-primary">
+            Novo lançamento
+          </button>
+        </div>
       </div>
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
@@ -281,7 +289,7 @@ export function FinancePage() {
 
           <div className="mt-3 grid gap-2">
             {rows.map((r) => (
-              <div key={r.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <a key={r.id} href={`/app/financeiro/${r.id}`} className="block rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-sm font-semibold text-white">
@@ -301,7 +309,7 @@ export function FinancePage() {
                   </div>
                   <div className="text-sm font-semibold text-white">{centsToBRL(r.amount_cents)}</div>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         </div>

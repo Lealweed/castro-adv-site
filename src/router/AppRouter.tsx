@@ -16,6 +16,9 @@ import { CasesPage } from '@/ui/pages/CasesPage';
 import { CaseDetailsPage } from '@/ui/pages/CaseDetailsPage';
 
 import { FinancePage } from '@/ui/pages/FinancePage';
+import { FinanceTxDetailsPage } from '@/ui/pages/finance/FinanceTxDetailsPage';
+import { PartnersPage } from '@/ui/pages/finance/PartnersPage';
+import { PayablesPage } from '@/ui/pages/finance/PayablesPage';
 import { AiReportsPage } from '@/ui/pages/AiReportsPage';
 import { ClientPortalPage } from '@/ui/pages/ClientPortalPage';
 import { SettingsPage } from '@/ui/pages/SettingsPage';
@@ -48,6 +51,9 @@ export function AppRouter() {
             <Route path="/app/agenda" element={<AgendaPage />} />
             <Route path="/app/tarefas" element={<TasksPage />} />
             <Route path="/app/financeiro" element={<FinancePage />} />
+            <Route path="/app/financeiro/parceiros" element={<PartnersPage />} />
+            <Route path="/app/financeiro/a-pagar" element={<PayablesPage />} />
+            <Route path="/app/financeiro/:txId" element={<FinanceTxDetailsPage />} />
             <Route path="/app/relatorios-ia" element={<AiReportsPage />} />
             <Route path="/app/portal" element={<ClientPortalPage />} />
             <Route path="/app/configuracoes" element={<SettingsPage />} />
