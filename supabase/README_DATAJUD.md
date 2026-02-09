@@ -17,7 +17,9 @@ supabase link --project-ref <YOUR_PROJECT_REF>
 
 # Set env vars for the function (optional)
 supabase secrets set DATAJUD_BASE_URL="https://api-publica.datajud.cnj.jus.br"
-# If the CNJ endpoint requires a key, set it too:
+# DataJud public key (from CNJ wiki). It can rotate.
+# Header format: Authorization: APIKey <key>
+# Store ONLY the key value (without "APIKey ")
 # supabase secrets set DATAJUD_API_KEY="..."
 
 supabase functions deploy datajud-last-movement

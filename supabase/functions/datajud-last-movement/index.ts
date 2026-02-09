@@ -41,15 +41,15 @@ serve(async (req) => {
     // against the official public API endpoint.
     const baseUrl = Deno.env.get('DATAJUD_BASE_URL') || 'https://api-publica.datajud.cnj.jus.br';
 
-    // In many CNJ services, the API key may be required even if "public".
-    // Keep it optional for now.
+    // DataJud Public API uses a *public* API key that can rotate.
+    // Wiki format: Authorization: APIKey <PUBLIC_KEY>
     const apiKey = Deno.env.get('DATAJUD_API_KEY');
 
     const url = `${baseUrl}/api_publica/processos/${cnj}`;
 
     const resp = await fetch(url, {
       headers: {
-        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+        ...(apiKey ? { Authorization: `APIKey ${apiKey}` } : {}),
         'user-agent': 'crm-castro-adv/1.0',
       },
     });
