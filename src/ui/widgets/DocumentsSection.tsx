@@ -3,18 +3,22 @@ import { useEffect, useMemo, useState } from 'react';
 import type { DocumentRow } from '@/lib/documents';
 import { deleteDocument, getDocumentDownloadUrl, listClientDocuments, uploadClientDocument } from '@/lib/documents';
 
-export function DocumentsSection({ clientId }: { clientId: string }) {
+export function DocumentsSection({ clientId, caseId }: { clientId: string; caseId?: string | null }) {
   const [rows, setRows] = useState<DocumentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<'personal' | 'case'>('personal');
+  const [tab, setTab] = useState<'personal' | 'case'>(caseId ? 'case' : 'personal');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const filtered = useMemo(() => rows.filter((r) => r.kind === tab), [rows, tab]);
+  const filtered = useMemo(() => {
+    if (tab === 'personal') return rows.filter((r) => r.kind === 'personal');
+    if (caseId) return rows.filter((r) => r.kind === 'case' && r.case_id === caseId);
+    return rows.filter((r) => r.kind === 'case');
+  }, [rows, tab, caseId]);
 
   async function load() {
     setLoading(true);
@@ -39,7 +43,7 @@ export function DocumentsSection({ clientId }: { clientId: string }) {
     setSaving(true);
     setError(null);
     try {
-      await uploadClientDocument({ clientId, kind: tab, title: title.trim() || file.name, file });
+      await uploadClientDocument({ clientId, kind: tab, title: title.trim() || file.name, file, caseId: tab === 'case' ? caseId || null : null });
       setUploadOpen(false);
       setTitle('');
       setFile(null);

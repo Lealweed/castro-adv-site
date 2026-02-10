@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { DocumentsSection } from '@/ui/widgets/DocumentsSection';
 import { fetchDatajudLastMovement } from '@/lib/datajud';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
@@ -201,6 +202,8 @@ export function CaseDetailsPage() {
           </div>
         </div>
       </Card>
+
+      {!loading && row?.client_id ? <DocumentsSection clientId={row.client_id} caseId={row.id} /> : null}
     </div>
   );
 }
