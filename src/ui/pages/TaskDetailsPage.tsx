@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
 import { TaskAttachmentsSection } from '@/ui/widgets/TaskAttachmentsSection';
+import { TimelineSection } from '@/ui/widgets/TimelineSection';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type TaskRow = {
@@ -139,6 +140,8 @@ export function TaskDetailsPage() {
       {!loading && row ? (
         <TaskAttachmentsSection taskId={row.id} clientId={row.client_id} caseId={row.case_id} />
       ) : null}
+
+      {!loading && row ? <TimelineSection taskId={row.id} clientId={row.client_id} caseId={row.case_id} /> : null}
     </div>
   );
 }

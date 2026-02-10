@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
 import { DocumentsSection } from '@/ui/widgets/DocumentsSection';
+import { TimelineSection } from '@/ui/widgets/TimelineSection';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type ClientRow = {
@@ -142,6 +143,8 @@ export function ClientDetailsPage() {
           <DocumentsSection clientId={clientId} />
         </Card>
       ) : null}
+
+      {clientId ? <TimelineSection clientId={clientId} /> : null}
     </div>
   );
 }

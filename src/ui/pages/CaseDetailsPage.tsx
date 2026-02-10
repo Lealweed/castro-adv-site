@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
 import { DocumentsSection } from '@/ui/widgets/DocumentsSection';
+import { TimelineSection } from '@/ui/widgets/TimelineSection';
 import { fetchDatajudLastMovement } from '@/lib/datajud';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
@@ -204,6 +205,8 @@ export function CaseDetailsPage() {
       </Card>
 
       {!loading && row?.client_id ? <DocumentsSection clientId={row.client_id} caseId={row.id} /> : null}
+
+      {!loading && row ? <TimelineSection caseId={row.id} clientId={row.client_id} /> : null}
     </div>
   );
 }
