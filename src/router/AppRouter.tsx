@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { RequireAuth } from '@/auth/RequireAuth';
+import { RequireRole } from '@/auth/RequireRole';
 import { AuthLayout } from '@/ui/layouts/AuthLayout';
 import { AppLayout } from '@/ui/layouts/AppLayout';
 import { PublicLayout } from '@/ui/layouts/PublicLayout';
@@ -22,6 +23,7 @@ import { PayablesPage } from '@/ui/pages/finance/PayablesPage';
 import { AiReportsPage } from '@/ui/pages/AiReportsPage';
 import { ClientPortalPage } from '@/ui/pages/ClientPortalPage';
 import { SettingsPage } from '@/ui/pages/SettingsPage';
+import { AuditPage } from '@/ui/pages/AuditPage';
 import { AgendaPage } from '@/ui/pages/AgendaPage';
 import { TasksPage } from '@/ui/pages/TasksPage';
 import { TaskDetailsPage } from '@/ui/pages/TaskDetailsPage';
@@ -52,13 +54,20 @@ export function AppRouter() {
             <Route path="/app/agenda" element={<AgendaPage />} />
             <Route path="/app/tarefas" element={<TasksPage />} />
             <Route path="/app/tarefas/:taskId" element={<TaskDetailsPage />} />
-            <Route path="/app/financeiro" element={<FinancePage />} />
-            <Route path="/app/financeiro/parceiros" element={<PartnersPage />} />
-            <Route path="/app/financeiro/a-pagar" element={<PayablesPage />} />
-            <Route path="/app/financeiro/:txId" element={<FinanceTxDetailsPage />} />
+            <Route element={<RequireRole allowed={["admin", "finance"]} />}>
+              <Route path="/app/financeiro" element={<FinancePage />} />
+              <Route path="/app/financeiro/parceiros" element={<PartnersPage />} />
+              <Route path="/app/financeiro/a-pagar" element={<PayablesPage />} />
+              <Route path="/app/financeiro/:txId" element={<FinanceTxDetailsPage />} />
+            </Route>
+
             <Route path="/app/relatorios-ia" element={<AiReportsPage />} />
             <Route path="/app/portal" element={<ClientPortalPage />} />
             <Route path="/app/configuracoes" element={<SettingsPage />} />
+
+            <Route element={<RequireRole allowed={["admin"]} />}>
+              <Route path="/app/configuracoes/auditoria" element={<AuditPage />} />
+            </Route>
           </Route>
         </Route>
 

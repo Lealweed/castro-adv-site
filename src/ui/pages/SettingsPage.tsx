@@ -261,6 +261,14 @@ export function SettingsPage() {
               <Field label="Nome" value={office.name} />
               <Field label="Seu papel" value={roleLabel(myMember?.role || 'member')} />
               <Field label="Membros" value={String(members.length)} />
+              {isAdmin ? (
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs text-white/60">Auditoria</div>
+                  <a className="mt-1 block text-sm font-semibold text-amber-200 hover:underline" href="/app/configuracoes/auditoria">
+                    Abrir logs
+                  </a>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </Card>
