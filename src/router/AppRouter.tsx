@@ -24,6 +24,7 @@ import { ClientPortalPage } from '@/ui/pages/ClientPortalPage';
 import { SettingsPage } from '@/ui/pages/SettingsPage';
 import { AgendaPage } from '@/ui/pages/AgendaPage';
 import { TasksPage } from '@/ui/pages/TasksPage';
+import { TaskDetailsPage } from '@/ui/pages/TaskDetailsPage';
 
 export function AppRouter() {
   return (
@@ -50,6 +51,7 @@ export function AppRouter() {
             <Route path="/app/casos/:caseId" element={<CaseDetailsPage />} />
             <Route path="/app/agenda" element={<AgendaPage />} />
             <Route path="/app/tarefas" element={<TasksPage />} />
+            <Route path="/app/tarefas/:taskId" element={<TaskDetailsPage />} />
             <Route path="/app/financeiro" element={<FinancePage />} />
             <Route path="/app/financeiro/parceiros" element={<PartnersPage />} />
             <Route path="/app/financeiro/a-pagar" element={<PayablesPage />} />

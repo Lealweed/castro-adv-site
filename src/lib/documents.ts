@@ -80,6 +80,63 @@ export async function getDocumentDownloadUrl(filePath: string) {
   return data.signedUrl;
 }
 
+export async function listTaskDocuments(taskId: string) {
+  const sb = requireSupabase();
+  await getAuthedUser();
+
+  const { data, error } = await sb
+    .from('documents')
+    .select('id,client_id,case_id,task_id,kind,title,file_path,mime_type,size_bytes,created_at')
+    .eq('task_id', taskId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data || []) as DocumentRow[];
+}
+
+export async function uploadTaskDocument(args: {
+  taskId: string;
+  clientId: string;
+  caseId?: string | null;
+  title: string;
+  file: File;
+}) {
+  const sb = requireSupabase();
+  const user = await getAuthedUser();
+
+  const docId = crypto.randomUUID();
+  const safeName = (args.file.name || 'arquivo').replace(/[^a-zA-Z0-9._-]/g, '_');
+  const casePart = args.caseId ? `/${args.caseId}` : '';
+
+  const path = `clients/${args.clientId}/tasks/${args.taskId}${casePart}/${docId}_${safeName}`;
+
+  const { error: upErr } = await sb.storage.from('documents').upload(path, args.file, {
+    upsert: false,
+    contentType: args.file.type || undefined,
+  });
+  if (upErr) throw new Error(upErr.message);
+
+  const { error: insErr } = await sb.from('documents').insert({
+    id: docId,
+    user_id: user.id,
+    client_id: args.clientId,
+    case_id: args.caseId || null,
+    task_id: args.taskId,
+    kind: 'task',
+    title: args.title.trim() || args.file.name,
+    file_path: path,
+    mime_type: args.file.type || null,
+    size_bytes: args.file.size || null,
+  } as any);
+
+  if (insErr) {
+    await sb.storage.from('documents').remove([path]).catch(() => null);
+    throw new Error(insErr.message);
+  }
+
+  return { id: docId, file_path: path };
+}
+
 export async function deleteDocument(doc: { id: string; file_path: string }) {
   const sb = requireSupabase();
   await getAuthedUser();

@@ -432,7 +432,9 @@ export function TasksPage() {
                 <div key={t.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <div className="text-sm font-semibold text-white">{t.title}</div>
+                      <Link to={`/app/tarefas/${t.id}`} className="text-sm font-semibold text-white hover:underline">
+                        {t.title}
+                      </Link>
                       {t.description ? <div className="mt-1 text-xs text-white/60">{t.description}</div> : null}
 
                       <div className="mt-2 text-xs text-white/50">
