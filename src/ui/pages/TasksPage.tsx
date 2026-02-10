@@ -86,6 +86,7 @@ export function TasksPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [filter, setFilter] = useState<TaskStatus | 'all'>('open');
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
 
   const [createOpen, setCreateOpen] = useState(false);
   const [title, setTitle] = useState('');
@@ -191,9 +192,40 @@ export function TasksPage() {
   }, []);
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return rows;
-    return rows.filter((r) => r.status_v2 === filter);
-  }, [rows, filter]);
+    let out = rows;
+    if (filter !== 'all') out = out.filter((r) => r.status_v2 === filter);
+
+    if (isAdmin && assigneeFilter !== 'all') {
+      out = out.filter((r) => (r.assigned_to_user_id || '') === assigneeFilter);
+    }
+
+    return out;
+  }, [rows, filter, isAdmin, assigneeFilter]);
+
+  const stats = useMemo(() => {
+    const openish = rows.filter((r) => r.status_v2 !== 'done' && r.status_v2 !== 'cancelled');
+    const overdue = openish.filter((r) => {
+      const b = dueBadge(r as any);
+      return b?.label === 'Atrasada';
+    });
+    const due48 = openish.filter((r) => {
+      const b = dueBadge(r as any);
+      return b?.label === 'Vence hoje' || b?.label === 'Vence em 48h';
+    });
+
+    const byAssignee = new Map<string, { total: number; overdue: number; due48: number }>();
+    for (const r of openish) {
+      const key = r.assigned_to_user_id || '—';
+      const cur = byAssignee.get(key) || { total: 0, overdue: 0, due48: 0 };
+      cur.total += 1;
+      const b = dueBadge(r as any);
+      if (b?.label === 'Atrasada') cur.overdue += 1;
+      if (b?.label === 'Vence hoje' || b?.label === 'Vence em 48h') cur.due48 += 1;
+      byAssignee.set(key, cur);
+    }
+
+    return { overdue: overdue.length, due48: due48.length, byAssignee };
+  }, [rows]);
 
   async function onCreate() {
     if (!title.trim()) return;
@@ -341,6 +373,31 @@ export function TasksPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        {isAdmin ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80">
+              Críticas (48h): <span className="text-amber-200">{stats.due48}</span>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80">
+              Atrasadas: <span className="text-red-200">{stats.overdue}</span>
+            </div>
+
+            <select
+              className="select !mt-0 !w-[240px]"
+              value={assigneeFilter}
+              onChange={(e) => setAssigneeFilter(e.target.value)}
+              title="Filtrar por responsável"
+            >
+              <option value="all">Equipe (todos)</option>
+              {profiles.map((p) => (
+                <option key={p.user_id} value={p.user_id}>
+                  {profileLabel(p)}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+
         {(
           [
             { id: 'open', label: 'Abertas' },
