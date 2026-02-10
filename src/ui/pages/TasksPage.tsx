@@ -49,6 +49,20 @@ function fmtDT(iso: string | null) {
   return new Date(iso).toLocaleString();
 }
 
+function dueBadge(t: { due_at: string | null; status_v2: TaskStatus }) {
+  if (!t.due_at) return null;
+  if (t.status_v2 === 'done' || t.status_v2 === 'cancelled') return null;
+
+  const due = new Date(t.due_at).getTime();
+  const now = Date.now();
+  const diffH = (due - now) / 36e5;
+
+  if (diffH < 0) return { label: 'Atrasada', cls: 'badge border-red-400/30 bg-red-400/10 text-red-200' };
+  if (diffH <= 24) return { label: 'Vence hoje', cls: 'badge badge-gold' };
+  if (diffH <= 48) return { label: 'Vence em 48h', cls: 'badge border-amber-400/30 bg-amber-400/10 text-amber-200' };
+  return null;
+}
+
 function toIsoFromDatetimeLocal(value: string) {
   if (!value) return null;
   const d = new Date(value);
@@ -498,7 +512,11 @@ export function TasksPage() {
                       {t.description ? <div className="mt-1 text-xs text-white/60">{t.description}</div> : null}
 
                       <div className="mt-2 text-xs text-white/50">
-                        Status: <span className="badge">{t.status_v2}</span> · Prioridade: {t.priority}
+                        Status: <span className="badge">{t.status_v2}</span> · Prioridade: {t.priority}{' '}
+                        {(() => {
+                          const b = dueBadge(t);
+                          return b ? <span className={"ml-2 " + b.cls}>{b.label}</span> : null;
+                        })()}
                       </div>
                       <div className="mt-1 text-xs text-white/50">Prazo: {fmtDT(t.due_at)}</div>
 
