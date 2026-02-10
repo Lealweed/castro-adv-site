@@ -13,6 +13,10 @@ export type AuditLogRow = {
   created_at: string;
   before_data: any | null;
   after_data: any | null;
+  profile?: {
+    email: string | null;
+    display_name: string | null;
+  }[] | null;
 };
 
 export async function listAuditLogs(args?: {
@@ -28,7 +32,7 @@ export async function listAuditLogs(args?: {
 
   let q = sb
     .from('audit_logs')
-    .select('id,office_id,user_id,action,table_name,record_id,client_id,case_id,task_id,created_at,before_data,after_data')
+    .select('id,office_id,user_id,action,table_name,record_id,client_id,case_id,task_id,created_at,before_data,after_data, profile:user_profiles(email,display_name)')
     .order('created_at', { ascending: false })
     .limit(args?.limit ?? 30);
 
