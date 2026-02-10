@@ -5,6 +5,7 @@ import { Card } from '@/ui/widgets/Card';
 import { loadCasesLite, type CaseLite } from '@/lib/loadCasesLite';
 import { loadClientsLite } from '@/lib/loadClientsLite';
 import type { ClientLite } from '@/lib/types';
+import { getMyOfficeRole } from '@/lib/roles';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type TaskStatus = 'open' | 'in_progress' | 'paused' | 'done' | 'cancelled';
@@ -62,6 +63,7 @@ export function TasksPage() {
   const [rows, setRows] = useState<TaskRow[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [myUserId, setMyUserId] = useState<string>('');
+  const [role, setRole] = useState<string>('');
 
   const [clients, setClients] = useState<ClientLite[]>([]);
   const [cases, setCases] = useState<CaseLite[]>([]);
@@ -77,11 +79,14 @@ export function TasksPage() {
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [dueAtLocal, setDueAtLocal] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
+  const [multi, setMulti] = useState(false);
+  const [assignees, setAssignees] = useState<string[]>([]);
   const [clientId, setClientId] = useState('');
   const [caseId, setCaseId] = useState('');
   const [saving, setSaving] = useState(false);
 
   const profileMap = useMemo(() => new Map(profiles.map((p) => [p.user_id, p] as const)), [profiles]);
+  const isAdmin = role === 'admin';
   const clientsMap = useMemo(() => new Map(clients.map((c) => [c.id, c] as const)), [clients]);
   const casesMap = useMemo(() => new Map(cases.map((c) => [c.id, c] as const)), [cases]);
 
@@ -89,6 +94,14 @@ export function TasksPage() {
     const sb = requireSupabase();
     const user = await getAuthedUser();
     setMyUserId(user.id);
+
+    // role (admin can manage team tasks)
+    try {
+      const r = await getMyOfficeRole();
+      setRole(r);
+    } catch {
+      setRole('');
+    }
 
     // best-effort upsert profile (so we can show names/emails)
     try {
@@ -122,7 +135,7 @@ export function TasksPage() {
 
     // set default assignedTo = me
     setAssignedTo((prev) => prev || user.id);
-  }
+    setAssignees((prev) => (prev.length ? prev : [user.id]));  }
 
   async function load() {
     setLoading(true);
@@ -184,10 +197,13 @@ export function TasksPage() {
       const sb = requireSupabase();
       const user = await getAuthedUser();
 
-      const { error: iErr } = await sb.from('tasks').insert({
+      const targets = isAdmin && multi ? (assignees.length ? assignees : [assignedTo || user.id]) : [assignedTo || user.id];
+      const groupId = isAdmin && multi && targets.length > 1 ? crypto.randomUUID() : null;
+
+      const payload = targets.map((uid) => ({
         user_id: user.id,
         created_by_user_id: user.id,
-        assigned_to_user_id: assignedTo || user.id,
+        assigned_to_user_id: uid,
         title: title.trim(),
         description: description.trim() || null,
         priority,
@@ -195,8 +211,10 @@ export function TasksPage() {
         due_at: dueIso,
         client_id: clientId || null,
         case_id: caseId || null,
-      } as any);
+        task_group_id: groupId,
+      }));
 
+      const { error: iErr } = await sb.from('tasks').insert(payload as any);
       if (iErr) throw new Error(iErr.message);
 
       setCreateOpen(false);
@@ -205,6 +223,8 @@ export function TasksPage() {
       setPriority('medium');
       setDueAtLocal('');
       setAssignedTo(user.id);
+      setMulti(false);
+      setAssignees([user.id]);
       setClientId('');
       setCaseId('');
       setSaving(false);
@@ -392,16 +412,56 @@ export function TasksPage() {
 
               <label className="md:col-span-3 text-sm text-white/80">
                 Executada por
-                <select className="select" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}>
-                  {(profiles.length ? profiles : [{ user_id: myUserId, display_name: null, email: null, office_id: null }]).map(
-                    (p) => (
-                      <option key={p.user_id} value={p.user_id}>
-                        {profileLabel(p)}
-                      </option>
-                    ),
-                  )}
+                <select
+                  className="select"
+                  value={assignedTo}
+                  onChange={(e) => setAssignedTo(e.target.value)}
+                  disabled={!isAdmin}
+                >
+                  {(profiles.length ? profiles : [{ user_id: myUserId, display_name: null, email: null, office_id: null }]).map((p) => (
+                    <option key={p.user_id} value={p.user_id}>
+                      {profileLabel(p)}
+                    </option>
+                  ))}
                 </select>
+                {!isAdmin ? <div className="mt-1 text-xs text-white/50">Apenas administradores podem delegar tarefas.</div> : null}
               </label>
+
+              {isAdmin ? (
+                <div className="md:col-span-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-white">Delegar para mais de 1 pessoa</div>
+                      <div className="text-xs text-white/60">O sistema cria 1 tarefa por responsável (cada um responde a sua).</div>
+                    </div>
+                    <label className="inline-flex items-center gap-2 text-sm font-semibold text-white/80">
+                      <input type="checkbox" checked={multi} onChange={(e) => setMulti(e.target.checked)} />
+                      Ativar
+                    </label>
+                  </div>
+
+                  {multi ? (
+                    <div className="mt-3 grid gap-2 md:grid-cols-2">
+                      {profiles.map((p) => (
+                        <label key={p.user_id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white/80">
+                          <input
+                            type="checkbox"
+                            checked={assignees.includes(p.user_id)}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setAssignees((curr) => {
+                                if (checked) return Array.from(new Set([...curr, p.user_id]));
+                                return curr.filter((x) => x !== p.user_id);
+                              });
+                            }}
+                          />
+                          {profileLabel(p)}
+                        </label>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap gap-3">
