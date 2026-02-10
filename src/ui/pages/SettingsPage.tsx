@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { Card } from '@/ui/widgets/Card';
+import { acceptOfficeInvite, createOfficeInvite, listMyOfficeInvites } from '@/lib/offices';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type Office = {
@@ -19,6 +20,16 @@ type OfficeMemberRow = {
     email: string | null;
     display_name: string | null;
   } | null;
+};
+
+type OfficeInviteRow = {
+  id: string;
+  office_id: string;
+  email: string;
+  role: string;
+  created_at: string;
+  accepted_at: string | null;
+  revoked_at: string | null;
 };
 
 function roleLabel(role: string) {
@@ -42,9 +53,16 @@ export function SettingsPage() {
 
   const [office, setOffice] = useState<Office | null>(null);
   const [members, setMembers] = useState<OfficeMemberRow[]>([]);
+  const [invites, setInvites] = useState<OfficeInviteRow[]>([]);
 
+  // legacy manual add
   const [addEmail, setAddEmail] = useState('');
   const [addRole, setAddRole] = useState<'member' | 'admin' | 'finance' | 'staff'>('member');
+
+  // new invite flow
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'member' | 'admin' | 'finance' | 'staff'>('member');
+
   const [saving, setSaving] = useState(false);
 
   const myMember = useMemo(() => members.find((m) => m.user_id === meId) || null, [members, meId]);
@@ -70,6 +88,11 @@ export function SettingsPage() {
 
       if (memErr) throw new Error(memErr.message);
       const officeId = (myMembership as any)?.office_id as string | undefined;
+
+      // load invites even when office isn't set yet (so user can accept and join)
+      const myInvites = await listMyOfficeInvites().catch(() => [] as any);
+      setInvites((myInvites || []) as any);
+
       if (!officeId) {
         setOffice(null);
         setMembers([]);
@@ -104,6 +127,7 @@ export function SettingsPage() {
   }, []);
 
   async function addMember() {
+    // legacy/manual add (kept) — requires user to have logged in once
     const email = addEmail.trim().toLowerCase();
     if (!email) return;
     if (!office) return;
@@ -115,7 +139,6 @@ export function SettingsPage() {
       const sb = requireSupabase();
       await getAuthedUser();
 
-      // We can only add users that already exist in user_profiles (i.e., logged in at least once).
       const { data: prof, error: pErr } = await sb
         .from('user_profiles')
         .select('user_id,email')
@@ -125,7 +148,7 @@ export function SettingsPage() {
 
       if (pErr) throw new Error(pErr.message);
       const userId = (prof as any)?.user_id as string | undefined;
-      if (!userId) throw new Error('Usuário não encontrado. Peça para a pessoa fazer login 1 vez para aparecer aqui.');
+      if (!userId) throw new Error('Usuário não encontrado.');
 
       const { error: iErr } = await sb.from('office_members').insert({ office_id: office.id, user_id: userId, role: addRole } as any);
       if (iErr) throw new Error(iErr.message);
@@ -139,6 +162,40 @@ export function SettingsPage() {
       setSaving(false);
     }
   }
+
+  async function createInvite() {
+    if (!office) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      await createOfficeInvite({ officeId: office.id, email: inviteEmail, role: inviteRole });
+      setInviteEmail('');
+      setInviteRole('member');
+      await load();
+    } catch (e: any) {
+      setError(e?.message || String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function acceptInvite(inviteId: string) {
+    setSaving(true);
+    setError(null);
+
+    try {
+      await acceptOfficeInvite(inviteId);
+      await load();
+    } catch (e: any) {
+      setError(e?.message || String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // (revogar convite) será adicionado quando listarmos convites do escritório para admin
 
   async function setRole(memberId: string, role: string) {
     if (!office) return;
@@ -209,71 +266,133 @@ export function SettingsPage() {
         </Card>
 
         <Card>
-          <div className="text-sm font-semibold text-white">Membros</div>
-          <div className="mt-2 text-xs text-white/60">
-            Para adicionar alguém: a pessoa precisa fazer login ao menos 1 vez (para criar o perfil).
-          </div>
+          <div className="text-sm font-semibold text-white">Membros & Convites</div>
 
-          {office && isAdmin ? (
-            <div className="mt-4 grid gap-3">
-              <label className="text-sm text-white/80">
-                E-mail do usuário
-                <input className="input" value={addEmail} onChange={(e) => setAddEmail(e.target.value)} placeholder="email@dominio.com" />
-              </label>
-
-              <label className="text-sm text-white/80">
-                Papel
-                <select className="select" value={addRole} onChange={(e) => setAddRole(e.target.value as any)}>
-                  <option value="member">Membro</option>
-                  <option value="staff">Operacional</option>
-                  <option value="finance">Financeiro</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </label>
-
-              <button className="btn-primary" disabled={saving} onClick={() => void addMember()}>
-                {saving ? 'Salvando…' : 'Adicionar membro'}
-              </button>
+          {invites.length ? (
+            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
+              <div className="text-sm font-semibold text-amber-100">Convites pendentes para você</div>
+              <div className="mt-2 grid gap-2">
+                {invites.map((inv) => (
+                  <div key={inv.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+                    <div>
+                      <div className="text-sm font-semibold text-white">{inv.email}</div>
+                      <div className="mt-1 text-xs text-white/60">Papel: {roleLabel(inv.role)}</div>
+                    </div>
+                    <button className="btn-primary !rounded-lg !px-3 !py-2 !text-xs" disabled={saving} onClick={() => void acceptInvite(inv.id)}>
+                      Aceitar
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
 
-          <div className="mt-4 grid gap-2">
-            {members.map((m) => (
-              <div key={m.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
-                <div>
-                  <div className="text-sm font-semibold text-white">
-                    {m.profile?.display_name || m.profile?.email || m.user_id}
-                    {m.user_id === meId ? <span className="badge badge-gold ml-2">você</span> : null}
-                  </div>
-                  <div className="mt-1 text-xs text-white/60">{m.profile?.email || '—'}</div>
+          {office && isAdmin ? (
+            <div className="mt-4 grid gap-6">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm font-semibold text-white">Criar convite (por e-mail)</div>
+                <div className="mt-2 text-xs text-white/60">A pessoa precisa fazer login com esse e-mail para conseguir aceitar.</div>
+
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <label className="text-sm text-white/80">
+                    E-mail
+                    <input
+                      className="input"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="email@dominio.com"
+                    />
+                  </label>
+
+                  <label className="text-sm text-white/80">
+                    Papel
+                    <select className="select" value={inviteRole} onChange={(e) => setInviteRole(e.target.value as any)}>
+                      <option value="member">Membro</option>
+                      <option value="staff">Operacional</option>
+                      <option value="finance">Financeiro</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </label>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <select
-                    className="select !mt-0 !w-[160px]"
-                    disabled={!office || !isAdmin || m.user_id === meId || saving}
-                    value={m.role}
-                    onChange={(e) => void setRole(m.id, e.target.value)}
-                  >
-                    <option value="member">Membro</option>
-                    <option value="staff">Operacional</option>
-                    <option value="finance">Financeiro</option>
-                    <option value="admin">Admin</option>
-                  </select>
-
-                  <button
-                    className="btn-ghost !rounded-lg !px-3 !py-2 !text-xs"
-                    disabled={!office || !isAdmin || m.user_id === meId || saving}
-                    onClick={() => void removeMember(m.id)}
-                  >
-                    Remover
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button className="btn-primary" disabled={saving} onClick={() => void createInvite()}>
+                    {saving ? 'Salvando…' : 'Criar convite'}
                   </button>
                 </div>
               </div>
-            ))}
 
-            {!loading && office && members.length === 0 ? <div className="text-sm text-white/60">Sem membros.</div> : null}
-          </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm font-semibold text-white">Adicionar membro direto (legado)</div>
+                <div className="mt-2 text-xs text-white/60">Funciona apenas se a pessoa já tiver logado 1 vez.</div>
+
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <label className="text-sm text-white/80">
+                    E-mail do usuário
+                    <input className="input" value={addEmail} onChange={(e) => setAddEmail(e.target.value)} placeholder="email@dominio.com" />
+                  </label>
+
+                  <label className="text-sm text-white/80">
+                    Papel
+                    <select className="select" value={addRole} onChange={(e) => setAddRole(e.target.value as any)}>
+                      <option value="member">Membro</option>
+                      <option value="staff">Operacional</option>
+                      <option value="finance">Financeiro</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="mt-3">
+                  <button className="btn-ghost" disabled={saving} onClick={() => void addMember()}>
+                    {saving ? 'Salvando…' : 'Adicionar membro'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {office ? (
+            <div className="mt-4 grid gap-2">
+              {members.map((m) => (
+                <div key={m.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div>
+                    <div className="text-sm font-semibold text-white">
+                      {m.profile?.display_name || m.profile?.email || m.user_id}
+                      {m.user_id === meId ? <span className="badge badge-gold ml-2">você</span> : null}
+                    </div>
+                    <div className="mt-1 text-xs text-white/60">{m.profile?.email || '—'}</div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="select !mt-0 !w-[160px]"
+                      disabled={!isAdmin || m.user_id === meId || saving}
+                      value={m.role}
+                      onChange={(e) => void setRole(m.id, e.target.value)}
+                    >
+                      <option value="member">Membro</option>
+                      <option value="staff">Operacional</option>
+                      <option value="finance">Financeiro</option>
+                      <option value="admin">Admin</option>
+                    </select>
+
+                    <button
+                      className="btn-ghost !rounded-lg !px-3 !py-2 !text-xs"
+                      disabled={!isAdmin || m.user_id === meId || saving}
+                      onClick={() => void removeMember(m.id)}
+                    >
+                      Remover
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {!loading && members.length === 0 ? <div className="text-sm text-white/60">Sem membros.</div> : null}
+            </div>
+          ) : null}
+
+          {!office ? <div className="mt-3 text-xs text-white/60">Aceite um convite para entrar em um escritório.</div> : null}
         </Card>
       </div>
     </div>
