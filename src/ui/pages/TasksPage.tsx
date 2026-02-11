@@ -42,6 +42,7 @@ type TaskRow = {
   cancel_reason: string | null;
 
   created_at: string;
+  task_group_id?: string | null;
 };
 
 function fmtDT(iso: string | null) {
@@ -164,7 +165,7 @@ export function TasksPage() {
         sb
           .from('tasks')
           .select(
-            'id,title,description,priority,status_v2,due_at,created_by_user_id,assigned_to_user_id,client_id,case_id,done_at,completed_by_user_id,paused_at,pause_reason,cancelled_at,cancel_reason,created_at',
+            'id,title,description,priority,status_v2,due_at,created_by_user_id,assigned_to_user_id,client_id,case_id,done_at,completed_by_user_id,paused_at,pause_reason,cancelled_at,cancel_reason,created_at,task_group_id',
           )
           .order('created_at', { ascending: false })
           .limit(500),
@@ -563,9 +564,20 @@ export function TasksPage() {
                 <div key={t.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <Link to={`/app/tarefas/${t.id}`} className="text-sm font-semibold text-white hover:underline">
-                        {t.title}
-                      </Link>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link to={`/app/tarefas/${t.id}`} className="text-sm font-semibold text-white hover:underline">
+                          {t.title}
+                        </Link>
+                        {isAdmin && t.task_group_id ? (
+                          <Link
+                            to={`/app/tarefas/lote/${t.task_group_id}`}
+                            className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-white/80 hover:bg-white/10"
+                            title="Abrir lote"
+                          >
+                            Lote
+                          </Link>
+                        ) : null}
+                      </div>
                       {t.description ? <div className="mt-1 text-xs text-white/60">{t.description}</div> : null}
 
                       <div className="mt-2 text-xs text-white/50">

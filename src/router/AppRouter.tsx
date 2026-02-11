@@ -27,6 +27,7 @@ import { AuditPage } from '@/ui/pages/AuditPage';
 import { AgendaPage } from '@/ui/pages/AgendaPage';
 import { TasksPage } from '@/ui/pages/TasksPage';
 import { TaskDetailsPage } from '@/ui/pages/TaskDetailsPage';
+import { TaskGroupPage } from '@/ui/pages/TaskGroupPage';
 
 export function AppRouter() {
   return (
@@ -54,6 +55,9 @@ export function AppRouter() {
             <Route path="/app/agenda" element={<AgendaPage />} />
             <Route path="/app/tarefas" element={<TasksPage />} />
             <Route path="/app/tarefas/:taskId" element={<TaskDetailsPage />} />
+            <Route element={<RequireRole allowed={["admin"]} />}>
+              <Route path="/app/tarefas/lote/:groupId" element={<TaskGroupPage />} />
+            </Route>
             <Route element={<RequireRole allowed={["admin", "finance"]} />}>
               <Route path="/app/financeiro" element={<FinancePage />} />
               <Route path="/app/financeiro/parceiros" element={<PartnersPage />} />
