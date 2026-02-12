@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { getMyOfficeRole } from '@/lib/roles';
+import { getMyOfficeId, listOfficeMemberProfiles, type OfficeMemberProfile } from '@/lib/officeContext';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 import { loadClientsLite } from '@/lib/loadClientsLite';
 import type { ClientLite } from '@/lib/types';
@@ -15,6 +17,7 @@ type CaseRow = {
   client?: { name: string } | null;
   process_number: string | null;
   area: string | null;
+  responsible_user_id: string | null;
 };
 
 function statusBadge(status: string) {
@@ -33,6 +36,13 @@ export function CasesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [role, setRole] = useState<string>('');
+  const [members, setMembers] = useState<OfficeMemberProfile[]>([]);
+
+  const [q, setQ] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [responsibleFilter, setResponsibleFilter] = useState<string>('all');
+
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newStatus, setNewStatus] = useState('aberto');
@@ -41,7 +51,27 @@ export function CasesPage() {
   const [newArea, setNewArea] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const ordered = useMemo(() => rows, [rows]);
+  const ordered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    let out = rows;
+
+    if (statusFilter !== 'all') {
+      out = out.filter((r) => (r.status || '').toLowerCase().includes(statusFilter.toLowerCase()));
+    }
+
+    if (role === 'admin' && responsibleFilter !== 'all') {
+      out = out.filter((r) => (r.responsible_user_id || '') === responsibleFilter);
+    }
+
+    if (needle) {
+      out = out.filter((r) => {
+        const s = `${r.title} ${r.process_number || ''} ${r.area || ''} ${r.client?.name || ''}`.toLowerCase();
+        return s.includes(needle);
+      });
+    }
+
+    return out;
+  }, [rows, q, statusFilter, role, responsibleFilter]);
 
   async function load() {
     setLoading(true);
@@ -54,7 +84,7 @@ export function CasesPage() {
       const [{ data: casesData, error: qErr }, clientsLite] = await Promise.all([
         sb
           .from('cases')
-          .select('id,title,status,created_at,client_id,process_number,area, client:clients(name)')
+          .select('id,title,status,created_at,client_id,process_number,area,responsible_user_id, client:clients(name)')
           .order('created_at', { ascending: false }),
         loadClientsLite().catch(() => [] as ClientLite[]),
       ]);
@@ -70,19 +100,32 @@ export function CasesPage() {
   }
 
   useEffect(() => {
-    load();
+    (async () => {
+      await load();
 
-    // allow deep link: /app/casos?new=1&clientId=...
-    const wantNew = params.get('new') === '1';
-    const clientId = params.get('clientId') || '';
-    if (wantNew) {
-      setCreateOpen(true);
-      if (clientId) setNewClientId(clientId);
-      // cleanup URL
-      params.delete('new');
-      params.delete('clientId');
-      setParams(params, { replace: true });
-    }
+      // role/members
+      const r = await getMyOfficeRole().catch(() => '');
+      setRole(r);
+      if (r === 'admin') {
+        const officeId = await getMyOfficeId().catch(() => null);
+        if (officeId) {
+          const ms = await listOfficeMemberProfiles(officeId).catch(() => []);
+          setMembers(ms);
+        }
+      }
+
+      // allow deep link: /app/casos?new=1&clientId=...
+      const wantNew = params.get('new') === '1';
+      const clientId = params.get('clientId') || '';
+      if (wantNew) {
+        setCreateOpen(true);
+        if (clientId) setNewClientId(clientId);
+        // cleanup URL
+        params.delete('new');
+        params.delete('clientId');
+        setParams(params, { replace: true });
+      }
+    })();
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -182,11 +225,47 @@ export function CasesPage() {
       ) : null}
 
       <Card>
-        {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
-        {error && !createOpen ? <div className="text-sm text-red-200">{error}</div> : null}
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-white">Lista de casos</div>
+            <div className="text-xs text-white/60">Busque por título, CNJ, cliente ou área.</div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <input
+              className="input !h-10 !py-2 !text-sm"
+              placeholder="Buscar…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <select className="select !h-10" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">Todos status</option>
+              <option value="aberto">Abertos</option>
+              <option value="and">Em andamento</option>
+              <option value="encerr">Encerrados</option>
+            </select>
+            {role === 'admin' ? (
+              <select
+                className="select !h-10"
+                value={responsibleFilter}
+                onChange={(e) => setResponsibleFilter(e.target.value)}
+              >
+                <option value="all">Todos responsáveis</option>
+                {members.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.display_name || m.email || m.user_id}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+          </div>
+        </div>
 
-        {!loading && !error ? (
-          <>
+        <div className="mt-4">
+          {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
+          {error && !createOpen ? <div className="text-sm text-red-200">{error}</div> : null}
+
+          {!loading && !error ? (
+            <>
             {/* Desktop table */}
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left text-sm">
@@ -258,8 +337,9 @@ export function CasesPage() {
 
               {ordered.length === 0 ? <div className="text-sm text-white/60">Nenhum caso cadastrado.</div> : null}
             </div>
-          </>
-        ) : null}
+            </>
+          ) : null}
+        </div>
       </Card>
     </div>
   );
