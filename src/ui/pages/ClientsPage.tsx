@@ -4,12 +4,17 @@ import { Link } from 'react-router-dom';
 import { Card } from '@/ui/widgets/Card';
 import { ClientAvatar } from '@/ui/widgets/ClientAvatar';
 import { formatCpf, isValidCpf, onlyDigits } from '@/lib/cpf';
+import { formatCnpj, isValidCnpj } from '@/lib/cnpj';
+import { formatBrPhone } from '@/lib/phone';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type ClientRow = {
   id: string;
   name: string;
+  person_type: 'pf' | 'pj' | null;
   cpf: string | null;
+  cnpj: string | null;
+  whatsapp: string | null;
   phone: string | null;
   email: string | null;
   avatar_path: string | null;
@@ -22,12 +27,33 @@ export function ClientsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
+
+  // form
+  const [personType, setPersonType] = useState<'pf' | 'pj'>('pf');
   const [newName, setNewName] = useState('');
   const [newCpf, setNewCpf] = useState('');
+  const [newCnpj, setNewCnpj] = useState('');
+  const [newWhatsapp, setNewWhatsapp] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [newNotes, setNewNotes] = useState('');
+
+  const [govLoginHint, setGovLoginHint] = useState('');
+  const [govNotes, setGovNotes] = useState('');
+
+  // address
+  const [cep, setCep] = useState('');
+  const [street, setStreet] = useState('');
+  const [number, setNumber] = useState('');
+  const [complement, setComplement] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [city, setCity] = useState('');
+  const [stateUf, setStateUf] = useState('');
+
+  // avatar
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
   const [saving, setSaving] = useState(false);
 
   const ordered = useMemo(() => rows, [rows]);
@@ -42,7 +68,7 @@ export function ClientsPage() {
 
       const { data, error: qErr } = await sb
         .from('clients')
-        .select('id,name,cpf,phone,email,avatar_path,created_at')
+        .select('id,name,person_type,cpf,cnpj,whatsapp,phone,email,avatar_path,created_at')
         .order('created_at', { ascending: false });
 
       if (qErr) throw new Error(qErr.message);
@@ -59,15 +85,56 @@ export function ClientsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function resetForm() {
+    setPersonType('pf');
+    setNewName('');
+    setNewCpf('');
+    setNewCnpj('');
+    setNewWhatsapp('');
+    setNewEmail('');
+    setNewPhone('');
+    setNewNotes('');
+    setGovLoginHint('');
+    setGovNotes('');
+
+    setCep('');
+    setStreet('');
+    setNumber('');
+    setComplement('');
+    setNeighborhood('');
+    setCity('');
+    setStateUf('');
+
+    setAvatarFile(null);
+    setAvatarPreview(null);
+  }
+
   async function onCreate() {
     if (!newName.trim()) return;
-    if (!newCpf.trim()) {
-      setError('CPF é obrigatório.');
+
+    if (!newWhatsapp.trim()) {
+      setError('WhatsApp é obrigatório.');
       return;
     }
-    if (!isValidCpf(newCpf)) {
-      setError('CPF inválido.');
-      return;
+
+    if (personType === 'pf') {
+      if (!newCpf.trim()) {
+        setError('CPF é obrigatório.');
+        return;
+      }
+      if (!isValidCpf(newCpf)) {
+        setError('CPF inválido.');
+        return;
+      }
+    } else {
+      if (!newCnpj.trim()) {
+        setError('CNPJ é obrigatório.');
+        return;
+      }
+      if (!isValidCnpj(newCnpj)) {
+        setError('CNPJ inválido.');
+        return;
+      }
     }
 
     setSaving(true);
@@ -77,18 +144,34 @@ export function ClientsPage() {
       const sb = requireSupabase();
       const user = await getAuthedUser();
 
-      const { data: created, error: iErr } = await sb
-        .from('clients')
-        .insert({
-          user_id: user.id,
-          name: newName.trim(),
-          cpf: onlyDigits(newCpf),
-          email: newEmail.trim() || null,
-          phone: newPhone.trim() || null,
-        } as any)
-        .select('id,office_id')
-        .single();
+      const payload: any = {
+        user_id: user.id,
+        person_type: personType,
+        name: newName.trim(),
+        whatsapp: onlyDigits(newWhatsapp),
+        email: newEmail.trim() || null,
+        phone: onlyDigits(newPhone) || null,
+        notes: newNotes.trim() || null,
+        gov_login_hint: govLoginHint.trim() || null,
+        gov_notes: govNotes.trim() || null,
+        address_cep: onlyDigits(cep) || null,
+        address_street: street.trim() || null,
+        address_number: number.trim() || null,
+        address_complement: complement.trim() || null,
+        address_neighborhood: neighborhood.trim() || null,
+        address_city: city.trim() || null,
+        address_state: stateUf.trim() || null,
+      };
 
+      if (personType === 'pf') {
+        payload.cpf = onlyDigits(newCpf);
+        payload.cnpj = null;
+      } else {
+        payload.cnpj = onlyDigits(newCnpj);
+        payload.cpf = null;
+      }
+
+      const { data: created, error: iErr } = await sb.from('clients').insert(payload).select('id,office_id').single();
       if (iErr) throw new Error(iErr.message);
 
       // Optional avatar upload
@@ -109,18 +192,23 @@ export function ClientsPage() {
       }
 
       setCreateOpen(false);
-      setNewName('');
-      setNewCpf('');
-      setNewEmail('');
-      setNewPhone('');
-      setAvatarFile(null);
-      setAvatarPreview(null);
+      resetForm();
       setSaving(false);
       await load();
     } catch (err: any) {
-      setError(err?.message || 'Falha ao criar cliente.');
+      const msg = err?.message || 'Falha ao criar cliente.';
+      // Friendly duplicate doc message
+      if (String(msg).includes('clients_office_cpf_uniq')) setError('Este CPF já está cadastrado.');
+      else if (String(msg).includes('clients_office_cnpj_uniq')) setError('Este CNPJ já está cadastrado.');
+      else setError(msg);
       setSaving(false);
     }
+  }
+
+  function docLabel(c: ClientRow) {
+    if (c.person_type === 'pj') return `CNPJ: ${c.cnpj || '—'}`;
+    if (c.person_type === 'pf') return `CPF: ${c.cpf || '—'}`;
+    return `Doc: ${c.cpf || c.cnpj || '—'}`;
   }
 
   return (
@@ -139,16 +227,76 @@ export function ClientsPage() {
         <Card>
           <div className="grid gap-4">
             <div className="text-sm font-semibold text-white">Novo cliente</div>
+
             <div className="grid gap-3 md:grid-cols-2">
               <label className="text-sm text-white/80">
-                Nome
+                Tipo
+                <select className="input" value={personType} onChange={(e) => setPersonType(e.target.value as any)}>
+                  <option value="pf">Pessoa Física (CPF)</option>
+                  <option value="pj">Pessoa Jurídica (CNPJ)</option>
+                </select>
+              </label>
+
+              <label className="text-sm text-white/80">
+                Nome / Razão Social
                 <input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} />
+              </label>
+
+              {personType === 'pf' ? (
+                <label className="text-sm text-white/80">
+                  CPF <span className="text-red-200">*</span>
+                  <input
+                    className="input"
+                    value={newCpf}
+                    onChange={(e) => setNewCpf(formatCpf(e.target.value))}
+                    placeholder="000.000.000-00"
+                    inputMode="numeric"
+                  />
+                </label>
+              ) : (
+                <label className="text-sm text-white/80">
+                  CNPJ <span className="text-red-200">*</span>
+                  <input
+                    className="input"
+                    value={newCnpj}
+                    onChange={(e) => setNewCnpj(formatCnpj(e.target.value))}
+                    placeholder="00.000.000/0000-00"
+                    inputMode="numeric"
+                  />
+                </label>
+              )}
+
+              <label className="text-sm text-white/80">
+                WhatsApp <span className="text-red-200">*</span>
+                <input
+                  className="input"
+                  value={newWhatsapp}
+                  onChange={(e) => setNewWhatsapp(formatBrPhone(e.target.value))}
+                  placeholder="(00) 90000-0000"
+                  inputMode="tel"
+                />
+              </label>
+
+              <label className="text-sm text-white/80">
+                E-mail
+                <input className="input" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+              </label>
+
+              <label className="text-sm text-white/80">
+                Telefone (opcional)
+                <input
+                  className="input"
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(formatBrPhone(e.target.value))}
+                  placeholder="(00) 0000-0000"
+                  inputMode="tel"
+                />
               </label>
 
               <div className="text-sm text-white/80">
                 Foto (opcional)
                 <div className="mt-2 flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-full border border-white/10 bg-white/5 overflow-hidden">
+                  <div className="h-11 w-11 overflow-hidden rounded-full border border-white/10 bg-white/5">
                     {avatarPreview ? <img src={avatarPreview} className="h-full w-full object-cover" /> : null}
                   </div>
                   <label className="btn-ghost !rounded-lg !px-3 !py-2 !text-xs">
@@ -178,31 +326,73 @@ export function ClientsPage() {
                   ) : null}
                 </div>
               </div>
-              <label className="text-sm text-white/80">
-                CPF <span className="text-red-200">*</span>
-                <input
-                  className="input"
-                  value={newCpf}
-                  onChange={(e) => setNewCpf(formatCpf(e.target.value))}
-                  placeholder="000.000.000-00"
-                  inputMode="numeric"
-                />
+
+              <label className="text-sm text-white/80 md:col-span-2">
+                Observações
+                <textarea className="input min-h-[84px]" value={newNotes} onChange={(e) => setNewNotes(e.target.value)} />
               </label>
-              <label className="text-sm text-white/80">
-                E-mail
-                <input className="input" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
-              </label>
-              <label className="text-sm text-white/80">
-                Telefone
-                <input className="input" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
-              </label>
+
+              <div className="md:col-span-2">
+                <div className="text-sm font-semibold text-white">Endereço (opcional)</div>
+                <div className="mt-2 grid gap-3 md:grid-cols-2">
+                  <label className="text-sm text-white/80">
+                    CEP
+                    <input className="input" value={cep} onChange={(e) => setCep(e.target.value)} inputMode="numeric" />
+                  </label>
+                  <label className="text-sm text-white/80">
+                    Rua
+                    <input className="input" value={street} onChange={(e) => setStreet(e.target.value)} />
+                  </label>
+                  <label className="text-sm text-white/80">
+                    Número
+                    <input className="input" value={number} onChange={(e) => setNumber(e.target.value)} />
+                  </label>
+                  <label className="text-sm text-white/80">
+                    Complemento
+                    <input className="input" value={complement} onChange={(e) => setComplement(e.target.value)} />
+                  </label>
+                  <label className="text-sm text-white/80">
+                    Bairro
+                    <input className="input" value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} />
+                  </label>
+                  <label className="text-sm text-white/80">
+                    Cidade
+                    <input className="input" value={city} onChange={(e) => setCity(e.target.value)} />
+                  </label>
+                  <label className="text-sm text-white/80">
+                    UF
+                    <input className="input" value={stateUf} onChange={(e) => setStateUf(e.target.value.toUpperCase().slice(0, 2))} />
+                  </label>
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <div className="text-sm font-semibold text-white">Gov.br (sem senha)</div>
+                <div className="mt-2 grid gap-3 md:grid-cols-2">
+                  <label className="text-sm text-white/80">
+                    Dica de login (ex.: e-mail/telefone)
+                    <input className="input" value={govLoginHint} onChange={(e) => setGovLoginHint(e.target.value)} />
+                  </label>
+                  <label className="text-sm text-white/80 md:col-span-2">
+                    Observações de acesso/recuperação
+                    <textarea className="input min-h-[84px]" value={govNotes} onChange={(e) => setGovNotes(e.target.value)} />
+                  </label>
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-3">
               <button disabled={saving} onClick={onCreate} className="btn-primary">
                 {saving ? 'Salvando…' : 'Salvar'}
               </button>
-              <button disabled={saving} onClick={() => setCreateOpen(false)} className="btn-ghost">
+              <button
+                disabled={saving}
+                onClick={() => {
+                  setCreateOpen(false);
+                  resetForm();
+                }}
+                className="btn-ghost"
+              >
                 Cancelar
               </button>
             </div>
@@ -218,7 +408,6 @@ export function ClientsPage() {
 
         {!loading && !error ? (
           <>
-            {/* Desktop table */}
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left text-sm">
                 <thead className="text-xs text-white/50">
@@ -236,13 +425,13 @@ export function ClientsPage() {
                           <ClientAvatar name={c.name} avatarPath={c.avatar_path} size={36} />
                           <div>
                             <div>{c.name}</div>
-                            <div className="text-xs text-white/50">CPF: {c.cpf || '—'}</div>
+                            <div className="text-xs text-white/50">{docLabel(c)}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-white/70">
                         <div className="grid gap-0.5">
-                          <div>{c.phone || '—'}</div>
+                          <div>WhatsApp: {c.whatsapp || '—'}</div>
                           <div className="text-xs text-white/50">{c.email || '—'}</div>
                         </div>
                       </td>
@@ -265,7 +454,6 @@ export function ClientsPage() {
               </table>
             </div>
 
-            {/* Mobile cards */}
             <div className="grid gap-3 md:hidden">
               {ordered.map((c) => (
                 <Link
@@ -276,10 +464,10 @@ export function ClientsPage() {
                   <div className="flex items-start gap-3">
                     <ClientAvatar name={c.name} avatarPath={c.avatar_path} size={44} />
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-white truncate">{c.name}</div>
-                      <div className="mt-1 text-xs text-white/50">CPF: {c.cpf || '—'}</div>
+                      <div className="truncate text-sm font-semibold text-white">{c.name}</div>
+                      <div className="mt-1 text-xs text-white/50">{docLabel(c)}</div>
                       <div className="mt-2 text-xs text-white/60">
-                        <div>{c.phone || '—'}</div>
+                        <div>WhatsApp: {c.whatsapp || '—'}</div>
                         <div className="mt-0.5 text-white/50">{c.email || '—'}</div>
                       </div>
                     </div>
