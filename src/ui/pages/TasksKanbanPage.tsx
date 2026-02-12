@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCorners,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+
 import { Card } from '@/ui/widgets/Card';
+import { KanbanCard, KanbanColumn } from '@/ui/widgets/kanbanDnd';
 import { loadCasesLite, type CaseLite } from '@/lib/loadCasesLite';
 import { loadClientsLite } from '@/lib/loadClientsLite';
 import type { ClientLite } from '@/lib/types';
@@ -76,6 +88,14 @@ export function TasksKanbanPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+  );
 
   const isAdmin = role === 'admin';
   const profileMap = useMemo(() => new Map(profiles.map((p) => [p.user_id, p] as const)), [profiles]);
@@ -213,6 +233,34 @@ export function TasksKanbanPage() {
     }
   }
 
+  const activeTask = useMemo(() => (activeId ? rows.find((r) => r.id === activeId) || null : null), [activeId, rows]);
+
+  function findContainer(id: string): TaskStatus | null {
+    if ((COLUMNS as any).some((c: any) => c.id === id)) return id as TaskStatus;
+    const t = rows.find((r) => r.id === id);
+    return (t?.status_v2 as TaskStatus) || null;
+  }
+
+  async function onDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    setActiveId(null);
+    if (!over) return;
+
+    const activeTaskId = String(active.id);
+    const overId = String(over.id);
+
+    const from = findContainer(activeTaskId);
+    const to = findContainer(overId);
+    if (!from || !to) return;
+    if (from === to) return;
+
+    const task = rows.find((r) => r.id === activeTaskId);
+    if (!task) return;
+
+    // move across columns
+    await setStatus(task, to);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-4">
@@ -232,87 +280,139 @@ export function TasksKanbanPage() {
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
 
-      <div className="grid gap-4 xl:grid-cols-5">
-        {COLUMNS.map((col) => {
-          const list = byStatus.get(col.id) || [];
-          return (
-            <Card key={col.id}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-semibold text-white">{col.label}</div>
-                  <div className="text-xs text-white/50">{list.length} tarefa(s)</div>
-                </div>
-              </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={(e) => setActiveId(String(e.active.id))}
+        onDragCancel={() => setActiveId(null)}
+        onDragEnd={(e) => void onDragEnd(e)}
+      >
+        <div className="grid gap-4 xl:grid-cols-5">
+          {COLUMNS.map((col) => {
+            const list = byStatus.get(col.id) || [];
+            const ids = list.map((t) => t.id);
 
-              <div className="mt-3 grid gap-2">
-                {loading ? <div className="text-sm text-white/60">Carregando…</div> : null}
-
-                {!loading && !list.length ? <div className="text-sm text-white/60">—</div> : null}
-
-                {list.map((t) => {
-                  const due = dueBadge(t);
-                  const assignee = t.assigned_to_user_id ? profileMap.get(t.assigned_to_user_id) : null;
-                  const client = t.client_id ? clientsMap.get(t.client_id) : null;
-                  const kase = t.case_id ? casesMap.get(t.case_id) : null;
-
-                  return (
-                    <div key={t.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <Link to={`/app/tarefas/${t.id}`} className="text-sm font-semibold text-white hover:underline">
-                          {t.title}
-                        </Link>
-                        {due ? <span className={due.cls}>{due.label}</span> : null}
-                      </div>
-
-                      <div className="mt-2 text-xs text-white/60">
-                        <div>Responsável: {assignee ? profileLabel(assignee) : t.assigned_to_user_id ? t.assigned_to_user_id.slice(0, 8) : '—'}</div>
-                        {client ? <div>Cliente: {client.name}</div> : null}
-                        {kase ? <div>Caso: {kase.title}</div> : null}
-                        {t.due_at ? <div>Prazo: {fmtDT(t.due_at)}</div> : null}
-                      </div>
-
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <button
-                          className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
-                          disabled={busyId === t.id}
-                          onClick={() => void setStatus(t, 'in_progress')}
-                        >
-                          Start
-                        </button>
-                        <button
-                          className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
-                          disabled={busyId === t.id}
-                          onClick={() => void setStatus(t, 'paused')}
-                        >
-                          Pausar
-                        </button>
-                        <button
-                          className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
-                          disabled={busyId === t.id}
-                          onClick={() => void setStatus(t, 'done')}
-                        >
-                          Concluir
-                        </button>
-                        {isAdmin ? (
-                          <button
-                            className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
-                            disabled={busyId === t.id}
-                            onClick={() => void setStatus(t, 'cancelled')}
-                          >
-                            Cancelar
-                          </button>
-                        ) : null}
-                      </div>
-
-                      <div className="mt-2 text-[11px] text-white/40">Status: {t.status_v2}</div>
+            return (
+              <KanbanColumn key={col.id} id={col.id}>
+                <Card>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-semibold text-white">{col.label}</div>
+                      <div className="text-xs text-white/50">{list.length} tarefa(s)</div>
                     </div>
-                  );
-                })}
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+                  </div>
+
+                  <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+                    <div className="mt-3 grid gap-2">
+                      {loading ? <div className="text-sm text-white/60">Carregando…</div> : null}
+
+                      {!loading && !list.length ? <div className="text-sm text-white/60">—</div> : null}
+
+                      {list.map((t) => {
+                        const due = dueBadge(t);
+                        const assignee = t.assigned_to_user_id ? profileMap.get(t.assigned_to_user_id) : null;
+                        const client = t.client_id ? clientsMap.get(t.client_id) : null;
+                        const kase = t.case_id ? casesMap.get(t.case_id) : null;
+
+                        return (
+                          <KanbanCard key={t.id} id={t.id} disabled={busyId === t.id}>
+                            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <Link to={`/app/tarefas/${t.id}`} className="text-sm font-semibold text-white hover:underline">
+                                  {t.title}
+                                </Link>
+                                {due ? <span className={due.cls}>{due.label}</span> : null}
+                              </div>
+
+                              <div className="mt-2 text-xs text-white/60">
+                                <div>
+                                  Responsável:{' '}
+                                  {assignee
+                                    ? profileLabel(assignee)
+                                    : t.assigned_to_user_id
+                                      ? t.assigned_to_user_id.slice(0, 8)
+                                      : '—'}
+                                </div>
+                                {client ? <div>Cliente: {client.name}</div> : null}
+                                {kase ? <div>Caso: {kase.title}</div> : null}
+                                {t.due_at ? <div>Prazo: {fmtDT(t.due_at)}</div> : null}
+                              </div>
+
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
+                                  disabled={busyId === t.id}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    void setStatus(t, 'in_progress');
+                                  }}
+                                >
+                                  Start
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
+                                  disabled={busyId === t.id}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    void setStatus(t, 'paused');
+                                  }}
+                                >
+                                  Pausar
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
+                                  disabled={busyId === t.id}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    void setStatus(t, 'done');
+                                  }}
+                                >
+                                  Concluir
+                                </button>
+                                {isAdmin ? (
+                                  <button
+                                    type="button"
+                                    className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
+                                    disabled={busyId === t.id}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      void setStatus(t, 'cancelled');
+                                    }}
+                                  >
+                                    Cancelar
+                                  </button>
+                                ) : null}
+                              </div>
+
+                              <div className="mt-2 text-[11px] text-white/40">Status: {t.status_v2}</div>
+                            </div>
+                          </KanbanCard>
+                        );
+                      })}
+                    </div>
+                  </SortableContext>
+                </Card>
+              </KanbanColumn>
+            );
+          })}
+        </div>
+
+        <DragOverlay>
+          {activeTask ? (
+            <div className="rounded-2xl border border-white/10 bg-neutral-950/90 p-3">
+              <div className="text-sm font-semibold text-white">{activeTask.title}</div>
+              <div className="mt-1 text-xs text-white/60">Arraste para mover de coluna</div>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }
