@@ -32,7 +32,7 @@ export async function listAuditLogs(args?: {
 
   let q = sb
     .from('audit_logs')
-    .select('id,office_id,user_id,action,table_name,record_id,client_id,case_id,task_id,created_at,before_data,after_data, profile:user_profiles(email,display_name)')
+    .select('id,office_id,user_id,action,table_name,record_id,client_id,case_id,task_id,created_at,before_data,after_data')
     .order('created_at', { ascending: false })
     .limit(args?.limit ?? 30);
 
@@ -44,5 +44,29 @@ export async function listAuditLogs(args?: {
 
   const { data, error } = await q;
   if (error) throw new Error(error.message);
-  return (data || []) as AuditLogRow[];
+
+  const rows = (data || []) as AuditLogRow[];
+  const userIds = Array.from(
+    new Set(rows.map((r) => r.user_id).filter(Boolean) as string[]),
+  );
+
+  if (!userIds.length) return rows;
+
+  // Avoid PostgREST embedded relationship errors by fetching profiles separately.
+  const { data: profs, error: pErr } = await sb
+    .from('user_profiles')
+    .select('user_id,email,display_name')
+    .in('user_id', userIds)
+    .limit(500);
+
+  if (pErr) return rows;
+
+  const map = new Map((profs || []).map((p: any) => [p.user_id, p]));
+  return rows.map((r) => {
+    const p = r.user_id ? map.get(r.user_id) : null;
+    return {
+      ...r,
+      profile: p ? [{ email: p.email ?? null, display_name: p.display_name ?? null }] : null,
+    } as AuditLogRow;
+  });
 }
