@@ -368,9 +368,14 @@ export function TasksPage() {
           <h1 className="text-2xl font-semibold text-white">Tarefas</h1>
           <p className="text-sm text-white/60">Criada por / Executada por · prazos · pausas/cancelamentos com motivo.</p>
         </div>
-        <button onClick={() => setCreateOpen(true)} className="btn-primary">
-          Nova tarefa
-        </button>
+        <div className="flex items-center gap-2">
+          <Link to="/app/tarefas/kanban" className="btn-ghost">
+            Kanban
+          </Link>
+          <button onClick={() => setCreateOpen(true)} className="btn-primary">
+            Nova tarefa
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

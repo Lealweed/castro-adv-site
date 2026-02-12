@@ -26,6 +26,7 @@ import { SettingsPage } from '@/ui/pages/SettingsPage';
 import { AuditPage } from '@/ui/pages/AuditPage';
 import { AgendaPage } from '@/ui/pages/AgendaPage';
 import { TasksPage } from '@/ui/pages/TasksPage';
+import { TasksKanbanPage } from '@/ui/pages/TasksKanbanPage';
 import { TaskDetailsPage } from '@/ui/pages/TaskDetailsPage';
 import { TaskGroupPage } from '@/ui/pages/TaskGroupPage';
 
@@ -54,6 +55,7 @@ export function AppRouter() {
             <Route path="/app/casos/:caseId" element={<CaseDetailsPage />} />
             <Route path="/app/agenda" element={<AgendaPage />} />
             <Route path="/app/tarefas" element={<TasksPage />} />
+            <Route path="/app/tarefas/kanban" element={<TasksKanbanPage />} />
             <Route path="/app/tarefas/:taskId" element={<TaskDetailsPage />} />
             <Route element={<RequireRole allowed={["admin"]} />}>
               <Route path="/app/tarefas/lote/:groupId" element={<TaskGroupPage />} />
