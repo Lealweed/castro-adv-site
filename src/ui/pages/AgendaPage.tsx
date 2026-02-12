@@ -4,6 +4,7 @@ import { Card } from '@/ui/widgets/Card';
 import { getMyOfficeRole } from '@/lib/roles';
 import { getMyOfficeId } from '@/lib/officeContext';
 import { createAgenda, listAgendas, type AgendaRow } from '@/lib/agendas';
+import { getOfficeSettings } from '@/lib/officeSettings';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type AgendaItem = {
@@ -225,8 +226,49 @@ export function AgendaPage() {
         payload.ends_at = null;
       }
 
-      const { error: iErr } = await sb.from('agenda_items').insert(payload);
+      const { data: created, error: iErr } = await sb.from('agenda_items').insert(payload).select('id,office_id,kind,title,starts_at,due_date').single();
       if (iErr) throw new Error(iErr.message);
+
+      // Auto reminder defaults (per office)
+      if (created?.office_id) {
+        try {
+          const settings = await getOfficeSettings(created.office_id);
+
+          let sendAt: string | null = null;
+          if (created.kind === 'commitment' && created.starts_at) {
+            const start = new Date(created.starts_at).getTime();
+            const mins = Number(settings.agenda_commitment_default_minutes_before || 0);
+            sendAt = new Date(start - mins * 60_000).toISOString();
+          }
+
+          if (created.kind === 'deadline' && created.due_date) {
+            const hhmm = String(settings.agenda_deadline_default_time || '09:00').slice(0, 5);
+            // Office timezone support will be refined later; for now this uses local time.
+            sendAt = new Date(`${created.due_date}T${hhmm}:00`).toISOString();
+          }
+
+          if (sendAt) {
+            const msg =
+              created.kind === 'deadline'
+                ? `Lembrete (prazo): ${created.title} · Data ${created.due_date}`
+                : `Lembrete (compromisso): ${created.title}`;
+
+            await sb.from('agenda_reminders').insert({
+              office_id: created.office_id,
+              agenda_item_id: created.id,
+              channel: 'whatsapp',
+              to_kind: 'internal',
+              to_user_id: user.id,
+              to_phone: null,
+              message: msg,
+              send_at: sendAt,
+              status: 'pending',
+            } as any);
+          }
+        } catch {
+          // ignore auto reminder failures
+        }
+      }
 
       setCreateOpen(false);
       setKind('commitment');
