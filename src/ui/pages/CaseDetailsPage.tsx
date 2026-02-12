@@ -5,6 +5,8 @@ import { Card } from '@/ui/widgets/Card';
 import { DocumentsSection } from '@/ui/widgets/DocumentsSection';
 import { TimelineSection } from '@/ui/widgets/TimelineSection';
 import { fetchDatajudLastMovement } from '@/lib/datajud';
+import { formatBrPhone } from '@/lib/phone';
+import { parseMoneyInput, formatBRL } from '@/lib/money';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type CaseRow = {
@@ -15,7 +17,19 @@ type CaseRow = {
   created_at: string;
   client_id: string | null;
   client?: { id: string; name: string }[] | null;
+
   process_number: string | null;
+
+  // extra
+  area: string | null;
+  court: string | null;
+  district: string | null;
+  counterparty_name: string | null;
+  counterparty_doc: string | null;
+  counterparty_whatsapp: string | null;
+  claim_value: number | null;
+  distributed_at: string | null;
+
   datajud_last_movement_text: string | null;
   datajud_last_movement_at: string | null;
   datajud_last_checked_at: string | null;
@@ -27,8 +41,26 @@ export function CaseDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [saving, setSaving] = useState(false);
+
   const [processNumber, setProcessNumber] = useState('');
   const [checking, setChecking] = useState(false);
+
+  // editable fields
+  const [title, setTitle] = useState('');
+  const [status, setStatus] = useState('');
+  const [description, setDescription] = useState('');
+
+  const [area, setArea] = useState('');
+  const [court, setCourt] = useState('');
+  const [district, setDistrict] = useState('');
+
+  const [counterpartyName, setCounterpartyName] = useState('');
+  const [counterpartyDoc, setCounterpartyDoc] = useState('');
+  const [counterpartyWhatsapp, setCounterpartyWhatsapp] = useState('');
+
+  const [claimValue, setClaimValue] = useState('');
+  const [distributedAt, setDistributedAt] = useState('');
 
   async function load() {
     if (!caseId) return;
@@ -43,14 +75,30 @@ export function CaseDetailsPage() {
       const { data, error: qErr } = await sb
         .from('cases')
         .select(
-          'id,title,status,description,created_at,client_id, client:clients(id,name), process_number, datajud_last_movement_text, datajud_last_movement_at, datajud_last_checked_at',
+          'id,title,status,description,created_at,client_id, client:clients(id,name), process_number, area,court,district,counterparty_name,counterparty_doc,counterparty_whatsapp,claim_value,distributed_at, datajud_last_movement_text, datajud_last_movement_at, datajud_last_checked_at',
         )
         .eq('id', caseId)
         .maybeSingle();
 
       if (qErr) throw new Error(qErr.message);
-      setRow((data as any) || null);
-      setProcessNumber((data as any)?.process_number || '');
+      const r = (data as any) || null;
+      setRow(r);
+
+      setTitle(r?.title || '');
+      setStatus(r?.status || '');
+      setDescription(r?.description || '');
+
+      setProcessNumber(r?.process_number || '');
+
+      setArea(r?.area || '');
+      setCourt(r?.court || '');
+      setDistrict(r?.district || '');
+      setCounterpartyName(r?.counterparty_name || '');
+      setCounterpartyDoc(r?.counterparty_doc || '');
+      setCounterpartyWhatsapp(r?.counterparty_whatsapp ? formatBrPhone(r.counterparty_whatsapp) : '');
+      setClaimValue(r?.claim_value !== null && r?.claim_value !== undefined ? String(r.claim_value) : '');
+      setDistributedAt(r?.distributed_at || '');
+
       setLoading(false);
     } catch (err: any) {
       setError(err?.message || 'Falha ao carregar.');
@@ -63,22 +111,41 @@ export function CaseDetailsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseId]);
 
-  async function saveProcessNumber() {
+  async function saveCase() {
     if (!caseId) return;
+    setSaving(true);
+    setError(null);
+
     try {
-      setError(null);
       const sb = requireSupabase();
       await getAuthedUser();
 
+      const claim = parseMoneyInput(claimValue);
+
       const { error: uErr } = await sb
         .from('cases')
-        .update({ process_number: processNumber.trim() || null })
+        .update({
+          title: title.trim() || null,
+          status: status.trim() || 'aberto',
+          description: description.trim() || null,
+          process_number: processNumber.trim() || null,
+          area: area.trim() || null,
+          court: court.trim() || null,
+          district: district.trim() || null,
+          counterparty_name: counterpartyName.trim() || null,
+          counterparty_doc: counterpartyDoc.trim() || null,
+          counterparty_whatsapp: counterpartyWhatsapp.trim() || null,
+          claim_value: claim,
+          distributed_at: distributedAt || null,
+        } as any)
         .eq('id', caseId);
 
       if (uErr) throw new Error(uErr.message);
       await load();
+      setSaving(false);
     } catch (err: any) {
-      setError(err?.message || 'Falha ao salvar número do processo.');
+      setError(err?.message || 'Falha ao salvar.');
+      setSaving(false);
     }
   }
 
@@ -136,34 +203,93 @@ export function CaseDetailsPage() {
 
         {!loading && row ? (
           <div className="grid gap-4">
-            <div>
-              <div className="text-xs text-white/50">Título</div>
-              <div className="text-lg font-semibold text-white">{row.title}</div>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <div className="text-xs text-white/50">Título</div>
+                <input className="input mt-1" value={title} onChange={(e) => setTitle(e.target.value)} />
+              </div>
+              <button onClick={() => void saveCase()} disabled={saving} className="btn-primary">
+                {saving ? 'Salvando…' : 'Salvar'}
+              </button>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-sm text-white/80">
+                Status
+                <input className="input mt-1" value={status} onChange={(e) => setStatus(e.target.value)} />
+              </label>
               <div>
-                <div className="text-xs text-white/50">Status</div>
-                <div className="text-sm text-white/80">{row.status}</div>
+                <div className="text-sm text-white/80">Cliente</div>
+                <div className="mt-2">
+                  {row.client?.[0] ? (
+                    <Link to={`/app/clientes/${row.client[0].id}`} className="link-accent">
+                      {row.client[0].name}
+                    </Link>
+                  ) : (
+                    <div className="text-sm text-white/70">—</div>
+                  )}
+                </div>
               </div>
-              <div>
-                <div className="text-xs text-white/50">Cliente</div>
-                {row.client?.[0] ? (
-                  <Link
-                    to={`/app/clientes/${row.client[0].id}`}
-                    className="link-accent"
-                  >
-                    {row.client[0].name}
-                  </Link>
-                ) : (
-                  <div className="text-sm text-white/70">—</div>
-                )}
-              </div>
+
+              <label className="text-sm text-white/80">
+                Número do processo (CNJ)
+                <input className="input mt-1" value={processNumber} onChange={(e) => setProcessNumber(e.target.value)} />
+              </label>
+
+              <label className="text-sm text-white/80">
+                Área
+                <input className="input mt-1" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Ex.: Previdenciário" />
+              </label>
+
+              <label className="text-sm text-white/80">
+                Vara / Tribunal
+                <input className="input mt-1" value={court} onChange={(e) => setCourt(e.target.value)} />
+              </label>
+
+              <label className="text-sm text-white/80">
+                Comarca / Cidade
+                <input className="input mt-1" value={district} onChange={(e) => setDistrict(e.target.value)} />
+              </label>
+
+              <label className="text-sm text-white/80">
+                Data de distribuição
+                <input className="input mt-1" type="date" value={distributedAt} onChange={(e) => setDistributedAt(e.target.value)} />
+              </label>
+
+              <label className="text-sm text-white/80">
+                Valor da causa
+                <input className="input mt-1" value={claimValue} onChange={(e) => setClaimValue(e.target.value)} placeholder="Ex.: 10.000,00" inputMode="decimal" />
+                <div className="mt-1 text-xs text-white/50">Atual: {formatBRL(parseMoneyInput(claimValue) ?? row.claim_value)}</div>
+              </label>
             </div>
 
-            <div>
-              <div className="text-xs text-white/50">Descrição</div>
-              <div className="text-sm text-white/80">{row.description || '—'}</div>
+            <label className="text-sm text-white/80">
+              Descrição
+              <textarea className="input mt-1 min-h-[92px]" value={description} onChange={(e) => setDescription(e.target.value)} />
+            </label>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="text-sm font-semibold text-white">Parte contrária (opcional)</div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <label className="text-sm text-white/80">
+                  Nome
+                  <input className="input mt-1" value={counterpartyName} onChange={(e) => setCounterpartyName(e.target.value)} />
+                </label>
+                <label className="text-sm text-white/80">
+                  Documento
+                  <input className="input mt-1" value={counterpartyDoc} onChange={(e) => setCounterpartyDoc(e.target.value)} />
+                </label>
+                <label className="text-sm text-white/80">
+                  WhatsApp
+                  <input
+                    className="input mt-1"
+                    value={counterpartyWhatsapp}
+                    onChange={(e) => setCounterpartyWhatsapp(formatBrPhone(e.target.value))}
+                    inputMode="tel"
+                    placeholder="(00) 90000-0000"
+                  />
+                </label>
+              </div>
             </div>
           </div>
         ) : null}
@@ -180,25 +306,13 @@ export function CaseDetailsPage() {
           </button>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <label className="md:col-span-2 text-sm text-white/80">
-            Número do processo (CNJ)
-            <input className="input" value={processNumber} onChange={(e) => setProcessNumber(e.target.value)} />
-          </label>
-          <div className="md:mt-7">
-            <button onClick={() => void saveProcessNumber()} className="btn-ghost w-full">
-              Salvar CNJ
-            </button>
-          </div>
-        </div>
-
         <div className="mt-4 grid gap-2">
           <div className="rounded-xl border border-white/10 bg-white/5 p-3">
             <div className="text-xs text-white/60">Última movimentação</div>
             <div className="mt-1 text-sm font-semibold text-white">{row?.datajud_last_movement_text || '—'}</div>
             <div className="mt-1 text-xs text-white/50">
-              Mov.: {row?.datajud_last_movement_at ? new Date(row.datajud_last_movement_at).toLocaleString() : '—'} ·
-              Consultado em: {row?.datajud_last_checked_at ? new Date(row.datajud_last_checked_at).toLocaleString() : '—'}
+              Mov.: {row?.datajud_last_movement_at ? new Date(row.datajud_last_movement_at).toLocaleString() : '—'} · Consultado em:{' '}
+              {row?.datajud_last_checked_at ? new Date(row.datajud_last_checked_at).toLocaleString() : '—'}
             </div>
           </div>
         </div>

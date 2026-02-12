@@ -19,6 +19,7 @@ type CaseLite = {
   id: string;
   title: string;
   status: string;
+  process_number: string | null;
   created_at: string;
 };
 
@@ -45,7 +46,7 @@ export function ClientDetailsPage() {
           sb.from('clients').select('id,name,phone,email,notes,created_at').eq('id', clientId).maybeSingle(),
           sb
             .from('cases')
-            .select('id,title,status,created_at')
+            .select('id,title,status,process_number,created_at')
             .eq('client_id', clientId)
             .order('created_at', { ascending: false }),
         ]);
@@ -133,6 +134,7 @@ export function ClientDetailsPage() {
             >
               <div className="text-sm font-semibold text-white">{c.title}</div>
               <div className="mt-1 text-xs text-white/60">Status: {c.status}</div>
+              <div className="mt-1 text-xs text-white/50">{c.process_number ? `CNJ: ${c.process_number}` : 'CNJ: —'}</div>
             </Link>
           ))}
         </div>

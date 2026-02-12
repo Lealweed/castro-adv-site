@@ -13,6 +13,8 @@ type CaseRow = {
   created_at: string;
   client_id: string | null;
   client?: { name: string } | null;
+  process_number: string | null;
+  area: string | null;
 };
 
 function statusBadge(status: string) {
@@ -34,6 +36,8 @@ export function CasesPage() {
   const [newTitle, setNewTitle] = useState('');
   const [newStatus, setNewStatus] = useState('aberto');
   const [newClientId, setNewClientId] = useState<string>('');
+  const [newProcessNumber, setNewProcessNumber] = useState('');
+  const [newArea, setNewArea] = useState('');
   const [saving, setSaving] = useState(false);
 
   const ordered = useMemo(() => rows, [rows]);
@@ -49,7 +53,7 @@ export function CasesPage() {
       const [{ data: casesData, error: qErr }, clientsLite] = await Promise.all([
         sb
           .from('cases')
-          .select('id,title,status,created_at,client_id, client:clients(name)')
+          .select('id,title,status,created_at,client_id,process_number,area, client:clients(name)')
           .order('created_at', { ascending: false }),
         loadClientsLite().catch(() => [] as ClientLite[]),
       ]);
@@ -83,7 +87,9 @@ export function CasesPage() {
         title: newTitle.trim(),
         status: newStatus.trim() || 'aberto',
         client_id: newClientId || null,
-      });
+        process_number: newProcessNumber.trim() || null,
+        area: newArea.trim() || null,
+      } as any);
 
       if (iErr) throw new Error(iErr.message);
 
@@ -91,6 +97,8 @@ export function CasesPage() {
       setNewTitle('');
       setNewStatus('aberto');
       setNewClientId('');
+      setNewProcessNumber('');
+      setNewArea('');
       setSaving(false);
       await load();
     } catch (err: any) {
@@ -123,6 +131,14 @@ export function CasesPage() {
               <label className="text-sm text-white/80">
                 Status
                 <input className="input" value={newStatus} onChange={(e) => setNewStatus(e.target.value)} />
+              </label>
+              <label className="text-sm text-white/80">
+                Número do processo (CNJ)
+                <input className="input" value={newProcessNumber} onChange={(e) => setNewProcessNumber(e.target.value)} />
+              </label>
+              <label className="text-sm text-white/80">
+                Área
+                <input className="input" value={newArea} onChange={(e) => setNewArea(e.target.value)} placeholder="Ex.: Previdenciário" />
               </label>
               <label className="md:col-span-2 text-sm text-white/80">
                 Cliente
@@ -171,7 +187,14 @@ export function CasesPage() {
                 <tbody>
                   {ordered.map((c) => (
                     <tr key={c.id} className="border-t border-white/10">
-                      <td className="px-4 py-3 font-medium text-white">{c.title}</td>
+                      <td className="px-4 py-3 font-medium text-white">
+                        <div>
+                          <div>{c.title}</div>
+                          <div className="mt-1 text-xs text-white/50">
+                            {c.process_number ? `CNJ: ${c.process_number}` : 'CNJ: —'}{c.area ? ` · ${c.area}` : ''}
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-white/70">{c.client?.name || '—'}</td>
                       <td className="px-4 py-3">
                         <span className={statusBadge(c.status)}>{c.status}</span>
@@ -207,6 +230,9 @@ export function CasesPage() {
                     <div>
                       <div className="text-sm font-semibold text-white">{c.title}</div>
                       <div className="mt-1 text-xs text-white/60">{c.client?.name || '—'}</div>
+                      <div className="mt-1 text-xs text-white/50">
+                        {c.process_number ? `CNJ: ${c.process_number}` : 'CNJ: —'}{c.area ? ` · ${c.area}` : ''}
+                      </div>
                     </div>
                     <span className={statusBadge(c.status)}>{c.status}</span>
                   </div>
