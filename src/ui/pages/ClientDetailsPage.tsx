@@ -118,9 +118,16 @@ export function ClientDetailsPage() {
             <div className="text-sm font-semibold text-white">Casos do cliente</div>
             <div className="text-xs text-white/60">Vinculados pelo client_id</div>
           </div>
-          <Link to="/app/casos" className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs">
-            Ver todos
-          </Link>
+          <div className="flex items-center gap-2">
+            {clientId ? (
+              <Link to={`/app/casos?new=1&clientId=${clientId}`} className="btn-primary !rounded-lg !px-3 !py-1.5 !text-xs">
+                Novo caso
+              </Link>
+            ) : null}
+            <Link to="/app/casos" className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs">
+              Ver todos
+            </Link>
+          </div>
         </div>
 
         <div className="mt-4 grid gap-2">

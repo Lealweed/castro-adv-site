@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
@@ -28,6 +28,7 @@ function statusBadge(status: string) {
 export function CasesPage() {
   const [rows, setRows] = useState<CaseRow[]>([]);
   const [clients, setClients] = useState<ClientLite[]>([]);
+  const [params, setParams] = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +71,19 @@ export function CasesPage() {
 
   useEffect(() => {
     load();
+
+    // allow deep link: /app/casos?new=1&clientId=...
+    const wantNew = params.get('new') === '1';
+    const clientId = params.get('clientId') || '';
+    if (wantNew) {
+      setCreateOpen(true);
+      if (clientId) setNewClientId(clientId);
+      // cleanup URL
+      params.delete('new');
+      params.delete('clientId');
+      setParams(params, { replace: true });
+    }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
