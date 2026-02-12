@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { formatCpf, isValidCpf } from '@/lib/cpf';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type ClientRow = {
   id: string;
   name: string;
+  cpf: string | null;
   phone: string | null;
   email: string | null;
+  avatar_path: string | null;
   created_at: string;
 };
 
@@ -19,6 +22,7 @@ export function ClientsPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newCpf, setNewCpf] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [saving, setSaving] = useState(false);
@@ -35,7 +39,7 @@ export function ClientsPage() {
 
       const { data, error: qErr } = await sb
         .from('clients')
-        .select('id,name,phone,email,created_at')
+        .select('id,name,cpf,phone,email,avatar_path,created_at')
         .order('created_at', { ascending: false });
 
       if (qErr) throw new Error(qErr.message);
@@ -54,6 +58,15 @@ export function ClientsPage() {
 
   async function onCreate() {
     if (!newName.trim()) return;
+    if (!newCpf.trim()) {
+      setError('CPF é obrigatório.');
+      return;
+    }
+    if (!isValidCpf(newCpf)) {
+      setError('CPF inválido.');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -64,6 +77,7 @@ export function ClientsPage() {
       const { error: iErr } = await sb.from('clients').insert({
         user_id: user.id,
         name: newName.trim(),
+        cpf: newCpf.trim(),
         email: newEmail.trim() || null,
         phone: newPhone.trim() || null,
       });
@@ -72,6 +86,7 @@ export function ClientsPage() {
 
       setCreateOpen(false);
       setNewName('');
+      setNewCpf('');
       setNewEmail('');
       setNewPhone('');
       setSaving(false);
@@ -102,6 +117,16 @@ export function ClientsPage() {
               <label className="text-sm text-white/80">
                 Nome
                 <input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} />
+              </label>
+              <label className="text-sm text-white/80">
+                CPF <span className="text-red-200">*</span>
+                <input
+                  className="input"
+                  value={newCpf}
+                  onChange={(e) => setNewCpf(formatCpf(e.target.value))}
+                  placeholder="000.000.000-00"
+                  inputMode="numeric"
+                />
               </label>
               <label className="text-sm text-white/80">
                 E-mail
@@ -146,7 +171,15 @@ export function ClientsPage() {
                 <tbody>
                   {ordered.map((c) => (
                     <tr key={c.id} className="border-t border-white/10">
-                      <td className="px-4 py-3 font-medium text-white">{c.name}</td>
+                      <td className="px-4 py-3 font-medium text-white">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-full border border-white/10 bg-white/5" />
+                          <div>
+                            <div>{c.name}</div>
+                            <div className="text-xs text-white/50">CPF: {c.cpf || '—'}</div>
+                          </div>
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-white/70">
                         <div className="grid gap-0.5">
                           <div>{c.phone || '—'}</div>
