@@ -25,6 +25,7 @@ import { ClientPortalPage } from '@/ui/pages/ClientPortalPage';
 import { SettingsPage } from '@/ui/pages/SettingsPage';
 import { AuditPage } from '@/ui/pages/AuditPage';
 import { AgendaPage } from '@/ui/pages/AgendaPage';
+import { AgendaSettingsPage } from '@/ui/pages/AgendaSettingsPage';
 import { TasksPage } from '@/ui/pages/TasksPage';
 import { TasksKanbanPage } from '@/ui/pages/TasksKanbanPage';
 import { TaskDetailsPage } from '@/ui/pages/TaskDetailsPage';
@@ -54,6 +55,9 @@ export function AppRouter() {
             <Route path="/app/casos" element={<CasesPage />} />
             <Route path="/app/casos/:caseId" element={<CaseDetailsPage />} />
             <Route path="/app/agenda" element={<AgendaPage />} />
+            <Route element={<RequireRole allowed={["admin"]} />}>
+              <Route path="/app/agenda/configuracoes" element={<AgendaSettingsPage />} />
+            </Route>
             <Route path="/app/tarefas" element={<TasksPage />} />
             <Route path="/app/tarefas/kanban" element={<TasksKanbanPage />} />
             <Route path="/app/tarefas/:taskId" element={<TaskDetailsPage />} />
