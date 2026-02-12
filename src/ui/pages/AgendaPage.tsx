@@ -253,7 +253,10 @@ export function AgendaPage() {
                 ? `Lembrete (prazo): ${created.title} · Data ${created.due_date}`
                 : `Lembrete (compromisso): ${created.title}`;
 
-            await sb.from('agenda_reminders').insert({
+            const inserts: any[] = [];
+
+            // 1) responsável (ou criador)
+            inserts.push({
               office_id: created.office_id,
               agenda_item_id: created.id,
               channel: 'whatsapp',
@@ -263,7 +266,25 @@ export function AgendaPage() {
               message: msg,
               send_at: sendAt,
               status: 'pending',
-            } as any);
+            });
+
+            // 2) escritório (número fixo)
+            const officePhone = (settings as any).office_whatsapp;
+            if (officePhone) {
+              inserts.push({
+                office_id: created.office_id,
+                agenda_item_id: created.id,
+                channel: 'whatsapp',
+                to_kind: 'custom',
+                to_user_id: null,
+                to_phone: String(officePhone),
+                message: msg,
+                send_at: sendAt,
+                status: 'pending',
+              });
+            }
+
+            await sb.from('agenda_reminders').insert(inserts as any);
           }
         } catch {
           // ignore auto reminder failures

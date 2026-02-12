@@ -4,6 +4,7 @@ create table if not exists public.office_settings (
   office_id uuid primary key references public.offices(id) on delete cascade,
   agenda_deadline_default_time time not null default '09:00',
   agenda_commitment_default_minutes_before int not null default 30,
+  office_whatsapp text,
   timezone text not null default 'America/Sao_Paulo',
   updated_at timestamptz not null default now()
 );

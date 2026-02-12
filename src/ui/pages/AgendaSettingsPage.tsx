@@ -16,6 +16,7 @@ export function AgendaSettingsPage() {
 
   const [deadlineTime, setDeadlineTime] = useState('09:00');
   const [commitmentMinutes, setCommitmentMinutes] = useState(30);
+  const [officeWhatsapp, setOfficeWhatsapp] = useState('');
   const [timezone, setTimezone] = useState('America/Sao_Paulo');
 
   async function load() {
@@ -32,6 +33,7 @@ export function AgendaSettingsPage() {
       setRow(s);
       setDeadlineTime(String(s.agenda_deadline_default_time || '09:00').slice(0, 5));
       setCommitmentMinutes(Number(s.agenda_commitment_default_minutes_before || 30));
+      setOfficeWhatsapp((s.office_whatsapp || '').toString());
       setTimezone(s.timezone || 'America/Sao_Paulo');
       setLoading(false);
     } catch (e: any) {
@@ -60,6 +62,7 @@ export function AgendaSettingsPage() {
       await updateOfficeSettings(officeId, {
         agenda_deadline_default_time: deadlineTime,
         agenda_commitment_default_minutes_before: mins,
+        office_whatsapp: officeWhatsapp.trim() || null,
         timezone,
       });
       setSaving(false);
@@ -105,6 +108,11 @@ export function AgendaSettingsPage() {
                   value={commitmentMinutes}
                   onChange={(e) => setCommitmentMinutes(Number(e.target.value))}
                 />
+              </label>
+
+              <label className="text-sm text-white/80">
+                WhatsApp do escritório (para receber lembretes)
+                <input className="input" value={officeWhatsapp} onChange={(e) => setOfficeWhatsapp(e.target.value)} placeholder="Ex.: 5511999999999" inputMode="tel" />
               </label>
 
               <label className="text-sm text-white/80">

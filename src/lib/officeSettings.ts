@@ -4,6 +4,7 @@ export type OfficeSettings = {
   office_id: string;
   agenda_deadline_default_time: string; // 'HH:MM:SS' or 'HH:MM'
   agenda_commitment_default_minutes_before: number;
+  office_whatsapp: string | null;
   timezone: string;
   updated_at: string;
 };
@@ -21,7 +22,7 @@ export async function getOfficeSettings(officeId: string): Promise<OfficeSetting
 
   const { data, error } = await sb
     .from('office_settings')
-    .select('office_id,agenda_deadline_default_time,agenda_commitment_default_minutes_before,timezone,updated_at')
+    .select('office_id,agenda_deadline_default_time,agenda_commitment_default_minutes_before,office_whatsapp,timezone,updated_at')
     .eq('office_id', officeId)
     .maybeSingle();
 
@@ -31,6 +32,7 @@ export async function getOfficeSettings(officeId: string): Promise<OfficeSetting
       office_id: officeId,
       agenda_deadline_default_time: '09:00',
       agenda_commitment_default_minutes_before: 30,
+      office_whatsapp: null,
       timezone: 'America/Sao_Paulo',
       updated_at: new Date().toISOString(),
     };
@@ -41,7 +43,7 @@ export async function getOfficeSettings(officeId: string): Promise<OfficeSetting
 
 export async function updateOfficeSettings(
   officeId: string,
-  patch: Partial<Pick<OfficeSettings, 'agenda_deadline_default_time' | 'agenda_commitment_default_minutes_before' | 'timezone'>>,
+  patch: Partial<Pick<OfficeSettings, 'agenda_deadline_default_time' | 'agenda_commitment_default_minutes_before' | 'office_whatsapp' | 'timezone'>>,
 ) {
   const sb = requireSupabase();
   await getAuthedUser();
