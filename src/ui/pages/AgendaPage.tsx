@@ -4,6 +4,7 @@ import { Card } from '@/ui/widgets/Card';
 import { getMyOfficeRole } from '@/lib/roles';
 import { getMyOfficeId } from '@/lib/officeContext';
 import { createAgenda, listAgendas, type AgendaRow } from '@/lib/agendas';
+import { listOfficeMemberProfiles, type OfficeMemberProfile } from '@/lib/officeContext';
 import { getOfficeSettings } from '@/lib/officeSettings';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
@@ -96,6 +97,10 @@ export function AgendaPage() {
   const [dueDate, setDueDate] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const [members, setMembers] = useState<OfficeMemberProfile[]>([]);
+  const [responsibleUserId, setResponsibleUserId] = useState('');
+  const [responsibleFilter, setResponsibleFilter] = useState('all');
+
   const range = useMemo(() => {
     const now = new Date();
 
@@ -133,6 +138,12 @@ export function AgendaPage() {
       setOfficeId(oid);
       setAgendas(ags);
 
+      // members (for responsible dropdown/filter)
+      if (oid) {
+        const ms = await listOfficeMemberProfiles(oid).catch(() => []);
+        setMembers(ms);
+      }
+
       // default selected agendas (all)
       if (!selectedAgendaIds.length && ags.length) {
         setSelectedAgendaIds(ags.map((a) => a.id));
@@ -150,13 +161,17 @@ export function AgendaPage() {
 
       let q = sb
         .from('agenda_items')
-        .select('id,kind,title,notes,location,all_day,starts_at,ends_at,due_date,status,agenda_id,created_at')
+        .select('id,kind,title,notes,location,all_day,starts_at,ends_at,due_date,status,agenda_id,created_at,responsible_user_id')
         .or(orFilter)
         .order('created_at', { ascending: false })
         .limit(500);
 
       if (selectedAgendaIds.length) {
         q = q.in('agenda_id', selectedAgendaIds as any);
+      }
+
+      if (r === 'admin' && responsibleFilter !== 'all') {
+        q = q.eq('responsible_user_id', responsibleFilter);
       }
 
       const { data, error: qErr } = await q;
@@ -214,6 +229,7 @@ export function AgendaPage() {
         all_day: allDay,
         status: 'confirmed',
         agenda_id: selectedAgendaIds[0] || null,
+        responsible_user_id: responsibleUserId || user.id,
       };
 
       if (kind === 'commitment') {
@@ -391,6 +407,22 @@ export function AgendaPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {role === 'admin' ? (
+            <select
+              className="select !mt-0"
+              value={responsibleFilter}
+              onChange={(e) => setResponsibleFilter(e.target.value)}
+              title="Filtrar por responsável"
+            >
+              <option value="all">Todos responsáveis</option>
+              {members.map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.display_name || m.email || m.user_id}
+                </option>
+              ))}
+            </select>
+          ) : null}
+
           <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1">
             {(
               [
@@ -541,6 +573,18 @@ export function AgendaPage() {
               <label className="md:col-span-2 text-sm text-white/80">
                 Título
                 <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
+              </label>
+
+              <label className="md:col-span-3 text-sm text-white/80">
+                Responsável
+                <select className="select" value={responsibleUserId} onChange={(e) => setResponsibleUserId(e.target.value)}>
+                  <option value="">Eu</option>
+                  {members.map((m) => (
+                    <option key={m.user_id} value={m.user_id}>
+                      {m.display_name || m.email || m.user_id}
+                    </option>
+                  ))}
+                </select>
               </label>
             </div>
 
