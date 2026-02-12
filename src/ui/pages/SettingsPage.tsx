@@ -102,18 +102,29 @@ export function SettingsPage() {
 
       const [{ data: officeRow, error: oErr }, { data: ms, error: msErr }] = await Promise.all([
         sb.from('offices').select('id,name,created_at').eq('id', officeId).maybeSingle(),
-        sb
-          .from('office_members')
-          .select('id,office_id,user_id,role,created_at, profile:user_profiles(email,display_name)')
-          .eq('office_id', officeId)
-          .order('created_at', { ascending: true }),
+        sb.from('office_members').select('id,office_id,user_id,role,created_at').eq('office_id', officeId).order('created_at', { ascending: true }),
       ]);
 
       if (oErr) throw new Error(oErr.message);
       if (msErr) throw new Error(msErr.message);
 
+      const members = (ms || []) as any[];
+      const userIds = Array.from(new Set(members.map((m) => m.user_id).filter(Boolean)));
+
+      // Avoid PostgREST relationship cache errors by fetching profiles separately.
+      let profMap = new Map<string, any>();
+      if (userIds.length) {
+        const { data: profs } = await sb.from('user_profiles').select('user_id,email,display_name').in('user_id', userIds).limit(500);
+        profMap = new Map((profs || []).map((p: any) => [p.user_id, p]));
+      }
+
       setOffice((officeRow || null) as any);
-      setMembers((ms || []) as any);
+      setMembers(
+        members.map((m) => ({
+          ...m,
+          profile: m.user_id && profMap.get(m.user_id) ? [profMap.get(m.user_id)] : null,
+        })) as any,
+      );
       setLoading(false);
     } catch (e: any) {
       setError(e?.message || String(e));
