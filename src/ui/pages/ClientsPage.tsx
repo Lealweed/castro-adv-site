@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
-import { formatCpf, isValidCpf } from '@/lib/cpf';
+import { ClientAvatar } from '@/ui/widgets/ClientAvatar';
+import { formatCpf, isValidCpf, onlyDigits } from '@/lib/cpf';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type ClientRow = {
@@ -25,6 +26,8 @@ export function ClientsPage() {
   const [newCpf, setNewCpf] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const ordered = useMemo(() => rows, [rows]);
@@ -74,21 +77,44 @@ export function ClientsPage() {
       const sb = requireSupabase();
       const user = await getAuthedUser();
 
-      const { error: iErr } = await sb.from('clients').insert({
-        user_id: user.id,
-        name: newName.trim(),
-        cpf: newCpf.trim(),
-        email: newEmail.trim() || null,
-        phone: newPhone.trim() || null,
-      });
+      const { data: created, error: iErr } = await sb
+        .from('clients')
+        .insert({
+          user_id: user.id,
+          name: newName.trim(),
+          cpf: onlyDigits(newCpf),
+          email: newEmail.trim() || null,
+          phone: newPhone.trim() || null,
+        } as any)
+        .select('id,office_id')
+        .single();
 
       if (iErr) throw new Error(iErr.message);
+
+      // Optional avatar upload
+      if (avatarFile && created?.id && created?.office_id) {
+        const ext = avatarFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+        const path = `office/${created.office_id}/client/${created.id}/avatar.${ext}`;
+
+        const up = await sb.storage
+          .from('client_avatars')
+          .upload(path, avatarFile, { upsert: true, contentType: avatarFile.type || undefined } as any);
+        if (up.error) throw new Error(up.error.message);
+
+        const { error: uErr } = await sb
+          .from('clients')
+          .update({ avatar_path: path, avatar_updated_at: new Date().toISOString() } as any)
+          .eq('id', created.id);
+        if (uErr) throw new Error(uErr.message);
+      }
 
       setCreateOpen(false);
       setNewName('');
       setNewCpf('');
       setNewEmail('');
       setNewPhone('');
+      setAvatarFile(null);
+      setAvatarPreview(null);
       setSaving(false);
       await load();
     } catch (err: any) {
@@ -118,6 +144,40 @@ export function ClientsPage() {
                 Nome
                 <input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} />
               </label>
+
+              <div className="text-sm text-white/80">
+                Foto (opcional)
+                <div className="mt-2 flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-full border border-white/10 bg-white/5 overflow-hidden">
+                    {avatarPreview ? <img src={avatarPreview} className="h-full w-full object-cover" /> : null}
+                  </div>
+                  <label className="btn-ghost !rounded-lg !px-3 !py-2 !text-xs">
+                    {avatarFile ? 'Trocar foto' : 'Adicionar foto'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] || null;
+                        setAvatarFile(f);
+                        setAvatarPreview(f ? URL.createObjectURL(f) : null);
+                      }}
+                    />
+                  </label>
+                  {avatarFile ? (
+                    <button
+                      type="button"
+                      className="btn-ghost !rounded-lg !px-3 !py-2 !text-xs"
+                      onClick={() => {
+                        setAvatarFile(null);
+                        setAvatarPreview(null);
+                      }}
+                    >
+                      Remover
+                    </button>
+                  ) : null}
+                </div>
+              </div>
               <label className="text-sm text-white/80">
                 CPF <span className="text-red-200">*</span>
                 <input
@@ -173,7 +233,7 @@ export function ClientsPage() {
                     <tr key={c.id} className="border-t border-white/10">
                       <td className="px-4 py-3 font-medium text-white">
                         <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-full border border-white/10 bg-white/5" />
+                          <ClientAvatar name={c.name} avatarPath={c.avatar_path} size={36} />
                           <div>
                             <div>{c.name}</div>
                             <div className="text-xs text-white/50">CPF: {c.cpf || '—'}</div>
@@ -213,14 +273,18 @@ export function ClientsPage() {
                   to={`/app/clientes/${c.id}`}
                   className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10"
                 >
-                  <div className="text-sm font-semibold text-white">{c.name}</div>
-                  <div className="mt-2 text-xs text-white/60">
-                    <div>{c.phone || '—'}</div>
-                    <div className="mt-0.5 text-white/50">{c.email || '—'}</div>
+                  <div className="flex items-start gap-3">
+                    <ClientAvatar name={c.name} avatarPath={c.avatar_path} size={44} />
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-white truncate">{c.name}</div>
+                      <div className="mt-1 text-xs text-white/50">CPF: {c.cpf || '—'}</div>
+                      <div className="mt-2 text-xs text-white/60">
+                        <div>{c.phone || '—'}</div>
+                        <div className="mt-0.5 text-white/50">{c.email || '—'}</div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-amber-200">
-                    Abrir →
-                  </div>
+                  <div className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-amber-200">Abrir →</div>
                 </Link>
               ))}
 
