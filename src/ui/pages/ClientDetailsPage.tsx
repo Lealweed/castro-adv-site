@@ -20,6 +20,7 @@ type CaseLite = {
   title: string;
   status: string;
   process_number: string | null;
+  area: string | null;
   created_at: string;
 };
 
@@ -46,7 +47,7 @@ export function ClientDetailsPage() {
           sb.from('clients').select('id,name,phone,email,notes,created_at').eq('id', clientId).maybeSingle(),
           sb
             .from('cases')
-            .select('id,title,status,process_number,created_at')
+            .select('id,title,status,process_number,area,created_at')
             .eq('client_id', clientId)
             .order('created_at', { ascending: false }),
         ]);
@@ -139,9 +140,14 @@ export function ClientDetailsPage() {
               to={`/app/casos/${c.id}`}
               className="rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10"
             >
-              <div className="text-sm font-semibold text-white">{c.title}</div>
-              <div className="mt-1 text-xs text-white/60">Status: {c.status}</div>
-              <div className="mt-1 text-xs text-white/50">{c.process_number ? `CNJ: ${c.process_number}` : 'CNJ: —'}</div>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="text-sm font-semibold text-white">{c.title}</div>
+                <span className="badge">{c.status}</span>
+              </div>
+              <div className="mt-1 text-xs text-white/50">
+                {c.process_number ? `CNJ: ${c.process_number}` : 'CNJ: —'}
+                {c.area ? ` · ${c.area}` : ''}
+              </div>
             </Link>
           ))}
         </div>
