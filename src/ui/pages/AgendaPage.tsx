@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { Card } from '@/ui/widgets/Card';
+import { getMyOfficeRole } from '@/lib/roles';
+import { getMyOfficeId } from '@/lib/officeContext';
+import { createAgenda, listAgendas, type AgendaRow } from '@/lib/agendas';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type AgendaItem = {
@@ -14,6 +17,7 @@ type AgendaItem = {
   ends_at: string | null;
   due_date: string | null;
   status: 'confirmed' | 'cancelled' | 'done' | string;
+  agenda_id: string | null;
   created_at: string;
 };
 
@@ -65,6 +69,15 @@ export function AgendaPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [role, setRole] = useState<string>('');
+  const [officeId, setOfficeId] = useState<string | null>(null);
+  const [agendas, setAgendas] = useState<AgendaRow[]>([]);
+  const [selectedAgendaIds, setSelectedAgendaIds] = useState<string[]>([]);
+
+  const [createAgendaOpen, setCreateAgendaOpen] = useState(false);
+  const [agendaName, setAgendaName] = useState('');
+  const [agendaColor, setAgendaColor] = useState('#f59e0b');
+
   const [view, setView] = useState<ViewMode>('today');
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date();
@@ -109,6 +122,21 @@ export function AgendaPage() {
       const sb = requireSupabase();
       await getAuthedUser();
 
+      // role + office + agendas
+      const [r, oid, ags] = await Promise.all([
+        getMyOfficeRole().catch(() => ''),
+        getMyOfficeId().catch(() => null),
+        listAgendas().catch(() => [] as AgendaRow[]),
+      ]);
+      setRole(r);
+      setOfficeId(oid);
+      setAgendas(ags);
+
+      // default selected agendas (all)
+      if (!selectedAgendaIds.length && ags.length) {
+        setSelectedAgendaIds(ags.map((a) => a.id));
+      }
+
       const startDate = toDateStr(range.start);
       const endDate = toDateStr(range.end);
       const startIso = range.start.toISOString();
@@ -119,12 +147,18 @@ export function AgendaPage() {
         `and(kind.eq.commitment,starts_at.gte.${startIso},starts_at.lte.${endIso})`,
       ].join(',');
 
-      const { data, error: qErr } = await sb
+      let q = sb
         .from('agenda_items')
-        .select('id,kind,title,notes,location,all_day,starts_at,ends_at,due_date,status,created_at')
+        .select('id,kind,title,notes,location,all_day,starts_at,ends_at,due_date,status,agenda_id,created_at')
         .or(orFilter)
         .order('created_at', { ascending: false })
         .limit(500);
+
+      if (selectedAgendaIds.length) {
+        q = q.in('agenda_id', selectedAgendaIds as any);
+      }
+
+      const { data, error: qErr } = await q;
 
       if (qErr) throw new Error(qErr.message);
       setRows((data || []) as AgendaItem[]);
@@ -138,10 +172,14 @@ export function AgendaPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, monthCursor.getTime()]);
+  }, [view, monthCursor.getTime(), selectedAgendaIds.join('|')]);
 
   async function onCreate() {
     if (!title.trim()) return;
+    if (!selectedAgendaIds.length) {
+      setError('Selecione ao menos uma agenda.');
+      return;
+    }
 
     if (kind === 'commitment') {
       if (!startsAt) {
@@ -174,6 +212,7 @@ export function AgendaPage() {
         location: location.trim() || null,
         all_day: allDay,
         status: 'confirmed',
+        agenda_id: selectedAgendaIds[0] || null,
       };
 
       if (kind === 'commitment') {
@@ -205,6 +244,31 @@ export function AgendaPage() {
       setSaving(false);
     }
   }
+
+  async function onCreateAgenda() {
+    if (!officeId) {
+      setError('Escritório não encontrado.');
+      return;
+    }
+    if (!agendaName.trim()) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      await createAgenda({ officeId, name: agendaName, color: agendaColor, kind: 'shared' });
+      setCreateAgendaOpen(false);
+      setAgendaName('');
+      setAgendaColor('#f59e0b');
+      setSaving(false);
+      await load();
+    } catch (e: any) {
+      setError(e?.message || 'Falha ao criar agenda.');
+      setSaving(false);
+    }
+  }
+
+  const agendaMap = useMemo(() => new Map(agendas.map((a) => [a.id, a] as const)), [agendas]);
 
   const itemsSorted = useMemo(() => {
     const score = (it: AgendaItem) => {
@@ -305,11 +369,98 @@ export function AgendaPage() {
             </div>
           ) : null}
 
+          {role === 'admin' ? (
+            <button onClick={() => setCreateAgendaOpen(true)} className="btn-ghost">
+              Nova agenda
+            </button>
+          ) : null}
+
           <button onClick={() => setCreateOpen(true)} className="btn-primary">
             Novo
           </button>
         </div>
       </div>
+
+      <Card>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-white">Agendas</div>
+            <div className="text-xs text-white/60">Marque quais agendas você quer visualizar.</div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
+              onClick={() => setSelectedAgendaIds(agendas.map((a) => a.id))}
+            >
+              Ver todas
+            </button>
+            <button
+              type="button"
+              className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
+              onClick={() => setSelectedAgendaIds([])}
+            >
+              Limpar
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {agendas.map((a) => {
+            const checked = selectedAgendaIds.includes(a.id);
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => {
+                  setSelectedAgendaIds((prev) =>
+                    prev.includes(a.id) ? prev.filter((x) => x !== a.id) : [...prev, a.id],
+                  );
+                }}
+                className={
+                  'rounded-xl border px-3 py-1.5 text-sm font-semibold ' +
+                  (checked ? 'bg-white text-neutral-950 border-white/10' : 'bg-white/5 text-white/80 border-white/10 hover:bg-white/10')
+                }
+                title={a.name}
+              >
+                <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full" style={{ background: a.color }} />
+                {a.name}
+              </button>
+            );
+          })}
+          {!agendas.length ? <div className="text-sm text-white/60">Nenhuma agenda encontrada.</div> : null}
+        </div>
+      </Card>
+
+      {createAgendaOpen ? (
+        <Card>
+          <div className="grid gap-4">
+            <div className="text-sm font-semibold text-white">Nova agenda</div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <label className="md:col-span-2 text-sm text-white/80">
+                Nome
+                <input className="input" value={agendaName} onChange={(e) => setAgendaName(e.target.value)} />
+              </label>
+              <label className="text-sm text-white/80">
+                Cor
+                <input className="input" type="color" value={agendaColor} onChange={(e) => setAgendaColor(e.target.value)} />
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button disabled={saving} onClick={() => void onCreateAgenda()} className="btn-primary">
+                {saving ? 'Salvando…' : 'Criar'}
+              </button>
+              <button disabled={saving} onClick={() => setCreateAgendaOpen(false)} className="btn-ghost">
+                Cancelar
+              </button>
+            </div>
+
+            {error ? <div className="text-sm text-red-200">{error}</div> : null}
+          </div>
+        </Card>
+      ) : null}
 
       {createOpen ? (
         <Card>
@@ -447,6 +598,15 @@ export function AgendaPage() {
                   <div>
                     <div className="text-sm font-semibold text-white">
                       {it.title} <span className="badge">{it.kind === 'deadline' ? 'Prazo' : 'Compromisso'}</span>
+                      {it.agenda_id && agendaMap.get(it.agenda_id) ? (
+                        <span
+                          className="ml-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-white/80"
+                          title={agendaMap.get(it.agenda_id)!.name}
+                        >
+                          <span className="h-2 w-2 rounded-full" style={{ background: agendaMap.get(it.agenda_id)!.color }} />
+                          {agendaMap.get(it.agenda_id)!.name}
+                        </span>
+                      ) : null}
                     </div>
                     <div className="mt-1 text-xs text-white/60">
                       {it.kind === 'deadline'
