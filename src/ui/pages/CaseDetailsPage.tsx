@@ -11,6 +11,7 @@ import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type CaseRow = {
   id: string;
+  office_id: string | null;
   title: string;
   status: string;
   description: string | null;
@@ -29,6 +30,7 @@ type CaseRow = {
   counterparty_whatsapp: string | null;
   claim_value: number | null;
   distributed_at: string | null;
+  responsible_user_id: string | null;
 
   datajud_last_movement_text: string | null;
   datajud_last_movement_at: string | null;
@@ -46,6 +48,8 @@ export function CaseDetailsPage() {
   const [processNumber, setProcessNumber] = useState('');
   const [checking, setChecking] = useState(false);
 
+  const [officeMembers, setOfficeMembers] = useState<{ user_id: string; display_name: string | null; email: string | null }[]>([]);
+
   // editable fields
   const [title, setTitle] = useState('');
   const [status, setStatus] = useState('');
@@ -61,6 +65,7 @@ export function CaseDetailsPage() {
 
   const [claimValue, setClaimValue] = useState('');
   const [distributedAt, setDistributedAt] = useState('');
+  const [responsibleUserId, setResponsibleUserId] = useState('');
 
   async function load() {
     if (!caseId) return;
@@ -75,7 +80,7 @@ export function CaseDetailsPage() {
       const { data, error: qErr } = await sb
         .from('cases')
         .select(
-          'id,title,status,description,created_at,client_id, client:clients(id,name), process_number, area,court,district,counterparty_name,counterparty_doc,counterparty_whatsapp,claim_value,distributed_at, datajud_last_movement_text, datajud_last_movement_at, datajud_last_checked_at',
+          'id,office_id,title,status,description,created_at,client_id, client:clients(id,name), process_number, area,court,district,counterparty_name,counterparty_doc,counterparty_whatsapp,claim_value,distributed_at,responsible_user_id, datajud_last_movement_text, datajud_last_movement_at, datajud_last_checked_at',
         )
         .eq('id', caseId)
         .maybeSingle();
@@ -98,6 +103,20 @@ export function CaseDetailsPage() {
       setCounterpartyWhatsapp(r?.counterparty_whatsapp ? formatBrPhone(r.counterparty_whatsapp) : '');
       setClaimValue(r?.claim_value !== null && r?.claim_value !== undefined ? String(r.claim_value) : '');
       setDistributedAt(r?.distributed_at || '');
+      setResponsibleUserId(r?.responsible_user_id || '');
+
+      // Load office members for Responsible dropdown
+      setOfficeMembers([]);
+      if (r?.office_id) {
+        const { data: ms } = await sb.from('office_members').select('user_id').eq('office_id', r.office_id).limit(200);
+        const ids = Array.from(new Set((ms || []).map((m: any) => m.user_id).filter(Boolean)));
+        if (ids.length) {
+          const { data: profs } = await sb.from('user_profiles').select('user_id,email,display_name').in('user_id', ids).limit(500);
+          const sorted = (profs || []) as any[];
+          sorted.sort((a, b) => String(a.display_name || a.email || '').localeCompare(String(b.display_name || b.email || '')));
+          setOfficeMembers(sorted as any);
+        }
+      }
 
       setLoading(false);
     } catch (err: any) {
@@ -137,6 +156,7 @@ export function CaseDetailsPage() {
           counterparty_whatsapp: counterpartyWhatsapp.trim() || null,
           claim_value: claim,
           distributed_at: distributedAt || null,
+          responsible_user_id: responsibleUserId || null,
         } as any)
         .eq('id', caseId);
 
@@ -254,6 +274,18 @@ export function CaseDetailsPage() {
               <label className="text-sm text-white/80">
                 Data de distribuição
                 <input className="input mt-1" type="date" value={distributedAt} onChange={(e) => setDistributedAt(e.target.value)} />
+              </label>
+
+              <label className="text-sm text-white/80">
+                Responsável
+                <select className="select mt-1" value={responsibleUserId} onChange={(e) => setResponsibleUserId(e.target.value)}>
+                  <option value="">Sem responsável</option>
+                  {officeMembers.map((m) => (
+                    <option key={m.user_id} value={m.user_id}>
+                      {m.display_name || m.email || m.user_id}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className="text-sm text-white/80">
