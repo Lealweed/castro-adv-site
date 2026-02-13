@@ -8,9 +8,15 @@ import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 type TaskRow = {
   id: string;
   title: string;
-  status: string;
-  due_date: string | null;
+  status_v2: 'open' | 'in_progress' | 'paused' | 'done' | 'cancelled' | string;
+  priority: string;
+  due_at: string | null;
   created_at: string;
+  assigned_to_user_id: string | null;
+  client_id: string | null;
+  case_id: string | null;
+  client?: { id: string; name: string }[] | null;
+  case?: { id: string; title: string }[] | null;
 };
 
 type TeamTaskRow = {
@@ -28,6 +34,7 @@ type AgendaItem = {
   title: string;
   starts_at: string | null;
   due_date: string | null;
+  responsible_user_id: string | null;
 };
 
 function toDateStr(d: Date) {
@@ -41,6 +48,27 @@ function fmtShort(iso: string | null) {
   if (!iso) return '—';
   const d = new Date(iso);
   return d.toLocaleString(undefined, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function badgeStatus(status: string) {
+  const s = (status || '').toLowerCase();
+  if (s === 'open') return 'badge badge-gold';
+  if (s === 'in_progress') return 'badge';
+  if (s === 'paused') return 'badge border-amber-400/30 bg-amber-400/10 text-amber-200';
+  if (s === 'done') return 'badge border-green-400/30 bg-green-400/10 text-green-200';
+  if (s === 'cancelled') return 'badge border-red-400/30 bg-red-400/10 text-red-200';
+  return 'badge';
+}
+
+function dueKind(dueAt: string | null) {
+  if (!dueAt) return null;
+  const due = new Date(dueAt).getTime();
+  const now = Date.now();
+  const diffH = (due - now) / 36e5;
+  if (diffH < 0) return { label: 'Atrasada', cls: 'badge border-red-400/30 bg-red-400/10 text-red-200' };
+  if (diffH <= 24) return { label: 'Hoje', cls: 'badge badge-gold' };
+  if (diffH <= 48) return { label: '48h', cls: 'badge border-amber-400/30 bg-amber-400/10 text-amber-200' };
+  return null;
 }
 
 export function DashboardPage() {
@@ -74,18 +102,19 @@ export function DashboardPage() {
           sb.from('cases').select('id', { count: 'exact', head: true }),
           sb
             .from('tasks')
-            .select('id,title,status,due_date,created_at')
-            .neq('status', 'done')
-            .order('due_date', { ascending: true, nullsFirst: false })
+            .select('id,title,status_v2,priority,due_at,created_at,assigned_to_user_id,client_id,case_id, client:clients(id,name), case:cases(id,title)')
+            .neq('status_v2', 'done')
+            .neq('status_v2', 'cancelled')
+            .order('due_at', { ascending: true, nullsFirst: false })
             .order('created_at', { ascending: false })
-            .limit(5),
+            .limit(12),
           // next agenda items: deadlines today + next commitments
           sb
             .from('agenda_items')
-            .select('id,kind,title,starts_at,due_date')
+            .select('id,kind,title,starts_at,due_date,responsible_user_id')
             .or(`and(kind.eq.deadline,due_date.gte.${todayStr}),and(kind.eq.commitment,starts_at.gte.${new Date().toISOString()})`)
             .order('created_at', { ascending: false })
-            .limit(5),
+            .limit(8),
           roleNow === 'admin'
             ? sb
                 .from('tasks')
@@ -256,25 +285,59 @@ export function DashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <div className="text-sm font-semibold text-white">Tarefas em aberto</div>
-              <div className="text-xs text-white/60">Próximas 5</div>
+              <div className="text-sm font-semibold text-white">Lembretes de tarefas</div>
+              <div className="text-xs text-white/60">Atrasadas · hoje · próximas</div>
             </div>
-            <Link to="/app/tarefas" className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs">
-              Ver todas
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link to="/app/tarefas/kanban" className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs">
+                Kanban
+              </Link>
+              <Link to="/app/tarefas" className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs">
+                Ver todas
+              </Link>
+            </div>
           </div>
 
           <div className="mt-4 grid gap-2">
             {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
             {!loading && tasks.length === 0 ? <div className="text-sm text-white/60">Nada pendente.</div> : null}
-            {tasks.map((t) => (
-              <div key={t.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
-                <div className="text-sm font-semibold text-white">{t.title}</div>
-                <div className="mt-1 text-xs text-white/60">{t.due_date ? `Vence: ${t.due_date}` : 'Sem vencimento'}</div>
-              </div>
-            ))}
+            {tasks.map((t) => {
+              const due = dueKind(t.due_at);
+              return (
+                <Link
+                  key={t.id}
+                  to={`/app/tarefas/${t.id}`}
+                  className="rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="text-sm font-semibold text-white">{t.title}</div>
+                    <div className="flex items-center gap-2">
+                      {due ? <span className={due.cls}>{due.label}</span> : null}
+                      <span className={badgeStatus(t.status_v2)}>{t.status_v2}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 grid gap-1 text-xs text-white/60">
+                    <div>
+                      Prazo: <span className="text-white/80">{t.due_at ? fmtShort(t.due_at) : '—'}</span> · Prioridade:{' '}
+                      <span className="text-white/80">{t.priority}</span>
+                    </div>
+                    {t.client?.[0] ? (
+                      <div>
+                        Cliente: <span className="text-white/80">{t.client[0].name}</span>
+                      </div>
+                    ) : null}
+                    {t.case?.[0] ? (
+                      <div>
+                        Caso: <span className="text-white/80">{t.case[0].title}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </Card>
 
@@ -293,7 +356,7 @@ export function DashboardPage() {
             {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
             {!loading && agenda.length === 0 ? <div className="text-sm text-white/60">Nada agendado.</div> : null}
             {agenda.map((a) => (
-              <div key={a.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <Link key={a.id} to="/app/agenda" className="rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10">
                 <div className="text-sm font-semibold text-white">
                   {a.title}{' '}
                   <span className={a.kind === 'deadline' ? 'badge badge-gold' : 'badge'}>
@@ -303,7 +366,7 @@ export function DashboardPage() {
                 <div className="mt-1 text-xs text-white/60">
                   {a.kind === 'deadline' ? `Data: ${a.due_date || '—'}` : `Início: ${fmtShort(a.starts_at)}`}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </Card>
