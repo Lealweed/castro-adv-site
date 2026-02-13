@@ -16,8 +16,20 @@ type TaskRow = {
   created_at: string;
   client_id: string | null;
   case_id: string | null;
+  office_id?: string | null;
   client?: { id: string; name: string }[] | null;
   case?: { id: string; title: string }[] | null;
+};
+
+type Participant = {
+  id: string;
+  task_id: string;
+  user_id: string;
+  role: string;
+  status: string;
+  conclusion_notes: string | null;
+  concluded_at: string | null;
+  profile?: { display_name: string | null; email: string | null } | null;
 };
 
 function fmtDT(iso: string | null) {
@@ -30,6 +42,10 @@ export function TaskDetailsPage() {
   const [row, setRow] = useState<TaskRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [myNotes, setMyNotes] = useState('');
+  const [savingPart, setSavingPart] = useState(false);
 
   async function load() {
     if (!taskId) return;
@@ -44,13 +60,39 @@ export function TaskDetailsPage() {
       const { data, error: qErr } = await sb
         .from('tasks')
         .select(
-          'id,title,description,status_v2,priority,due_at,created_at,client_id,case_id, client:clients(id,name), case:cases(id,title)',
+          'id,office_id,title,description,status_v2,priority,due_at,created_at,client_id,case_id, client:clients(id,name), case:cases(id,title)',
         )
         .eq('id', taskId)
         .maybeSingle();
 
       if (qErr) throw new Error(qErr.message);
-      setRow((data as any) || null);
+      const t = (data as any) || null;
+      setRow(t);
+
+      // participants + profiles
+      const { data: ps, error: pErr } = await sb
+        .from('task_participants')
+        .select('id,task_id,user_id,role,status,conclusion_notes,concluded_at,office_id')
+        .eq('task_id', taskId)
+        .order('created_at', { ascending: true });
+      if (pErr) throw new Error(pErr.message);
+
+      const list = (ps || []) as any[];
+      const userIds = Array.from(new Set(list.map((p) => p.user_id).filter(Boolean)));
+
+      let profMap = new Map<string, any>();
+      if (userIds.length) {
+        const { data: profs } = await sb.from('user_profiles').select('user_id,email,display_name').in('user_id', userIds).limit(500);
+        profMap = new Map((profs || []).map((p: any) => [p.user_id, p]));
+      }
+
+      setParticipants(
+        list.map((p) => ({
+          ...p,
+          profile: profMap.get(p.user_id) ? { email: profMap.get(p.user_id).email ?? null, display_name: profMap.get(p.user_id).display_name ?? null } : null,
+        })) as any,
+      );
+
       setLoading(false);
     } catch (e: any) {
       setError(e?.message || 'Falha ao carregar tarefa.');
@@ -136,6 +178,88 @@ export function TaskDetailsPage() {
           </div>
         ) : null}
       </Card>
+
+      {!loading && row ? (
+        <Card>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-white">Equipe da tarefa</div>
+              <div className="text-xs text-white/60">Cada participante pode registrar sua própria conclusão.</div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2">
+            {participants.map((p) => {
+              const name = p.profile?.display_name || p.profile?.email || p.user_id.slice(0, 8);
+              return (
+                <div key={p.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-semibold text-white">{name}</div>
+                      <div className="mt-1 text-xs text-white/60">
+                        {p.role} · status: <span className="badge">{p.status}</span>
+                        {p.concluded_at ? ` · concluído em ${fmtDT(p.concluded_at)}` : ''}
+                      </div>
+                    </div>
+                  </div>
+
+                  {p.conclusion_notes ? (
+                    <div className="mt-2 text-sm text-white/80">
+                      <div className="text-xs text-white/50">Conclusão</div>
+                      <div className="mt-1 whitespace-pre-wrap">{p.conclusion_notes}</div>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+
+            {!participants.length ? <div className="text-sm text-white/60">Nenhum participante vinculado.</div> : null}
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="text-sm font-semibold text-white">Minha conclusão</div>
+            <div className="mt-2">
+              <textarea
+                className="input min-h-[100px]"
+                value={myNotes}
+                onChange={(e) => setMyNotes(e.target.value)}
+                placeholder="Escreva aqui o que você concluiu (ex.: minuta pronta, conferido, protocolado etc.)"
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                className="btn-primary"
+                disabled={savingPart}
+                onClick={async () => {
+                  if (!row?.id) return;
+                  setSavingPart(true);
+                  setError(null);
+                  try {
+                    const sb = requireSupabase();
+                    await getAuthedUser();
+                    const { error: rErr } = await sb.rpc('task_mark_my_part_done', {
+                      p_task_id: row.id,
+                      p_notes: myNotes.trim() || null,
+                    } as any);
+                    if (rErr) throw new Error(rErr.message);
+                    setSavingPart(false);
+                    await load();
+                  } catch (e: any) {
+                    setError(e?.message || 'Falha ao salvar sua conclusão.');
+                    setSavingPart(false);
+                  }
+                }}
+              >
+                {savingPart ? 'Salvando…' : 'Marcar minha parte como concluída'}
+              </button>
+
+              <button className="btn-ghost" disabled={savingPart} onClick={() => setMyNotes('')}>
+                Limpar
+              </button>
+            </div>
+          </div>
+        </Card>
+      ) : null}
 
       {!loading && row ? (
         <TaskAttachmentsSection taskId={row.id} clientId={row.client_id} caseId={row.case_id} />
