@@ -29,6 +29,9 @@ type TaskRow = {
   created_by_user_id: string | null;
   assigned_to_user_id: string | null;
 
+  last_assigned_by_user_id: string | null;
+  last_assigned_at: string | null;
+
   client_id: string | null;
   case_id: string | null;
 
@@ -86,7 +89,7 @@ export function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [filter, setFilter] = useState<TaskStatus | 'all'>('open');
+  const [filter, setFilter] = useState<TaskStatus | 'all' | 'delegated'>('open');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -165,7 +168,7 @@ export function TasksPage() {
         sb
           .from('tasks')
           .select(
-            'id,title,description,priority,status_v2,due_at,created_by_user_id,assigned_to_user_id,client_id,case_id,done_at,completed_by_user_id,paused_at,pause_reason,cancelled_at,cancel_reason,created_at,task_group_id',
+            'id,title,description,priority,status_v2,due_at,created_by_user_id,assigned_to_user_id,last_assigned_by_user_id,last_assigned_at,client_id,case_id,done_at,completed_by_user_id,paused_at,pause_reason,cancelled_at,cancel_reason,created_at,task_group_id',
           )
           .order('created_at', { ascending: false })
           .limit(500),
@@ -194,7 +197,14 @@ export function TasksPage() {
 
   const filtered = useMemo(() => {
     let out = rows;
-    if (filter !== 'all') out = out.filter((r) => r.status_v2 === filter);
+
+    if (filter === 'delegated') {
+      out = out.filter(
+        (r) => r.last_assigned_by_user_id === myUserId && (r.assigned_to_user_id || '') !== myUserId,
+      );
+    } else if (filter !== 'all') {
+      out = out.filter((r) => r.status_v2 === filter);
+    }
 
     if (isAdmin && assigneeFilter !== 'all') {
       out = out.filter((r) => (r.assigned_to_user_id || '') === assigneeFilter);
@@ -411,6 +421,7 @@ export function TasksPage() {
             { id: 'paused', label: 'Pausadas' },
             { id: 'done', label: 'Concluídas' },
             { id: 'cancelled', label: 'Canceladas' },
+            { id: 'delegated', label: 'Delegadas' },
             { id: 'all', label: 'Todas' },
           ] as const
         ).map((t) => (
