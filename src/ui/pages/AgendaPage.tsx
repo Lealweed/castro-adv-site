@@ -25,6 +25,8 @@ type AgendaItem = {
   agenda_id: string | null;
   created_at: string;
   responsible_user_id: string | null;
+  last_responsible_by_user_id?: string | null;
+  last_responsible_at?: string | null;
   client_id: string | null;
   case_id: string | null;
 };
@@ -78,6 +80,7 @@ export function AgendaPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [role, setRole] = useState<string>('');
+  const isAdmin = role === 'admin';
   const [officeId, setOfficeId] = useState<string | null>(null);
   const [agendas, setAgendas] = useState<AgendaRow[]>([]);
   const [selectedAgendaIds, setSelectedAgendaIds] = useState<string[]>([]);
@@ -107,6 +110,8 @@ export function AgendaPage() {
   const [responsibleUserId, setResponsibleUserId] = useState('');
   const [responsibleFilter, setResponsibleFilter] = useState('all');
 
+  const [scope, setScope] = useState<'inbox' | 'outbox'>('inbox');
+
   const [clientsLite, setClientsLite] = useState<ClientLite[]>([]);
   const [casesLite, setCasesLite] = useState<CaseLite[]>([]);
   const [linkClientId, setLinkClientId] = useState('');
@@ -119,6 +124,9 @@ export function AgendaPage() {
   const [remTarget, setRemTarget] = useState<'responsible' | 'custom'>('responsible');
   const [remPhone, setRemPhone] = useState('');
   const [remMessage, setRemMessage] = useState('');
+
+  const [delegatingItemId, setDelegatingItemId] = useState<string | null>(null);
+  const [delegateTo, setDelegateTo] = useState('');
 
   const range = useMemo(() => {
     const now = new Date();
@@ -184,7 +192,7 @@ export function AgendaPage() {
 
       let q = sb
         .from('agenda_items')
-        .select('id,kind,title,notes,location,all_day,starts_at,ends_at,due_date,status,agenda_id,created_at,responsible_user_id,client_id,case_id')
+        .select('id,kind,title,notes,location,all_day,starts_at,ends_at,due_date,status,agenda_id,created_at,responsible_user_id,last_responsible_by_user_id,last_responsible_at,client_id,case_id')
         .or(orFilter)
         .order('created_at', { ascending: false })
         .limit(500);
@@ -195,6 +203,12 @@ export function AgendaPage() {
 
       if (r === 'admin' && responsibleFilter !== 'all') {
         q = q.eq('responsible_user_id', responsibleFilter);
+      }
+
+      if (scope === 'outbox') {
+        // items I delegated (requires RLS allowing last_responsible_by_user_id)
+        const me = (await getAuthedUser()).id;
+        q = q.eq('last_responsible_by_user_id', me).neq('responsible_user_id', me);
       }
 
       const { data, error: qErr } = await q;
@@ -211,7 +225,7 @@ export function AgendaPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, monthCursor.getTime(), selectedAgendaIds.join('|')]);
+  }, [view, monthCursor.getTime(), selectedAgendaIds.join('|'), scope]);
 
   async function onCreate() {
     if (!title.trim()) return;
@@ -454,6 +468,30 @@ export function AgendaPage() {
     }
   }
 
+  async function delegateAgendaItem(item: AgendaItem, toUserId: string) {
+    if (!toUserId) return;
+    setDelegatingItemId(item.id);
+    setError(null);
+
+    try {
+      const sb = requireSupabase();
+      await getAuthedUser();
+
+      const { error } = await sb.rpc('delegate_agenda_item', {
+        p_agenda_item_id: item.id,
+        p_responsible_user_id: toUserId,
+      } as any);
+
+      if (error) throw new Error(error.message);
+      setDelegatingItemId(null);
+      setDelegateTo('');
+      await load();
+    } catch (e: any) {
+      setError(e?.message || 'Falha ao delegar item.');
+      setDelegatingItemId(null);
+    }
+  }
+
   async function onCreateAgenda() {
     if (!officeId) {
       setError('Escritório não encontrado.');
@@ -552,6 +590,27 @@ export function AgendaPage() {
               ))}
             </select>
           ) : null}
+
+          <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1">
+            {(
+              [
+                { id: 'inbox', label: 'Entrada' },
+                { id: 'outbox', label: 'Saída' },
+              ] as const
+            ).map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setScope(t.id)}
+                className={
+                  'rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ' +
+                  (scope === t.id ? 'bg-white text-neutral-950' : 'text-white/70 hover:text-white')
+                }
+                title={t.id === 'outbox' ? 'Itens delegados por você (caixa de saída)' : undefined}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
 
           <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1">
             {(
@@ -893,7 +952,7 @@ export function AgendaPage() {
                     {it.location ? <div className="mt-1 text-xs text-white/50">Local: {it.location}</div> : null}
                     {it.notes ? <div className="mt-1 text-xs text-white/50">Obs: {it.notes}</div> : null}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
                       onClick={() => void openReminders(it)}
@@ -901,6 +960,30 @@ export function AgendaPage() {
                     >
                       Lembretes
                     </button>
+
+                    {isAdmin ? (
+                      <div className="flex items-center gap-2">
+                        <select
+                          className="select !mt-0 !w-[200px]"
+                          value={delegatingItemId === it.id ? delegateTo : ''}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setDelegateTo(v);
+                            if (v) void delegateAgendaItem(it, v);
+                          }}
+                          disabled={delegatingItemId === it.id}
+                          title="Delegar para"
+                        >
+                          <option value="">Delegar…</option>
+                          {members.map((m) => (
+                            <option key={m.user_id} value={m.user_id}>
+                              {m.display_name || m.email || m.user_id.slice(0, 8)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : null}
+
                     <div className="text-xs font-semibold text-white/60">{it.status}</div>
                   </div>
                 </div>
