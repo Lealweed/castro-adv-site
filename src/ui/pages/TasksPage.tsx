@@ -103,6 +103,10 @@ export function TasksPage() {
   const [assignedTo, setAssignedTo] = useState('');
   const [multi, setMulti] = useState(false);
   const [assignees, setAssignees] = useState<string[]>([]);
+
+  const [teamOpen, setTeamOpen] = useState(false);
+  const [teamUserIds, setTeamUserIds] = useState<string[]>([]);
+  const [teamRoles, setTeamRoles] = useState<Record<string, string>>({});
   const [clientId, setClientId] = useState('');
   const [caseId, setCaseId] = useState('');
   const [saving, setSaving] = useState(false);
@@ -274,12 +278,47 @@ export function TasksPage() {
         task_group_id: groupId,
       }));
 
-      const { error: iErr } = await sb.from('tasks').insert(payload as any);
+      const { data: inserted, error: iErr } = await sb
+        .from('tasks')
+        .insert(payload as any)
+        .select('id,office_id,assigned_to_user_id');
       if (iErr) throw new Error(iErr.message);
+
+      // Optional: add team participants (admin)
+      if (isAdmin) {
+        const insertedRows = (inserted || []) as any[];
+
+        // Ensure assigned user is also a participant for each created task
+        for (const tr of insertedRows) {
+          if (tr?.id && tr?.assigned_to_user_id) {
+            await sb.rpc('task_add_participant', {
+              p_task_id: tr.id,
+              p_user_id: tr.assigned_to_user_id,
+              p_role: 'assignee',
+            } as any);
+          }
+        }
+
+        if (teamOpen && teamUserIds.length) {
+          for (const tr of insertedRows) {
+            for (const uid of teamUserIds) {
+              const role = teamRoles[uid] || 'reviewer';
+              await sb.rpc('task_add_participant', {
+                p_task_id: tr.id,
+                p_user_id: uid,
+                p_role: role,
+              } as any);
+            }
+          }
+        }
+      }
 
       setCreateOpen(false);
       setTitle('');
       setDescription('');
+      setTeamOpen(false);
+      setTeamUserIds([]);
+      setTeamRoles({});
       setPriority('medium');
       setDueAtLocal('');
       setAssignedTo(user.id);
@@ -545,38 +584,99 @@ export function TasksPage() {
               </label>
 
               {isAdmin ? (
-                <div className="md:col-span-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-semibold text-white">Delegar para mais de 1 pessoa</div>
-                      <div className="text-xs text-white/60">O sistema cria 1 tarefa por responsável (cada um responde a sua).</div>
+                <div className="md:col-span-3 grid gap-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-white">Delegar para mais de 1 pessoa</div>
+                        <div className="text-xs text-white/60">O sistema cria 1 tarefa por responsável (cada um responde a sua).</div>
+                      </div>
+                      <label className="inline-flex items-center gap-2 text-sm font-semibold text-white/80">
+                        <input type="checkbox" checked={multi} onChange={(e) => setMulti(e.target.checked)} />
+                        Ativar
+                      </label>
                     </div>
-                    <label className="inline-flex items-center gap-2 text-sm font-semibold text-white/80">
-                      <input type="checkbox" checked={multi} onChange={(e) => setMulti(e.target.checked)} />
-                      Ativar
-                    </label>
+
+                    {multi ? (
+                      <div className="mt-3 grid gap-2 md:grid-cols-2">
+                        {profiles.map((p) => (
+                          <label key={p.user_id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white/80">
+                            <input
+                              type="checkbox"
+                              checked={assignees.includes(p.user_id)}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setAssignees((curr) => {
+                                  if (checked) return Array.from(new Set([...curr, p.user_id]));
+                                  return curr.filter((x) => x !== p.user_id);
+                                });
+                              }}
+                            />
+                            {profileLabel(p)}
+                          </label>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
 
-                  {multi ? (
-                    <div className="mt-3 grid gap-2 md:grid-cols-2">
-                      {profiles.map((p) => (
-                        <label key={p.user_id} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white/80">
-                          <input
-                            type="checkbox"
-                            checked={assignees.includes(p.user_id)}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-                              setAssignees((curr) => {
-                                if (checked) return Array.from(new Set([...curr, p.user_id]));
-                                return curr.filter((x) => x !== p.user_id);
-                              });
-                            }}
-                          />
-                          {profileLabel(p)}
-                        </label>
-                      ))}
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-white">Equipe da tarefa (opcional)</div>
+                        <div className="text-xs text-white/60">Adiciona participantes extras (revisor, protocolo etc.).</div>
+                      </div>
+                      <label className="inline-flex items-center gap-2 text-sm font-semibold text-white/80">
+                        <input type="checkbox" checked={teamOpen} onChange={(e) => setTeamOpen(e.target.checked)} />
+                        Ativar
+                      </label>
                     </div>
-                  ) : null}
+
+                    {teamOpen ? (
+                      <div className="mt-3 grid gap-2 md:grid-cols-2">
+                        {profiles.map((p) => {
+                          const checked = teamUserIds.includes(p.user_id);
+                          const role = teamRoles[p.user_id] || 'reviewer';
+
+                          return (
+                            <div
+                              key={p.user_id}
+                              className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-3 py-2"
+                            >
+                              <label className="flex items-center gap-2 text-sm text-white/80">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    const on = e.target.checked;
+                                    setTeamUserIds((curr) => {
+                                      if (on) return Array.from(new Set([...curr, p.user_id]));
+                                      return curr.filter((x) => x !== p.user_id);
+                                    });
+                                    setTeamRoles((curr) => ({ ...curr, [p.user_id]: curr[p.user_id] || 'reviewer' }));
+                                  }}
+                                />
+                                {profileLabel(p)}
+                              </label>
+
+                              {checked ? (
+                                <select
+                                  className="select !mt-0 !w-[140px]"
+                                  value={role}
+                                  onChange={(e) => setTeamRoles((curr) => ({ ...curr, [p.user_id]: e.target.value }))}
+                                >
+                                  <option value="assignee">Responsável</option>
+                                  <option value="reviewer">Revisor</option>
+                                  <option value="protocol">Protocolo</option>
+                                </select>
+                              ) : (
+                                <div className="w-[140px]" />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
             </div>
