@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { Hero1951 } from '@/components/ui/hero-195-1';
 import { Card } from '@/ui/widgets/Card';
 import { getMyOfficeRole } from '@/lib/roles';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
@@ -297,6 +298,8 @@ export function DashboardPage() {
       </div>
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
+
+      <Hero1951 />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
