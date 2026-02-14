@@ -6,6 +6,9 @@ import { getMyOfficeId } from '@/lib/officeContext';
 import { createAgenda, listAgendas, type AgendaRow } from '@/lib/agendas';
 import { listOfficeMemberProfiles, type OfficeMemberProfile } from '@/lib/officeContext';
 import { getOfficeSettings } from '@/lib/officeSettings';
+import { loadClientsLite } from '@/lib/loadClientsLite';
+import { loadCasesLite, type CaseLite } from '@/lib/loadCasesLite';
+import type { ClientLite } from '@/lib/types';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type AgendaItem = {
@@ -21,6 +24,9 @@ type AgendaItem = {
   status: 'confirmed' | 'cancelled' | 'done' | string;
   agenda_id: string | null;
   created_at: string;
+  responsible_user_id: string | null;
+  client_id: string | null;
+  case_id: string | null;
 };
 
 type ViewMode = 'today' | 'week' | 'month';
@@ -101,6 +107,19 @@ export function AgendaPage() {
   const [responsibleUserId, setResponsibleUserId] = useState('');
   const [responsibleFilter, setResponsibleFilter] = useState('all');
 
+  const [clientsLite, setClientsLite] = useState<ClientLite[]>([]);
+  const [casesLite, setCasesLite] = useState<CaseLite[]>([]);
+  const [linkClientId, setLinkClientId] = useState('');
+  const [linkCaseId, setLinkCaseId] = useState('');
+
+  const [remindersOpen, setRemindersOpen] = useState<null | { item: AgendaItem }>(null);
+  const [reminders, setReminders] = useState<any[]>([]);
+  const [remindersLoading, setRemindersLoading] = useState(false);
+  const [remSendAt, setRemSendAt] = useState('');
+  const [remTarget, setRemTarget] = useState<'responsible' | 'custom'>('responsible');
+  const [remPhone, setRemPhone] = useState('');
+  const [remMessage, setRemMessage] = useState('');
+
   const range = useMemo(() => {
     const now = new Date();
 
@@ -128,15 +147,19 @@ export function AgendaPage() {
       const sb = requireSupabase();
       await getAuthedUser();
 
-      // role + office + agendas
-      const [r, oid, ags] = await Promise.all([
+      // role + office + agendas + lite lookups
+      const [r, oid, ags, clLite, csLite] = await Promise.all([
         getMyOfficeRole().catch(() => ''),
         getMyOfficeId().catch(() => null),
         listAgendas().catch(() => [] as AgendaRow[]),
+        loadClientsLite().catch(() => [] as ClientLite[]),
+        loadCasesLite().catch(() => [] as CaseLite[]),
       ]);
       setRole(r);
       setOfficeId(oid);
       setAgendas(ags);
+      setClientsLite(clLite);
+      setCasesLite(csLite);
 
       // members (for responsible dropdown/filter)
       if (oid) {
@@ -161,7 +184,7 @@ export function AgendaPage() {
 
       let q = sb
         .from('agenda_items')
-        .select('id,kind,title,notes,location,all_day,starts_at,ends_at,due_date,status,agenda_id,created_at,responsible_user_id')
+        .select('id,kind,title,notes,location,all_day,starts_at,ends_at,due_date,status,agenda_id,created_at,responsible_user_id,client_id,case_id')
         .or(orFilter)
         .order('created_at', { ascending: false })
         .limit(500);
@@ -230,6 +253,8 @@ export function AgendaPage() {
         status: 'confirmed',
         agenda_id: selectedAgendaIds[0] || null,
         responsible_user_id: responsibleUserId || user.id,
+        client_id: linkClientId || null,
+        case_id: linkCaseId || null,
       };
 
       if (kind === 'commitment') {
@@ -316,10 +341,115 @@ export function AgendaPage() {
       setStartsAt('');
       setEndsAt('');
       setDueDate('');
+      setLinkClientId('');
+      setLinkCaseId('');
       setSaving(false);
       await load();
     } catch (err: any) {
       setError(err?.message || 'Falha ao criar item na agenda.');
+      setSaving(false);
+    }
+  }
+
+  async function openReminders(item: AgendaItem) {
+    setRemindersOpen({ item });
+    setReminders([]);
+    setRemindersLoading(true);
+    setError(null);
+
+    try {
+      const sb = requireSupabase();
+      await getAuthedUser();
+
+      const { data, error } = await sb
+        .from('agenda_reminders')
+        .select('id,channel,to_kind,to_phone,to_user_id,to_client_id,message,send_at,status,sent_at,last_error,created_at')
+        .eq('agenda_item_id', item.id)
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (error) throw new Error(error.message);
+      setReminders((data as any) ?? []);
+
+      // Defaults for new reminder
+      setRemSendAt('');
+      setRemTarget('responsible');
+      setRemPhone('');
+      setRemMessage(
+        item.kind === 'deadline'
+          ? `Lembrete (prazo): ${item.title} · Data ${item.due_date || ''}`
+          : `Lembrete (compromisso): ${item.title}`,
+      );
+      setRemindersLoading(false);
+    } catch (e: any) {
+      setError(e?.message || 'Falha ao carregar lembretes.');
+      setRemindersLoading(false);
+    }
+  }
+
+  async function addReminder() {
+    if (!remindersOpen) return;
+    if (!remSendAt) {
+      setError('Informe data/hora do lembrete.');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const sb = requireSupabase();
+      const user = await getAuthedUser();
+
+      const office_id = officeId;
+      if (!office_id) throw new Error('Escritório não encontrado.');
+
+      const item = remindersOpen.item;
+      const sendAtIso = new Date(remSendAt).toISOString();
+
+      const payload: any = {
+        office_id,
+        agenda_item_id: item.id,
+        channel: 'whatsapp',
+        message: remMessage.trim() || 'Lembrete',
+        send_at: sendAtIso,
+        status: 'pending',
+        to_kind: remTarget === 'custom' ? 'custom' : 'internal',
+        to_phone: remTarget === 'custom' ? (remPhone.trim() || null) : null,
+        to_user_id: remTarget === 'responsible' ? item.responsible_user_id || user.id : null,
+        to_client_id: null,
+      };
+
+      if (remTarget === 'custom' && !payload.to_phone) {
+        throw new Error('Informe o telefone do destinatário.');
+      }
+
+      const { error } = await sb.from('agenda_reminders').insert(payload);
+      if (error) throw new Error(error.message);
+
+      setSaving(false);
+      await openReminders(item);
+    } catch (e: any) {
+      setError(e?.message || 'Falha ao criar lembrete.');
+      setSaving(false);
+    }
+  }
+
+  async function deleteReminder(id: string) {
+    if (!confirm('Excluir este lembrete?')) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const sb = requireSupabase();
+      await getAuthedUser();
+
+      const { error } = await sb.from('agenda_reminders').delete().eq('id', id);
+      if (error) throw new Error(error.message);
+
+      setSaving(false);
+      if (remindersOpen) await openReminders(remindersOpen.item);
+    } catch (e: any) {
+      setError(e?.message || 'Falha ao excluir lembrete.');
       setSaving(false);
     }
   }
@@ -638,6 +768,33 @@ export function AgendaPage() {
               </label>
             </div>
 
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-sm text-white/80">
+                Cliente (opcional)
+                <select className="select" value={linkClientId} onChange={(e) => setLinkClientId(e.target.value)}>
+                  <option value="">—</option>
+                  {clientsLite.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm text-white/80">
+                Caso (opcional)
+                <select className="select" value={linkCaseId} onChange={(e) => setLinkCaseId(e.target.value)}>
+                  <option value="">—</option>
+                  {casesLite
+                    .filter((c) => (!linkClientId ? true : c.client_id === linkClientId))
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.title}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            </div>
+
             <div className="flex flex-wrap gap-3">
               <button disabled={saving} onClick={onCreate} className="btn-primary">
                 {saving ? 'Salvando…' : 'Salvar'}
@@ -720,10 +877,32 @@ export function AgendaPage() {
                         ? `Data: ${it.due_date || '—'}`
                         : `Início: ${fmtDateTime(it.starts_at)}${it.ends_at ? ` · Fim: ${fmtDateTime(it.ends_at)}` : ''}`}
                     </div>
+
+                    <div className="mt-1 flex flex-wrap gap-2 text-xs text-white/60">
+                      {it.client_id ? (
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5">
+                          Cliente vinculado
+                        </span>
+                      ) : null}
+                      {it.case_id ? (
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5">
+                          Caso vinculado
+                        </span>
+                      ) : null}
+                    </div>
                     {it.location ? <div className="mt-1 text-xs text-white/50">Local: {it.location}</div> : null}
                     {it.notes ? <div className="mt-1 text-xs text-white/50">Obs: {it.notes}</div> : null}
                   </div>
-                  <div className="text-xs font-semibold text-white/60">{it.status}</div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
+                      onClick={() => void openReminders(it)}
+                      type="button"
+                    >
+                      Lembretes
+                    </button>
+                    <div className="text-xs font-semibold text-white/60">{it.status}</div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -732,6 +911,100 @@ export function AgendaPage() {
           </div>
         ) : null}
       </Card>
+
+      {remindersOpen ? (
+        <Card>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-white">Lembretes</div>
+              <div className="text-xs text-white/60">Item: {remindersOpen.item.title}</div>
+            </div>
+            <button className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs" onClick={() => setRemindersOpen(null)}>
+              Fechar
+            </button>
+          </div>
+
+          {error ? <div className="mt-3 text-sm text-red-200">{error}</div> : null}
+
+          <div className="mt-4 grid gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-white/60">Adicionar lembrete</div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-sm text-white/80">
+                Enviar em
+                <input
+                  type="datetime-local"
+                  className="input"
+                  value={remSendAt}
+                  onChange={(e) => setRemSendAt(e.target.value)}
+                />
+              </label>
+
+              <label className="text-sm text-white/80">
+                Destino
+                <select className="select" value={remTarget} onChange={(e) => setRemTarget(e.target.value as any)}>
+                  <option value="responsible">Responsável</option>
+                  <option value="custom">Número</option>
+                </select>
+              </label>
+
+              {remTarget === 'custom' ? (
+                <label className="md:col-span-2 text-sm text-white/80">
+                  Telefone
+                  <input className="input" value={remPhone} onChange={(e) => setRemPhone(e.target.value)} placeholder="Ex: +55 11 99999-9999" />
+                </label>
+              ) : null}
+
+              <label className="md:col-span-2 text-sm text-white/80">
+                Mensagem
+                <input className="input" value={remMessage} onChange={(e) => setRemMessage(e.target.value)} />
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button className="btn-primary" disabled={saving} onClick={() => void addReminder()}>
+                {saving ? 'Salvando…' : 'Salvar lembrete'}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5">
+            {remindersLoading ? <div className="p-4 text-sm text-white/70">Carregando…</div> : null}
+
+            {!remindersLoading && reminders.length === 0 ? (
+              <div className="p-4 text-sm text-white/60">Nenhum lembrete neste item.</div>
+            ) : null}
+
+            {!remindersLoading && reminders.length ? (
+              <div className="divide-y divide-white/10">
+                {reminders.map((r: any) => (
+                  <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+                    <div>
+                      <div className="text-sm font-semibold text-white">
+                        {new Date(r.send_at).toLocaleString()} · {String(r.status || '').toUpperCase()}
+                      </div>
+                      <div className="mt-1 text-xs text-white/60">{r.message}</div>
+                      <div className="mt-1 text-xs text-white/50">
+                        {r.to_kind === 'custom' ? `Para: ${r.to_phone || '—'}` : 'Para: responsável'}
+                      </div>
+                      {r.last_error ? <div className="mt-1 text-xs text-red-200">{r.last_error}</div> : null}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
+                        disabled={saving}
+                        onClick={() => void deleteReminder(r.id)}
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </Card>
+      ) : null}
     </div>
   );
 }
