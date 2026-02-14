@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { Hero1951 } from '@/components/ui/hero-195-1';
 import { Card } from '@/ui/widgets/Card';
 import { getMyOfficeRole } from '@/lib/roles';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   Cell,
@@ -38,6 +42,8 @@ type TeamTaskRow = {
   status_v2: 'open' | 'in_progress' | 'paused' | 'done' | 'cancelled' | string | null;
   due_at: string | null;
   assigned_to_user_id: string | null;
+  created_at?: string | null;
+  done_at?: string | null;
 };
 
 type ProfileLite = { user_id: string; display_name: string | null; email: string | null };
@@ -97,6 +103,7 @@ export function DashboardPage() {
   const [teamTasks, setTeamTasks] = useState<TeamTaskRow[]>([]);
   const [teamProfiles, setTeamProfiles] = useState<ProfileLite[]>([]);
   const [myTasksLite, setMyTasksLite] = useState<TeamTaskRow[]>([]);
+  const [trend, setTrend] = useState<{ day: string; criadas: number; concluidas: number }[]>([]);
 
   const todayStr = useMemo(() => toDateStr(new Date()), []);
 
@@ -112,7 +119,14 @@ export function DashboardPage() {
 
         const roleNow = await getMyOfficeRole().catch(() => '');
 
-        const [c1, c2, t1, a1, myLite, teamT, teamP] = await Promise.all([
+        const since = new Date(Date.now() - 14 * 86400e3);
+        const sinceIso = since.toISOString();
+        const days: string[] = [];
+        for (let i = 13; i >= 0; i--) {
+          days.push(toDateStr(new Date(Date.now() - i * 86400e3)));
+        }
+
+        const [c1, c2, t1, a1, myLite, created14, done14, teamT, teamP] = await Promise.all([
           sb.from('clients').select('id', { count: 'exact', head: true }),
           sb.from('cases').select('id', { count: 'exact', head: true }),
           sb
@@ -131,14 +145,19 @@ export function DashboardPage() {
             .order('created_at', { ascending: false })
             .limit(8),
 
-          // my tasks summary (for charts)
+          // tasks summary (for charts) - respects RLS
           sb
             .from('tasks')
             .select('id,status_v2,due_at,assigned_to_user_id')
             .neq('status_v2', 'done')
             .neq('status_v2', 'cancelled')
             .order('due_at', { ascending: true, nullsFirst: false })
-            .limit(400),
+            .limit(800),
+
+          // trend: created in 14d
+          sb.from('tasks').select('created_at').gte('created_at', sinceIso).limit(2000),
+          // trend: done in 14d
+          sb.from('tasks').select('done_at').not('done_at', 'is', null).gte('done_at', sinceIso).limit(2000),
 
           roleNow === 'admin'
             ? sb
@@ -147,16 +166,35 @@ export function DashboardPage() {
                 .neq('status_v2', 'done')
                 .neq('status_v2', 'cancelled')
                 .order('due_at', { ascending: true, nullsFirst: false })
-                .limit(800)
+                .limit(1200)
             : Promise.resolve({ data: [], error: null } as any),
           roleNow === 'admin'
             ? sb.from('user_profiles').select('user_id,display_name,email').order('created_at', { ascending: false }).limit(500)
             : Promise.resolve({ data: [], error: null } as any),
         ]);
 
+        // compute trend
+        try {
+          const createdMap = new Map<string, number>();
+          for (const d of days) createdMap.set(d, 0);
+          for (const r of (created14.data || []) as any[]) {
+            const d = toDateStr(new Date(r.created_at));
+            createdMap.set(d, (createdMap.get(d) || 0) + 1);
+          }
+          const doneMap = new Map<string, number>();
+          for (const d of days) doneMap.set(d, 0);
+          for (const r of (done14.data || []) as any[]) {
+            const d = toDateStr(new Date(r.done_at));
+            doneMap.set(d, (doneMap.get(d) || 0) + 1);
+          }
+          setTrend(days.map((d) => ({ day: d.slice(5), criadas: createdMap.get(d) || 0, concluidas: doneMap.get(d) || 0 })));
+        } catch {
+          setTrend([]);
+        }
+
         setRole(roleNow);
 
-        if (c1.error || c2.error || t1.error || a1.error || myLite.error || teamT.error || teamP.error) {
+        if (c1.error || c2.error || t1.error || a1.error || myLite.error || created14.error || done14.error || teamT.error || teamP.error) {
           throw new Error(
             c1.error?.message ||
               c2.error?.message ||
@@ -277,6 +315,35 @@ export function DashboardPage() {
     return { statusData, riskData };
   }, [role, teamTasks, myTasksLite]);
 
+  const baseTasks = role === 'admin' ? teamTasks : myTasksLite;
+
+  const kpis = useMemo(() => {
+    let pending = 0;
+    let overdue = 0;
+    let paused = 0;
+    let today = 0;
+    let due48 = 0;
+
+    const now = Date.now();
+    for (const t of baseTasks) {
+      const st = (t.status_v2 || 'open') as string;
+      if (st === 'paused') paused += 1;
+      if (st !== 'done' && st !== 'cancelled') pending += 1;
+
+      if (t.due_at) {
+        const due = new Date(t.due_at).getTime();
+        const diffH = (due - now) / 36e5;
+        if (diffH < 0) overdue += 1;
+        else if (diffH <= 24) today += 1;
+        else if (diffH <= 48) due48 += 1;
+      }
+    }
+
+    const agendaToday = agenda.filter((a) => a.kind === 'deadline' ? (a.due_date || '') === todayStr : true).length;
+
+    return { pending, overdue, paused, today, due48, agendaToday };
+  }, [baseTasks, agenda, todayStr]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -301,7 +368,76 @@ export function DashboardPage() {
 
       <Hero1951 />
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <Tabs defaultValue="insights" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 rounded-2xl border border-white/10 bg-white/5 p-1">
+          <TabsTrigger value="insights">Insights</TabsTrigger>
+          <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
+          <TabsTrigger value="agenda">Agenda</TabsTrigger>
+          <TabsTrigger value="equipe">Equipe</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="insights" className="mt-4 space-y-6">
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+            <Link to="/app/tarefas" className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10">
+              <div className="text-xs text-white/60">Pendentes</div>
+              <div className="mt-2 text-2xl font-semibold text-white">{loading ? '—' : kpis.pending}</div>
+            </Link>
+            <Link to="/app/tarefas" className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10">
+              <div className="text-xs text-white/60">Atrasadas</div>
+              <div className="mt-2 text-2xl font-semibold text-red-200">{loading ? '—' : kpis.overdue}</div>
+            </Link>
+            <Link to="/app/tarefas" className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10">
+              <div className="text-xs text-white/60">Pausadas</div>
+              <div className="mt-2 text-2xl font-semibold text-amber-200">{loading ? '—' : kpis.paused}</div>
+            </Link>
+            <Link to="/app/tarefas" className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10">
+              <div className="text-xs text-white/60">Vencem hoje</div>
+              <div className="mt-2 text-2xl font-semibold text-white">{loading ? '—' : kpis.today}</div>
+            </Link>
+            <Link to="/app/tarefas" className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10">
+              <div className="text-xs text-white/60">48h</div>
+              <div className="mt-2 text-2xl font-semibold text-white">{loading ? '—' : kpis.due48}</div>
+            </Link>
+            <Link to="/app/agenda" className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10">
+              <div className="text-xs text-white/60">Agenda hoje</div>
+              <div className="mt-2 text-2xl font-semibold text-white">{loading ? '—' : kpis.agendaToday}</div>
+            </Link>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-white">Esteira (14 dias)</div>
+                  <div className="text-xs text-white/60">Criadas vs Concluídas — se criadas &gt; concluídas, a fila cresce.</div>
+                </div>
+              </div>
+
+              <div className="mt-4 h-[260px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trend}>
+                    <XAxis dataKey="day" stroke="rgba(255,255,255,0.5)" fontSize={12} />
+                    <YAxis stroke="rgba(255,255,255,0.3)" fontSize={12} />
+                    <Tooltip />
+                    <Legend />
+                    <Area type="monotone" dataKey="criadas" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.15} />
+                    <Area type="monotone" dataKey="concluidas" stroke="#86efac" fill="#86efac" fillOpacity={0.12} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+
+            <Card>
+              <div className="text-sm font-semibold text-white">Atalhos</div>
+              <div className="mt-3 grid gap-2">
+                <Link to="/app/tarefas/kanban" className="btn-primary">Kanban</Link>
+                <Link to="/app/agenda" className="btn-ghost">Agenda</Link>
+                <Link to="/app/casos" className="btn-ghost">Casos</Link>
+              </div>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <div className="text-xs text-white/60">Clientes</div>
           <div className="mt-2 flex items-end justify-between gap-4">
@@ -322,9 +458,9 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <div className="flex items-end justify-between gap-3">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <div className="flex items-end justify-between gap-3">
             <div>
               <div className="text-sm font-semibold text-white">Saúde das tarefas</div>
               <div className="text-xs text-white/60">Distribuição por status (pontos secos aparecem em Pausado/Atrasadas).</div>
@@ -406,9 +542,9 @@ export function DashboardPage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <div className="text-sm font-semibold text-white">Lembretes de tarefas</div>
               <div className="text-xs text-white/60">Atrasadas · hoje · próximas</div>
@@ -493,7 +629,50 @@ export function DashboardPage() {
             ))}
           </div>
         </Card>
-      </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="tarefas" className="mt-4 space-y-4">
+          <Card>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-white">Tarefas</div>
+                <div className="text-xs text-white/60">Acompanhe a esteira e delegação.</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link to="/app/tarefas/kanban" className="btn-primary !rounded-lg !px-3 !py-1.5 !text-xs">Kanban</Link>
+                <Link to="/app/tarefas" className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs">Lista</Link>
+              </div>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="agenda" className="mt-4 space-y-4">
+          <Card>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-white">Agenda</div>
+                <div className="text-xs text-white/60">Compromissos e prazos.</div>
+              </div>
+              <Link to="/app/agenda" className="btn-primary !rounded-lg !px-3 !py-1.5 !text-xs">Abrir agenda</Link>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="equipe" className="mt-4 space-y-4">
+          {role === 'admin' ? (
+            <Card>
+              <div className="text-sm font-semibold text-white">Equipe (admin)</div>
+              <div className="mt-1 text-xs text-white/60">Use o bloco de gestão no Insights.</div>
+            </Card>
+          ) : (
+            <Card>
+              <div className="text-sm font-semibold text-white">Equipe</div>
+              <div className="mt-1 text-xs text-white/60">Disponível para admin.</div>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
