@@ -8,17 +8,42 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<'personal' | 'case'>(caseId ? 'case' : 'personal');
+  const [tab, setTab] = useState<'all' | 'personal' | 'case' | 'task'>(caseId ? 'case' : 'all');
+  const [q, setQ] = useState('');
+  const [type, setType] = useState<'all' | 'pdf' | 'image' | 'doc' | 'other'>('all');
+
   const [uploadOpen, setUploadOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
   const filtered = useMemo(() => {
-    if (tab === 'personal') return rows.filter((r) => r.kind === 'personal');
-    if (caseId) return rows.filter((r) => r.kind === 'case' && r.case_id === caseId);
-    return rows.filter((r) => r.kind === 'case');
-  }, [rows, tab, caseId]);
+    const term = q.trim().toLowerCase();
+
+    return rows
+      .filter((r) => {
+        if (tab === 'personal') return r.kind === 'personal';
+        if (tab === 'case') {
+          if (caseId) return r.kind === 'case' && r.case_id === caseId;
+          return r.kind === 'case';
+        }
+        if (tab === 'task') return r.kind === 'task';
+        return true;
+      })
+      .filter((r) => {
+        const mt = String(r.mime_type || '').toLowerCase();
+        if (type === 'all') return true;
+        if (type === 'pdf') return mt.includes('pdf') || r.file_path.toLowerCase().endsWith('.pdf');
+        if (type === 'image') return mt.startsWith('image/') || /\.(png|jpg|jpeg|webp|gif)$/i.test(r.file_path);
+        if (type === 'doc') return /\.(doc|docx)$/i.test(r.file_path) || mt.includes('msword');
+        return true;
+      })
+      .filter((r) => {
+        if (!term) return true;
+        const hay = [r.title, r.mime_type || '', r.file_path].join(' ').toLowerCase();
+        return hay.includes(term);
+      });
+  }, [rows, tab, caseId, q, type]);
 
   async function load() {
     setLoading(true);
@@ -43,7 +68,14 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
     setSaving(true);
     setError(null);
     try {
-      await uploadClientDocument({ clientId, kind: tab, title: title.trim() || file.name, file, caseId: tab === 'case' ? caseId || null : null });
+      const kind = tab === 'case' ? 'case' : 'personal';
+      await uploadClientDocument({
+        clientId,
+        kind,
+        title: title.trim() || file.name,
+        file,
+        caseId: kind === 'case' ? caseId || null : null,
+      });
       setUploadOpen(false);
       setTitle('');
       setFile(null);
@@ -86,8 +118,10 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
           <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1">
             {(
               [
+                { id: 'all', label: 'Todos' },
                 { id: 'personal', label: 'Pessoais' },
                 { id: 'case', label: 'Processos' },
+                { id: 'task', label: 'Tarefas' },
               ] as const
             ).map((t) => (
               <button
@@ -103,13 +137,41 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
             ))}
           </div>
 
-          <button onClick={() => setUploadOpen(true)} className="btn-primary">
+          <button
+            onClick={() => {
+              // Upload supports only personal/case.
+              if (tab === 'task' || tab === 'all') {
+                setTab(caseId ? 'case' : 'personal');
+              }
+              setUploadOpen(true);
+            }}
+            className="btn-primary"
+          >
             Enviar arquivo
           </button>
         </div>
       </div>
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <input
+            className="input w-72 max-w-full"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por título/tipo…"
+          />
+          <select className="input w-44" value={type} onChange={(e) => setType(e.target.value as any)}>
+            <option value="all">Todos os tipos</option>
+            <option value="pdf">PDF</option>
+            <option value="image">Imagens</option>
+            <option value="doc">Word</option>
+          </select>
+        </div>
+
+        <div className="text-xs text-white/60">{filtered.length} arquivos</div>
+      </div>
 
       {uploadOpen ? (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -144,7 +206,7 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
         {loading ? <div className="p-4 text-sm text-white/70">Carregando…</div> : null}
 
         {!loading && filtered.length === 0 ? (
-          <div className="p-4 text-sm text-white/60">Nenhum documento nesta aba.</div>
+          <div className="p-4 text-sm text-white/60">Nenhum documento neste filtro.</div>
         ) : null}
 
         {!loading && filtered.length ? (
