@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
 import { DocumentsSection } from '@/ui/widgets/DocumentsSection';
+import { ClientLinksSection } from '@/ui/widgets/ClientLinksSection';
 import { TimelineSection } from '@/ui/widgets/TimelineSection';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
@@ -152,6 +153,12 @@ export function ClientDetailsPage() {
           ))}
         </div>
       </Card>
+
+      {clientId ? (
+        <Card>
+          <ClientLinksSection clientId={clientId} />
+        </Card>
+      ) : null}
 
       {clientId ? (
         <Card>
