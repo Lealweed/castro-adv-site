@@ -61,6 +61,42 @@ export function TaskDetailsPage() {
 
   const isAdmin = role === 'admin';
 
+  const [addPartUserId, setAddPartUserId] = useState('');
+  const [addPartRole, setAddPartRole] = useState<'assignee' | 'reviewer' | 'protocol' | string>('assignee');
+  const [addingPart, setAddingPart] = useState(false);
+
+  async function onAddParticipant() {
+    if (!row) return;
+    if (!addPartUserId) {
+      setError('Selecione um membro para adicionar.');
+      return;
+    }
+
+    setAddingPart(true);
+    setError(null);
+
+    try {
+      const sb = requireSupabase();
+      await getAuthedUser();
+
+      const { error } = await sb.rpc('task_add_participant', {
+        p_task_id: row.id,
+        p_user_id: addPartUserId,
+        p_role: addPartRole || 'assignee',
+      } as any);
+
+      if (error) throw new Error(error.message);
+
+      setAddPartUserId('');
+      setAddPartRole('assignee');
+      setAddingPart(false);
+      await load();
+    } catch (e: any) {
+      setError(e?.message || 'Falha ao adicionar participante.');
+      setAddingPart(false);
+    }
+  }
+
   async function onDelegate() {
     if (!row) return;
     if (!delegateTo) {
@@ -279,6 +315,42 @@ export function TaskDetailsPage() {
               <div className="text-xs text-white/60">Cada participante pode registrar sua própria conclusão.</div>
             </div>
           </div>
+
+          {isAdmin ? (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="text-sm font-semibold text-white">Adicionar participante</div>
+              <div className="mt-1 text-xs text-white/60">Adiciona (ou atualiza o papel) de um membro na tarefa.</div>
+
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <label className="text-sm text-white/80">
+                  Membro
+                  <select className="select" value={addPartUserId} onChange={(e) => setAddPartUserId(e.target.value)}>
+                    <option value="">Selecione…</option>
+                    {members.map((m) => (
+                      <option key={m.user_id} value={m.user_id}>
+                        {m.display_name || m.email || m.user_id.slice(0, 8)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="text-sm text-white/80">
+                  Papel
+                  <select className="select" value={addPartRole} onChange={(e) => setAddPartRole(e.target.value)}>
+                    <option value="assignee">Responsável</option>
+                    <option value="reviewer">Revisor</option>
+                    <option value="protocol">Protocolo</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button className="btn-primary" disabled={addingPart} onClick={() => void onAddParticipant()}>
+                  {addingPart ? 'Adicionando…' : 'Adicionar'}
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-4 grid gap-2">
             {participants.map((p) => {
