@@ -80,6 +80,9 @@ function profileLabel(p: Profile) {
 export function TasksPage() {
   const [rows, setRows] = useState<TaskRow[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+
+  const [delegatingId, setDelegatingId] = useState<string | null>(null);
+  const [delegateTo, setDelegateTo] = useState('');
   const [myUserId, setMyUserId] = useState<string>('');
   const [role, setRole] = useState<string>('');
 
@@ -351,6 +354,32 @@ export function TasksPage() {
       await load();
     } catch (err: any) {
       setError(err?.message || 'Falha ao iniciar tarefa.');
+    }
+  }
+
+  async function delegateTask(t: TaskRow, toUserId: string) {
+    if (!toUserId) return;
+
+    setDelegatingId(t.id);
+    setError(null);
+
+    try {
+      const sb = requireSupabase();
+      await getAuthedUser();
+
+      const { error } = await sb.rpc('delegate_task', {
+        p_task_id: t.id,
+        p_assigned_to_user_id: toUserId,
+      } as any);
+
+      if (error) throw new Error(error.message);
+
+      setDelegatingId(null);
+      setDelegateTo('');
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao delegar tarefa.');
+      setDelegatingId(null);
     }
   }
 
@@ -642,7 +671,7 @@ export function TasksPage() {
                       ) : null}
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {t.status_v2 === 'open' ? (
                         <button onClick={() => void startTask(t)} className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs">
                           Iniciar
@@ -665,6 +694,27 @@ export function TasksPage() {
                         <button onClick={() => void cancelTask(t)} className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs">
                           Cancelar
                         </button>
+                      ) : null}
+
+                      {isAdmin ? (
+                        <select
+                          className="select !mt-0 !w-[200px]"
+                          value={delegatingId === t.id ? delegateTo : ''}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setDelegateTo(v);
+                            if (v) void delegateTask(t, v);
+                          }}
+                          disabled={delegatingId === t.id}
+                          title="Delegar"
+                        >
+                          <option value="">Delegar…</option>
+                          {profiles.map((p) => (
+                            <option key={p.user_id} value={p.user_id}>
+                              {profileLabel(p)}
+                            </option>
+                          ))}
+                        </select>
                       ) : null}
 
                       {t.status_v2 === 'done' || t.status_v2 === 'cancelled' ? (
