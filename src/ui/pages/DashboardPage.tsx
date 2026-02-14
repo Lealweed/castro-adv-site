@@ -5,6 +5,19 @@ import { Card } from '@/ui/widgets/Card';
 import { getMyOfficeRole } from '@/lib/roles';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
+import {
+  Bar,
+  BarChart,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+
 type TaskRow = {
   id: string;
   title: string;
@@ -21,7 +34,7 @@ type TaskRow = {
 
 type TeamTaskRow = {
   id: string;
-  status_v2: string | null;
+  status_v2: 'open' | 'in_progress' | 'paused' | 'done' | 'cancelled' | string | null;
   due_at: string | null;
   assigned_to_user_id: string | null;
 };
@@ -82,6 +95,7 @@ export function DashboardPage() {
   const [role, setRole] = useState<string>('');
   const [teamTasks, setTeamTasks] = useState<TeamTaskRow[]>([]);
   const [teamProfiles, setTeamProfiles] = useState<ProfileLite[]>([]);
+  const [myTasksLite, setMyTasksLite] = useState<TeamTaskRow[]>([]);
 
   const todayStr = useMemo(() => toDateStr(new Date()), []);
 
@@ -97,7 +111,7 @@ export function DashboardPage() {
 
         const roleNow = await getMyOfficeRole().catch(() => '');
 
-        const [c1, c2, t1, a1, teamT, teamP] = await Promise.all([
+        const [c1, c2, t1, a1, myLite, teamT, teamP] = await Promise.all([
           sb.from('clients').select('id', { count: 'exact', head: true }),
           sb.from('cases').select('id', { count: 'exact', head: true }),
           sb
@@ -115,6 +129,16 @@ export function DashboardPage() {
             .or(`and(kind.eq.deadline,due_date.gte.${todayStr}),and(kind.eq.commitment,starts_at.gte.${new Date().toISOString()})`)
             .order('created_at', { ascending: false })
             .limit(8),
+
+          // my tasks summary (for charts)
+          sb
+            .from('tasks')
+            .select('id,status_v2,due_at,assigned_to_user_id')
+            .neq('status_v2', 'done')
+            .neq('status_v2', 'cancelled')
+            .order('due_at', { ascending: true, nullsFirst: false })
+            .limit(400),
+
           roleNow === 'admin'
             ? sb
                 .from('tasks')
@@ -122,18 +146,24 @@ export function DashboardPage() {
                 .neq('status_v2', 'done')
                 .neq('status_v2', 'cancelled')
                 .order('due_at', { ascending: true, nullsFirst: false })
-                .limit(400)
+                .limit(800)
             : Promise.resolve({ data: [], error: null } as any),
           roleNow === 'admin'
-            ? sb.from('user_profiles').select('user_id,display_name,email').order('created_at', { ascending: false }).limit(200)
+            ? sb.from('user_profiles').select('user_id,display_name,email').order('created_at', { ascending: false }).limit(500)
             : Promise.resolve({ data: [], error: null } as any),
         ]);
 
         setRole(roleNow);
 
-        if (c1.error || c2.error || t1.error || a1.error || teamT.error || teamP.error) {
+        if (c1.error || c2.error || t1.error || a1.error || myLite.error || teamT.error || teamP.error) {
           throw new Error(
-            c1.error?.message || c2.error?.message || t1.error?.message || a1.error?.message || teamT.error?.message || teamP.error?.message ||
+            c1.error?.message ||
+              c2.error?.message ||
+              t1.error?.message ||
+              a1.error?.message ||
+              myLite.error?.message ||
+              teamT.error?.message ||
+              teamP.error?.message ||
               'Falha ao carregar.',
           );
         }
@@ -143,6 +173,7 @@ export function DashboardPage() {
         setCounts({ clients: c1.count || 0, cases: c2.count || 0 });
         setTasks((t1.data || []) as TaskRow[]);
         setAgenda((a1.data || []) as AgendaItem[]);
+        setMyTasksLite((myLite.data || []) as TeamTaskRow[]);
         setTeamTasks((teamT.data || []) as TeamTaskRow[]);
         setTeamProfiles((teamP.data || []) as ProfileLite[]);
         setLoading(false);
@@ -205,6 +236,46 @@ export function DashboardPage() {
     return { overdueAll, due48All, rows };
   }, [role, teamTasks, teamProfiles]);
 
+  const chartBase = useMemo(() => {
+    const base = role === 'admin' ? teamTasks : myTasksLite;
+
+    const statusCounts = new Map<string, number>();
+    const risk = { overdue: 0, today: 0, due48: 0, noDue: 0 };
+
+    const now = Date.now();
+    for (const t of base) {
+      const st = (t.status_v2 || 'open') as string;
+      statusCounts.set(st, (statusCounts.get(st) || 0) + 1);
+
+      if (!t.due_at) {
+        risk.noDue += 1;
+      } else {
+        const due = new Date(t.due_at).getTime();
+        const diffH = (due - now) / 36e5;
+        if (diffH < 0) risk.overdue += 1;
+        else if (diffH <= 24) risk.today += 1;
+        else if (diffH <= 48) risk.due48 += 1;
+      }
+    }
+
+    const statusData = [
+      { name: 'Aberto', key: 'open', value: statusCounts.get('open') || 0, color: '#f59e0b' },
+      { name: 'Andamento', key: 'in_progress', value: statusCounts.get('in_progress') || 0, color: '#93c5fd' },
+      { name: 'Pausado', key: 'paused', value: statusCounts.get('paused') || 0, color: '#fbbf24' },
+      { name: 'Concluído', key: 'done', value: statusCounts.get('done') || 0, color: '#86efac' },
+      { name: 'Cancelado', key: 'cancelled', value: statusCounts.get('cancelled') || 0, color: '#fca5a5' },
+    ].filter((x) => x.value > 0);
+
+    const riskData = [
+      { name: 'Atrasadas', value: risk.overdue, color: '#f87171' },
+      { name: 'Hoje', value: risk.today, color: '#f59e0b' },
+      { name: '48h', value: risk.due48, color: '#fbbf24' },
+      { name: 'Sem prazo', value: risk.noDue, color: '#a3a3a3' },
+    ];
+
+    return { statusData, riskData };
+  }, [role, teamTasks, myTasksLite]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -244,6 +315,55 @@ export function DashboardPage() {
             <Link className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs" to="/app/casos">
               Abrir
             </Link>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-white">Saúde das tarefas</div>
+              <div className="text-xs text-white/60">Distribuição por status (pontos secos aparecem em Pausado/Atrasadas).</div>
+            </div>
+          </div>
+
+          <div className="mt-4 h-[240px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={chartBase.statusData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90} paddingAngle={3}>
+                  {chartBase.statusData.map((e, idx) => (
+                    <Cell key={idx} fill={(e as any).color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-white">Risco / Gargalos</div>
+              <div className="text-xs text-white/60">Atrasadas, hoje, 48h e sem prazo.</div>
+            </div>
+          </div>
+
+          <div className="mt-4 h-[240px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartBase.riskData}>
+                <XAxis dataKey="name" stroke="rgba(255,255,255,0.5)" fontSize={12} />
+                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={12} />
+                <Tooltip />
+                <Bar dataKey="value">
+                  {chartBase.riskData.map((e, idx) => (
+                    <Cell key={idx} fill={(e as any).color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </Card>
       </div>
