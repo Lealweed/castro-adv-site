@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
 import { TaskAttachmentsSection } from '@/ui/widgets/TaskAttachmentsSection';
 import { TimelineSection } from '@/ui/widgets/TimelineSection';
+import { getMyOfficeRole } from '@/lib/roles';
+import { listOfficeMemberProfiles, type OfficeMemberProfile } from '@/lib/officeContext';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type TaskRow = {
@@ -14,6 +16,9 @@ type TaskRow = {
   priority: string;
   due_at: string | null;
   created_at: string;
+  assigned_to_user_id: string | null;
+  last_assigned_by_user_id?: string | null;
+  last_assigned_at?: string | null;
   client_id: string | null;
   case_id: string | null;
   office_id?: string | null;
@@ -39,6 +44,7 @@ function fmtDT(iso: string | null) {
 
 export function TaskDetailsPage() {
   const { taskId } = useParams();
+  const [sp] = useSearchParams();
   const [row, setRow] = useState<TaskRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +52,45 @@ export function TaskDetailsPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [myNotes, setMyNotes] = useState('');
   const [savingPart, setSavingPart] = useState(false);
+
+  const [role, setRole] = useState('');
+  const [members, setMembers] = useState<OfficeMemberProfile[]>([]);
+  const [delegateOpen, setDelegateOpen] = useState(false);
+  const [delegateTo, setDelegateTo] = useState('');
+  const [delegating, setDelegating] = useState(false);
+
+  const isAdmin = role === 'admin';
+
+  async function onDelegate() {
+    if (!row) return;
+    if (!delegateTo) {
+      setError('Selecione para quem delegar.');
+      return;
+    }
+
+    setDelegating(true);
+    setError(null);
+
+    try {
+      const sb = requireSupabase();
+      await getAuthedUser();
+
+      const { error } = await sb.rpc('delegate_task', {
+        p_task_id: row.id,
+        p_assigned_to_user_id: delegateTo,
+      } as any);
+
+      if (error) throw new Error(error.message);
+
+      setDelegateOpen(false);
+      setDelegateTo('');
+      setDelegating(false);
+      await load();
+    } catch (e: any) {
+      setError(e?.message || 'Falha ao delegar.');
+      setDelegating(false);
+    }
+  }
 
   async function load() {
     if (!taskId) return;
@@ -60,7 +105,7 @@ export function TaskDetailsPage() {
       const { data, error: qErr } = await sb
         .from('tasks')
         .select(
-          'id,office_id,title,description,status_v2,priority,due_at,created_at,client_id,case_id, client:clients(id,name), case:cases(id,title)',
+          'id,office_id,title,description,status_v2,priority,due_at,created_at,client_id,case_id,assigned_to_user_id,last_assigned_by_user_id,last_assigned_at, client:clients(id,name), case:cases(id,title)',
         )
         .eq('id', taskId)
         .maybeSingle();
@@ -68,6 +113,14 @@ export function TaskDetailsPage() {
       if (qErr) throw new Error(qErr.message);
       const t = (data as any) || null;
       setRow(t);
+
+      const r = await getMyOfficeRole().catch(() => '');
+      setRole(r);
+
+      if (t?.office_id) {
+        const ms = await listOfficeMemberProfiles(t.office_id).catch(() => []);
+        setMembers(ms);
+      }
 
       // participants + profiles
       const { data: ps, error: pErr } = await sb
@@ -104,6 +157,10 @@ export function TaskDetailsPage() {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId]);
+
+  useEffect(() => {
+    if (sp.get('delegate') === '1') setDelegateOpen(true);
+  }, [sp]);
 
   return (
     <div className="space-y-6">
@@ -175,6 +232,41 @@ export function TaskDetailsPage() {
             </div>
 
             <div className="text-xs text-white/40">Criada em: {fmtDT(row.created_at)}</div>
+
+            {isAdmin ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <button className="btn-ghost" onClick={() => setDelegateOpen((v) => !v)}>
+                  {delegateOpen ? 'Fechar delegação' : 'Delegar'}
+                </button>
+              </div>
+            ) : null}
+
+            {isAdmin && delegateOpen ? (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="text-sm font-semibold text-white">Delegar tarefa</div>
+                <div className="mt-1 text-xs text-white/60">Atribui a tarefa para outro membro e registra na caixa de saída.</div>
+
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <label className="text-sm text-white/80">
+                    Delegar para
+                    <select className="select" value={delegateTo} onChange={(e) => setDelegateTo(e.target.value)}>
+                      <option value="">Selecione…</option>
+                      {members.map((m) => (
+                        <option key={m.user_id} value={m.user_id}>
+                          {m.display_name || m.email || m.user_id.slice(0, 8)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button className="btn-primary" disabled={delegating} onClick={() => void onDelegate()}>
+                    {delegating ? 'Delegando…' : 'Confirmar delegação'}
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </Card>

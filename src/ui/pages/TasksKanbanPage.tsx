@@ -376,18 +376,30 @@ export function TasksKanbanPage() {
                                   Concluir
                                 </button>
                                 {isAdmin ? (
-                                  <button
-                                    type="button"
-                                    className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
-                                    disabled={busyId === t.id}
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      void setStatus(t, 'cancelled');
-                                    }}
-                                  >
-                                    Cancelar
-                                  </button>
+                                  <>
+                                    <Link
+                                      to={`/app/tarefas/${t.id}?delegate=1`}
+                                      className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                      }}
+                                    >
+                                      Delegar
+                                    </Link>
+                                    <button
+                                      type="button"
+                                      className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
+                                      disabled={busyId === t.id}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        void setStatus(t, 'cancelled');
+                                      }}
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </>
                                 ) : null}
                               </div>
 
