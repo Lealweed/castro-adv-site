@@ -42,6 +42,8 @@ export function FinancePage() {
   const [categories, setCategories] = useState<FinanceCategory[]>([]);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'planned' | 'paid'>('all');
 
   async function load() {
     setLoading(true);
@@ -91,8 +93,24 @@ export function FinancePage() {
     const paidExpense = rows
       .filter((r) => r.type === 'expense' && r.status === 'paid')
       .reduce((a, r) => a + r.amount_cents, 0);
-    return { plannedIncome, plannedExpense, paidIncome, paidExpense };
+    const netPaid = paidIncome - paidExpense;
+    return { plannedIncome, plannedExpense, paidIncome, paidExpense, netPaid };
   }, [rows]);
+
+  const filteredRows = useMemo(() => {
+    let out = rows;
+
+    if (statusFilter !== 'all') {
+      out = out.filter((r) => r.status === statusFilter);
+    }
+
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      out = out.filter((r) => (r.description || '').toLowerCase().includes(q));
+    }
+
+    return out;
+  }, [rows, statusFilter, search]);
 
   async function onCreate() {
     if (!description.trim()) return;
@@ -174,6 +192,25 @@ export function FinancePage() {
       </div>
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div className="text-[11px] text-white/60">Buscar lançamento</div>
+          <input className="input !mt-1" placeholder="Ex.: honorário, custas..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div className="text-[11px] text-white/60">Status</div>
+          <select className="select !mt-1" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
+            <option value="all">Todos</option>
+            <option value="planned">Previsto</option>
+            <option value="paid">Pago</option>
+          </select>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div className="text-[11px] text-white/60">Saldo líquido (pago)</div>
+          <div className={`mt-2 text-2xl font-semibold ${summary.netPaid >= 0 ? 'text-emerald-200' : 'text-red-200'}`}>{centsToBRL(summary.netPaid)}</div>
+        </div>
+      </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="grid flex-1 gap-4 lg:grid-cols-4">
@@ -307,10 +344,10 @@ export function FinancePage() {
         <div className="text-sm font-semibold text-white">Lançamentos</div>
         <div className="mt-3">
           {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
-          {!loading && rows.length === 0 ? <div className="text-sm text-white/60">Nenhum lançamento ainda.</div> : null}
+          {!loading && filteredRows.length === 0 ? <div className="text-sm text-white/60">Nenhum lançamento encontrado.</div> : null}
 
           <div className="mt-3 grid gap-2">
-            {rows.map((r) => (
+            {filteredRows.map((r) => (
               <a key={r.id} href={`/app/financeiro/${r.id}`} className="block rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
