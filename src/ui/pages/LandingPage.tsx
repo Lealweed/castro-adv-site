@@ -94,21 +94,14 @@ export function LandingPage() {
               <span className="size-1.5 rounded-full bg-gold" />
               {cityDisplay}
             </div>
-            <div className="mt-6 flex items-center gap-4">
-              <div className="hidden size-16 overflow-hidden rounded-2xl border border-black/10 bg-white sm:block">
-                <img
-                  src="/brand/logo.jpg"
-                  alt="Castro de Oliveira Advocacia"
-                  className="h-full w-full object-cover"
-                  loading="eager"
-                />
-              </div>
-              <h1 className="text-4xl font-semibold leading-tight tracking-tight md:text-5xl">
-                Castro de Oliveira Advocacia
-              </h1>
-            </div>
-            <p className="mt-4 text-base text-neutral-700">
-              Orientação jurídica com clareza, responsabilidade e estratégia. Atendimento e acompanhamento em áreas essenciais do direito.
+
+            <h1 className="mt-6 text-4xl font-semibold leading-tight tracking-tight text-neutral-950 md:text-5xl">
+              Castro de Oliveira
+              <span className="block text-[rgba(212,175,55,0.95)]">Advocacia</span>
+            </h1>
+
+            <p className="mt-4 max-w-xl text-base text-neutral-700">
+              Atendimento jurídico com padrão premium: organização, clareza e acompanhamento em tempo real no CRM.
             </p>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -119,67 +112,58 @@ export function LandingPage() {
                 to="/app"
                 className="inline-flex w-full items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-neutral-900 transition hover:bg-black/5 sm:w-auto"
               >
-                Área do Advogado (CRM)
+                Entrar no CRM
               </Link>
             </div>
 
             <div className="mt-8 grid grid-cols-2 gap-3 text-xs text-neutral-700 sm:grid-cols-3">
               <div className="rounded-xl border border-black/10 bg-white p-3">
-                <div className="text-neutral-950">Atuação</div>
-                <div>multidisciplinar</div>
+                <div className="text-neutral-950">Gestão</div>
+                <div>tarefas e prazos</div>
               </div>
               <div className="rounded-xl border border-black/10 bg-white p-3">
-                <div className="text-neutral-950">Atendimento</div>
-                <div>objetivo e humano</div>
+                <div className="text-neutral-950">Operação</div>
+                <div>clientes e casos</div>
               </div>
               <div className="rounded-xl border border-black/10 bg-white p-3">
-                <div className="text-neutral-950">Transparência</div>
-                <div>orientação clara</div>
+                <div className="text-neutral-950">Visão</div>
+                <div>dashboard executivo</div>
               </div>
             </div>
           </div>
 
-          {/* Visual */}
           <div className="relative">
             <div className="absolute -inset-10 rounded-[32px] bg-[radial-gradient(circle_at_30%_10%,rgba(212,175,55,0.38),transparent_58%)] blur-2xl" />
 
-            <div className="relative overflow-hidden rounded-[32px] border border-black/10 bg-white">
-              <div className="border-b border-black/10 bg-white px-5 py-4">
-                <div className="text-xs font-semibold tracking-[0.22em] text-gold">ÁREAS</div>
-                <div className="mt-1 text-sm font-semibold text-neutral-950">Atendimento em áreas essenciais</div>
+            <div className="relative overflow-hidden rounded-[32px] border border-black/10 bg-white p-5 md:p-6">
+              <Suspense fallback={<div className="h-44 animate-pulse rounded-2xl border border-black/10 bg-[#fbfaf7]" />}>
+                <HelixBadge3D className="mb-5 h-44" xOffset={0.8} quality="low" />
+              </Suspense>
+
+              <div className="grid gap-3">
+                {[
+                  'Visão consolidada de tarefas e SLA',
+                  'Funções por perfil (admin, financeiro, equipe)',
+                  'Fluxo premium para operação jurídica',
+                ].map((item) => (
+                  <div key={item} className="rounded-2xl border border-black/10 bg-[#fbfaf7] px-4 py-3 text-sm text-neutral-800">
+                    {item}
+                  </div>
+                ))}
               </div>
-              <div className="p-5">
-                <Suspense
-                  fallback={<div className="h-40 animate-pulse rounded-2xl border border-black/10 bg-[#fbfaf7]" />}
+
+              <div className="mt-5 rounded-2xl border border-black/10 bg-white p-4">
+                <div className="text-xs font-semibold tracking-[0.22em] text-gold">ENDEREÇO</div>
+                <div className="mt-2 text-sm text-neutral-700">{address.line1}</div>
+                <div className="text-sm text-neutral-700">{address.line2}</div>
+                <a
+                  className="mt-3 inline-flex text-xs font-semibold text-neutral-950 underline decoration-[rgba(212,175,55,0.7)] underline-offset-4 hover:decoration-[rgba(212,175,55,1)]"
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noreferrer"
                 >
-                  <HelixBadge3D className="mb-5" xOffset={0.8} quality="low" />
-                </Suspense>
-
-                <div className="grid gap-3">
-                  {areas.map((a) => (
-                    <div
-                      key={a.title}
-                      className="flex items-center justify-between rounded-2xl border border-black/10 bg-[#fbfaf7] px-4 py-4"
-                    >
-                      <span className="text-sm font-semibold text-neutral-950">{a.title}</span>
-                      <span className="text-xs font-semibold text-gold">Saiba mais</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-5 rounded-2xl border border-black/10 bg-white p-4">
-                  <div className="text-xs font-semibold tracking-[0.22em] text-gold">ENDEREÇO</div>
-                  <div className="mt-2 text-sm text-neutral-700">{address.line1}</div>
-                  <div className="text-sm text-neutral-700">{address.line2}</div>
-                  <a
-                    className="mt-3 inline-flex text-xs font-semibold text-neutral-950 underline decoration-[rgba(212,175,55,0.7)] underline-offset-4 hover:decoration-[rgba(212,175,55,1)]"
-                    href={mapsUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Abrir no Google Maps
-                  </a>
-                </div>
+                  Abrir no Google Maps
+                </a>
               </div>
             </div>
           </div>
