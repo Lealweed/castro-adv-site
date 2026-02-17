@@ -58,6 +58,12 @@ export function LoginPage() {
       if (env.apiBaseUrl) {
         try {
           await loginWithBackend(email, password);
+
+          // Keep Supabase session in sync for role-based guards/pages that still depend on it.
+          if (env.supabaseUrl && env.supabaseAnonKey) {
+            await signInWithPassword(email, password).catch(() => ({ error: null } as any));
+          }
+
           nav('/app');
           return;
         } catch (backendErr: any) {
