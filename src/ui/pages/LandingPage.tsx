@@ -150,9 +150,9 @@ export function LandingPage() {
               </div>
               <div className="p-5">
                 <Suspense
-                  fallback={<div className="h-36 animate-pulse rounded-2xl border border-black/10 bg-[#fbfaf7]" />}
+                  fallback={<div className="h-40 animate-pulse rounded-2xl border border-black/10 bg-[#fbfaf7]" />}
                 >
-                  <HelixBadge3D className="mb-4" />
+                  <HelixBadge3D className="mb-5" xOffset={0.8} quality="low" />
                 </Suspense>
 
                 <div className="grid gap-3">

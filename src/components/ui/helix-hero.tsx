@@ -168,16 +168,22 @@ export const Hero: React.FC<HeroProps> = ({ title, description }) => {
   );
 };
 
-export function HelixBadge3D({ className = '' }: { className?: string }) {
+export function HelixBadge3D({
+  className = '',
+  quality = 'low',
+  xOffset = 0,
+}: {
+  className?: string;
+  quality?: 'low' | 'high';
+  xOffset?: number;
+}) {
   return (
-    <div className={`relative h-36 overflow-hidden rounded-2xl border border-black/10 bg-white ${className}`}>
+    <div className={`relative h-40 overflow-hidden rounded-2xl border border-black/10 bg-white ${className}`}>
       <div className="absolute inset-0 opacity-95">
-        <Scene quality="low" xOffset={0} />
+        <Scene quality={quality} xOffset={xOffset} />
       </div>
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/35 via-transparent to-black/10" />
-      <div className="pointer-events-none absolute bottom-2 left-2 rounded-full border border-black/10 bg-white/75 px-2 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-neutral-700 backdrop-blur">
-        3D LIVE
-      </div>
+      <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-black/5" />
     </div>
   );
 }
