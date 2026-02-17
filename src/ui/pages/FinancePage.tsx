@@ -21,6 +21,10 @@ function todayStr() {
   return `${y}-${m}-${day}`;
 }
 
+function pdvStorageKey(date: string) {
+  return `castrocrm.pdv.${date}`;
+}
+
 const FinanceChartsLazy = lazy(() => import('@/ui/widgets/FinanceCharts').then((m) => ({ default: m.FinanceCharts })));
 
 export function FinancePage() {
@@ -45,6 +49,11 @@ export function FinancePage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'planned' | 'paid'>('all');
 
+  const [pdvOpen, setPdvOpen] = useState(false);
+  const [openingAmount, setOpeningAmount] = useState('');
+  const [pdvAmount, setPdvAmount] = useState('');
+  const [pdvDesc, setPdvDesc] = useState('');
+
   async function load() {
     setLoading(true);
     setError(null);
@@ -62,6 +71,21 @@ export function FinancePage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const key = pdvStorageKey(todayStr());
+    const raw = typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as { open: boolean; openingCents?: number };
+      setPdvOpen(Boolean(parsed.open));
+      if (typeof parsed.openingCents === 'number') {
+        setOpeningAmount((parsed.openingCents / 100).toFixed(2).replace('.', ','));
+      }
+    } catch {
+      // ignore
+    }
   }, []);
 
   useEffect(() => {
@@ -111,6 +135,20 @@ export function FinancePage() {
 
     return out;
   }, [rows, statusFilter, search]);
+
+  const pdvSummary = useMemo(() => {
+    const today = todayStr();
+    const todayPaid = rows.filter((r) => r.status === 'paid' && r.occurred_on === today);
+    const inCents = todayPaid.filter((r) => r.type === 'income').reduce((a, r) => a + r.amount_cents, 0);
+    const outCents = todayPaid.filter((r) => r.type === 'expense').reduce((a, r) => a + r.amount_cents, 0);
+    const openingCents = brlToCents(openingAmount) || 0;
+    return {
+      inCents,
+      outCents,
+      openingCents,
+      balanceCents: openingCents + inCents - outCents,
+    };
+  }, [rows, openingAmount]);
 
   async function onCreate() {
     if (!description.trim()) return;
@@ -168,6 +206,65 @@ export function FinancePage() {
     }
   }
 
+  function openCash() {
+    const cents = brlToCents(openingAmount);
+    if (cents === null) {
+      setError('Valor de abertura inválido. Ex: 200,00');
+      return;
+    }
+    const key = pdvStorageKey(todayStr());
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(key, JSON.stringify({ open: true, openingCents: cents }));
+    }
+    setPdvOpen(true);
+  }
+
+  function closeCash() {
+    const key = pdvStorageKey(todayStr());
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(
+        key,
+        JSON.stringify({ open: false, openingCents: pdvSummary.openingCents, closedAt: new Date().toISOString() }),
+      );
+    }
+    setPdvOpen(false);
+  }
+
+  async function quickPdv(typeValue: 'income' | 'expense') {
+    const cents = brlToCents(pdvAmount);
+    if (cents === null) {
+      setError('Valor inválido. Ex: 150,00');
+      return;
+    }
+    if (!pdvDesc.trim()) {
+      setError('Informe a descrição da movimentação.');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      await createFinanceTx({
+        type: typeValue,
+        status: 'paid',
+        occurred_on: todayStr(),
+        due_date: null,
+        category_id: null,
+        description: `[PDV] ${pdvDesc.trim()}`,
+        amount_cents: cents,
+        payment_method: 'pix',
+        notes: 'Lançamento rápido de caixa',
+      });
+      setPdvAmount('');
+      setPdvDesc('');
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Falha no lançamento rápido.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)] sm:p-6">
@@ -195,6 +292,46 @@ export function FinancePage() {
       </div>
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
+
+      <Card className="border-white/15 bg-gradient-to-b from-white/10 to-white/5">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="text-sm font-semibold text-white">PDV Jurídico (Caixa do Dia)</div>
+            <div className="text-xs text-white/60">Abertura, movimentação rápida e fechamento de caixa.</div>
+          </div>
+          <div className="flex items-center gap-2">
+            {!pdvOpen ? (
+              <button className="btn-primary" onClick={openCash}>Abrir caixa</button>
+            ) : (
+              <button className="btn-ghost" onClick={closeCash}>Fechar caixa</button>
+            )}
+            <span className={`badge ${pdvOpen ? 'badge-gold' : ''}`}>{pdvOpen ? 'Caixa aberto' : 'Caixa fechado'}</span>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-4">
+          <label className="text-sm text-white/80">
+            Abertura (R$)
+            <input className="input" value={openingAmount} onChange={(e) => setOpeningAmount(e.target.value)} placeholder="200,00" />
+          </label>
+          <label className="text-sm text-white/80 md:col-span-2">
+            Descrição rápida
+            <input className="input" value={pdvDesc} onChange={(e) => setPdvDesc(e.target.value)} placeholder="Consulta à vista, diligência..." />
+          </label>
+          <label className="text-sm text-white/80">
+            Valor rápido (R$)
+            <input className="input" value={pdvAmount} onChange={(e) => setPdvAmount(e.target.value)} placeholder="150,00" />
+          </label>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button disabled={!pdvOpen || saving} onClick={() => void quickPdv('income')} className="btn-primary">Entrada rápida</button>
+          <button disabled={!pdvOpen || saving} onClick={() => void quickPdv('expense')} className="btn-ghost">Saída rápida</button>
+          <span className="badge">Entradas hoje: {centsToBRL(pdvSummary.inCents)}</span>
+          <span className="badge">Saídas hoje: {centsToBRL(pdvSummary.outCents)}</span>
+          <span className="badge border-emerald-400/30 bg-emerald-400/10 text-emerald-200">Saldo caixa: {centsToBRL(pdvSummary.balanceCents)}</span>
+        </div>
+      </Card>
 
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
