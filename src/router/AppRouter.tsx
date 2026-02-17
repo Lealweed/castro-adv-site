@@ -72,6 +72,7 @@ export function AppRouter() {
                 <Route path="/app/tarefas/lote/:groupId" element={<TaskGroupPage />} />
               </Route>
               <Route path="/app/financeiro" element={<FinancePage />} />
+              <Route path="/app/f" element={<FinancePage />} />
               <Route path="/app/financeiro/parceiros" element={<PartnersPage />} />
               <Route path="/app/financeiro/a-pagar" element={<PayablesPage />} />
               <Route path="/app/financeiro/:txId" element={<FinanceTxDetailsPage />} />

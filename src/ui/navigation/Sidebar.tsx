@@ -19,7 +19,7 @@ const items = [
   { to: '/app/casos', label: 'Casos', icon: Briefcase },
   { to: '/app/agenda', label: 'Agenda', icon: Calendar },
   { to: '/app/tarefas', label: 'Tarefas', icon: CheckSquare },
-  { to: '/app/financeiro', label: 'Financeiro', icon: Coins },
+  { to: '/app/f', label: 'Financeiro', icon: Coins },
   { to: '/app/relatorios-ia', label: 'Relatórios com IA', icon: Sparkles },
   { to: '/app/portal', label: 'Portal do Cliente', icon: Building2 },
   { to: '/app/configuracoes', label: 'Configurações', icon: Cog },
