@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/authStore';
 import { signInWithPassword } from '@/auth/supabaseAuth';
 import { env } from '@/env';
-import { setTokens } from '@/lib/apiClient';
+import { setRole, setTokens } from '@/lib/apiClient';
 
 type LoginResponse = {
   accessToken: string;
@@ -46,6 +46,11 @@ export function LoginPage() {
 
     const firstOrg = data.organizations?.[0]?.id;
     if (firstOrg) auth.setOrgId(firstOrg);
+
+    const firstRole = String(data.organizations?.[0]?.role || '').toLowerCase();
+    if (firstRole) {
+      setRole(firstRole === 'owner' ? 'admin' : firstRole);
+    }
   }
 
   async function onSubmit(e: React.FormEvent) {

@@ -1,6 +1,21 @@
+import { getRole as getStoredRole } from '@/lib/apiClient';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
+function normalizeRole(role: string | null | undefined) {
+  const r = String(role || '').trim().toLowerCase();
+  if (!r) return '';
+
+  // Backend membership roles (OWNER/ADMIN/FINANCE/...) and office roles (admin/finance/...)
+  if (r === 'owner') return 'admin';
+  if (r === 'administrator') return 'admin';
+  return r;
+}
+
 export async function getMyOfficeRole() {
+  const stored = normalizeRole(getStoredRole());
+  if (stored) return stored;
+
+  // Legacy fallback (while some flows still rely on Supabase office_members)
   const sb = requireSupabase();
   const user = await getAuthedUser();
 
@@ -13,11 +28,12 @@ export async function getMyOfficeRole() {
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  return ((data as any)?.role || '') as string;
+  return normalizeRole((data as any)?.role || '');
 }
 
 export async function requireRole(allowed: string[]) {
+  const normalizedAllowed = allowed.map((x) => normalizeRole(x));
   const role = await getMyOfficeRole().catch(() => '');
   if (!role) return false;
-  return allowed.includes(role);
+  return normalizedAllowed.includes(role);
 }

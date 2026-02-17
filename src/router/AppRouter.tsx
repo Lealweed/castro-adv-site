@@ -71,10 +71,12 @@ export function AppRouter() {
               <Route element={<RequireRole allowed={["admin"]} />}>
                 <Route path="/app/tarefas/lote/:groupId" element={<TaskGroupPage />} />
               </Route>
-              <Route path="/app/financeiro" element={<FinancePage />} />
-              <Route path="/app/financeiro/parceiros" element={<PartnersPage />} />
-              <Route path="/app/financeiro/a-pagar" element={<PayablesPage />} />
-              <Route path="/app/financeiro/:txId" element={<FinanceTxDetailsPage />} />
+              <Route element={<RequireRole allowed={["admin", "finance"]} />}>
+                <Route path="/app/financeiro" element={<FinancePage />} />
+                <Route path="/app/financeiro/parceiros" element={<PartnersPage />} />
+                <Route path="/app/financeiro/a-pagar" element={<PayablesPage />} />
+                <Route path="/app/financeiro/:txId" element={<FinanceTxDetailsPage />} />
+              </Route>
 
               <Route path="/app/relatorios-ia" element={<AiReportsPage />} />
               <Route path="/app/portal" element={<ClientPortalPage />} />

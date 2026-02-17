@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-import { clearOrgId, clearTokens, getAccessToken, getOrgId, setOrgId } from '@/lib/apiClient';
+import { clearOrgId, clearRole, clearTokens, getAccessToken, getOrgId, setOrgId } from '@/lib/apiClient';
 import { getSession, onAuthStateChange, signOut as supaSignOut } from '@/auth/supabaseAuth';
 
 type AuthState = {
@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await supaSignOut();
         clearTokens();
         clearOrgId();
+        clearRole();
         setOrgIdState(null);
         setIsAuthenticated(false);
       },

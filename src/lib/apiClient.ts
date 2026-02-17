@@ -4,6 +4,7 @@ import { storageGet, storageRemove, storageSet } from '@/lib/storage';
 const ACCESS_KEY = 'castrocrm.accessToken';
 const REFRESH_KEY = 'castrocrm.refreshToken';
 const ORG_KEY = 'castrocrm.orgId';
+const ROLE_KEY = 'castrocrm.role';
 
 export type Tokens = { accessToken: string; refreshToken: string };
 
@@ -35,6 +36,18 @@ export function setOrgId(orgId: string) {
 
 export function clearOrgId() {
   storageRemove(ORG_KEY);
+}
+
+export function getRole() {
+  return storageGet(ROLE_KEY);
+}
+
+export function setRole(role: string) {
+  storageSet(ROLE_KEY, role);
+}
+
+export function clearRole() {
+  storageRemove(ROLE_KEY);
 }
 
 async function refreshAccessToken() {
@@ -79,6 +92,7 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
     } else {
       clearTokens();
       clearOrgId();
+      clearRole();
     }
   }
 
