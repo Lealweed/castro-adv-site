@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
 import {
@@ -278,12 +279,12 @@ export function FinancePage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-          <a href="/app/financeiro/parceiros" className="btn-ghost">
+          <Link to="/app/financeiro/parceiros" className="btn-ghost">
             Parceiros
-          </a>
-          <a href="/app/financeiro/a-pagar" className="btn-ghost">
+          </Link>
+          <Link to="/app/financeiro/a-pagar" className="btn-ghost">
             A pagar
-          </a>
+          </Link>
           <button onClick={() => setCreateOpen(true)} className="btn-primary">
             Novo lançamento
           </button>
@@ -488,7 +489,7 @@ export function FinancePage() {
 
           <div className="mt-3 grid gap-2">
             {filteredRows.map((r) => (
-              <a key={r.id} href={`/app/financeiro/${r.id}`} className="block rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10">
+              <Link key={r.id} to={`/app/financeiro/${r.id}`} className="block rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-sm font-semibold text-white">
@@ -508,7 +509,7 @@ export function FinancePage() {
                   </div>
                   <div className="text-sm font-semibold text-white">{centsToBRL(r.amount_cents)}</div>
                 </div>
-              </a>
+              </Link>
             ))}
           </div>
         </div>

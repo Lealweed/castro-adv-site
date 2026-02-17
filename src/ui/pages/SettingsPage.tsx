@@ -122,7 +122,7 @@ export function SettingsPage() {
       setMembers(
         members.map((m) => ({
           ...m,
-          profile: m.user_id && profMap.get(m.user_id) ? [profMap.get(m.user_id)] : null,
+          profile: m.user_id && profMap.get(m.user_id) ? profMap.get(m.user_id) : null,
         })) as any,
       );
       setLoading(false);
