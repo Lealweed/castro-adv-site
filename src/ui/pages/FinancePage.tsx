@@ -170,15 +170,17 @@ export function FinancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Financeiro</h1>
-          <p className="text-sm text-white/60">
-            Lançamentos reais. Avisos: enviaremos WhatsApp + e-mail 1 dia antes do vencimento (quando a integração estiver
-            ligada).
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)] sm:p-6">
+        <div className="absolute inset-0 bg-[radial-gradient(500px_180px_at_0%_0%,rgba(251,191,36,0.15),transparent_60%)]" />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200/90">Castro de Oliveira Adv</p>
+            <h1 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">Financeiro executivo</h1>
+            <p className="mt-1 text-sm text-white/60">
+              Conciliação de receitas/despesas, previsões e visão operacional por status.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
           <a href="/app/financeiro/parceiros" className="btn-ghost">
             Parceiros
           </a>
@@ -188,6 +190,7 @@ export function FinancePage() {
           <button onClick={() => setCreateOpen(true)} className="btn-primary">
             Novo lançamento
           </button>
+          </div>
         </div>
       </div>
 
@@ -215,19 +218,19 @@ export function FinancePage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="grid flex-1 gap-4 lg:grid-cols-4">
 
-        <Card>
+        <Card className="border-emerald-400/20 bg-gradient-to-b from-emerald-400/10 to-white/5">
           <div className="text-xs text-white/60">Receitas (pagas)</div>
-          <div className="mt-2 text-2xl font-semibold text-white">{centsToBRL(summary.paidIncome)}</div>
+          <div className="mt-2 text-2xl font-semibold text-emerald-200">{centsToBRL(summary.paidIncome)}</div>
         </Card>
-        <Card>
+        <Card className="border-red-400/20 bg-gradient-to-b from-red-400/10 to-white/5">
           <div className="text-xs text-white/60">Despesas (pagas)</div>
-          <div className="mt-2 text-2xl font-semibold text-white">{centsToBRL(summary.paidExpense)}</div>
+          <div className="mt-2 text-2xl font-semibold text-red-200">{centsToBRL(summary.paidExpense)}</div>
         </Card>
-        <Card>
+        <Card className="border-white/15 bg-gradient-to-b from-white/10 to-white/5">
           <div className="text-xs text-white/60">A receber</div>
           <div className="mt-2 text-2xl font-semibold text-white">{centsToBRL(summary.plannedIncome)}</div>
         </Card>
-        <Card>
+        <Card className="border-white/15 bg-gradient-to-b from-white/10 to-white/5">
           <div className="text-xs text-white/60">A pagar</div>
           <div className="mt-2 text-2xl font-semibold text-white">{centsToBRL(summary.plannedExpense)}</div>
         </Card>
