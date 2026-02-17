@@ -56,14 +56,22 @@ export function LoginPage() {
     try {
       // Prefer backend JWT auth when API is configured.
       if (env.apiBaseUrl) {
-        await loginWithBackend(email, password);
-        nav('/app');
-        return;
+        try {
+          await loginWithBackend(email, password);
+          nav('/app');
+          return;
+        } catch (backendErr: any) {
+          const msg = String(backendErr?.message || '');
+          const networkLike = msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('network');
+
+          // If API is temporarily unreachable, fallback to Supabase auth.
+          if (!networkLike) throw backendErr;
+        }
       }
 
       // Fallback: Supabase auth (legacy path).
       if (!env.supabaseUrl || !env.supabaseAnonKey) {
-        throw new Error('Nenhum provedor de autenticação configurado.');
+        throw new Error('API indisponível e Supabase não configurado.');
       }
 
       const { error } = await signInWithPassword(email, password);
