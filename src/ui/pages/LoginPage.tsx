@@ -4,37 +4,77 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/authStore';
 import { signInWithPassword } from '@/auth/supabaseAuth';
 import { env } from '@/env';
+import { setTokens } from '@/lib/apiClient';
+
+type LoginResponse = {
+  accessToken: string;
+  refreshToken: string;
+  tokenType?: string;
+  expiresIn?: number;
+  organizations?: Array<{ id: string; name: string; role?: string }>;
+};
 
 export function LoginPage() {
   const nav = useNavigate();
-  // Auth state is handled by Supabase session listener (AuthProvider)
-  useAuth();
+  const auth = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  async function loginWithBackend(emailValue: string, passwordValue: string) {
+    const res = await fetch(`${env.apiBaseUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailValue, password: passwordValue }),
+    });
+
+    const json = (await res.json().catch(() => null)) as LoginResponse | { message?: string } | null;
+
+    if (!res.ok) {
+      const msg = (json as any)?.message || 'Falha no login.';
+      throw new Error(Array.isArray(msg) ? msg.join(', ') : msg);
+    }
+
+    const data = json as LoginResponse;
+    if (!data?.accessToken || !data?.refreshToken) {
+      throw new Error('Resposta de login inválida (tokens ausentes).');
+    }
+
+    setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+
+    const firstOrg = data.organizations?.[0]?.id;
+    if (firstOrg) auth.setOrgId(firstOrg);
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    if (!env.supabaseUrl || !env.supabaseAnonKey) {
-      setError('Supabase não configurado (env vars).');
-      setLoading(false);
-      return;
-    }
+    try {
+      // Prefer backend JWT auth when API is configured.
+      if (env.apiBaseUrl) {
+        await loginWithBackend(email, password);
+        nav('/app');
+        return;
+      }
 
-    const { error } = await signInWithPassword(email, password);
-    if (error) {
-      setError(error.message || 'Falha no login.');
-      setLoading(false);
-      return;
-    }
+      // Fallback: Supabase auth (legacy path).
+      if (!env.supabaseUrl || !env.supabaseAnonKey) {
+        throw new Error('Nenhum provedor de autenticação configurado.');
+      }
 
-    nav('/app');
-    setLoading(false);
+      const { error } = await signInWithPassword(email, password);
+      if (error) throw new Error(error.message || 'Falha no login.');
+
+      nav('/app');
+    } catch (err: any) {
+      setError(err?.message || 'Falha no login.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

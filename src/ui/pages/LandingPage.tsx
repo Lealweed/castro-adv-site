@@ -1,6 +1,9 @@
+import { Suspense, lazy } from 'react';
 import { Link } from 'react-router-dom';
 
 import { ShimmerButton } from '@/ui/primitives/ShimmerButton';
+
+const HelixBadge3D = lazy(() => import('@/components/ui/helix-hero').then((m) => ({ default: m.HelixBadge3D })));
 
 function SectionTitle({ kicker, title, desc }: { kicker: string; title: string; desc: string }) {
   return (
@@ -146,6 +149,12 @@ export function LandingPage() {
                 <div className="mt-1 text-sm font-semibold text-neutral-950">Atendimento em áreas essenciais</div>
               </div>
               <div className="p-5">
+                <Suspense
+                  fallback={<div className="h-36 animate-pulse rounded-2xl border border-black/10 bg-[#fbfaf7]" />}
+                >
+                  <HelixBadge3D className="mb-4" />
+                </Suspense>
+
                 <div className="grid gap-3">
                   {areas.map((a) => (
                     <div

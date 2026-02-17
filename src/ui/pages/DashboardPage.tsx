@@ -344,23 +344,36 @@ export function DashboardPage() {
     return { pending, overdue, paused, today, due48, agendaToday };
   }, [baseTasks, agenda, todayStr]);
 
+  const kpiCards = [
+    { label: 'Pendentes', value: kpis.pending, to: '/app/tarefas', tone: 'text-white', chip: 'Visão geral' },
+    { label: 'Atrasadas', value: kpis.overdue, to: '/app/tarefas', tone: 'text-red-200', chip: 'Atenção' },
+    { label: 'Pausadas', value: kpis.paused, to: '/app/tarefas', tone: 'text-amber-200', chip: 'Bloqueios' },
+    { label: 'Vencem hoje', value: kpis.today, to: '/app/tarefas', tone: 'text-white', chip: 'Urgente' },
+    { label: 'Próx. 48h', value: kpis.due48, to: '/app/tarefas', tone: 'text-white', chip: 'Janela crítica' },
+    { label: 'Agenda hoje', value: kpis.agendaToday, to: '/app/agenda', tone: 'text-white', chip: 'Compromissos' },
+  ] as const;
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
-          <p className="text-sm text-white/60">Visão geral — clientes, casos, agenda e tarefas.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link to="/app/clientes" className="btn-ghost">
-            Clientes
-          </Link>
-          <Link to="/app/casos" className="btn-ghost">
-            Casos
-          </Link>
-          <Link to="/app/tarefas" className="btn-primary">
-            Nova tarefa
-          </Link>
+      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)] sm:p-6">
+        <div className="absolute inset-0 bg-[radial-gradient(600px_200px_at_0%_0%,rgba(251,191,36,0.15),transparent_60%)]" />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200/90">Castro de Oliveira Adv</p>
+            <h1 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">Dashboard executivo</h1>
+            <p className="mt-1 text-sm text-white/60">Visão geral de clientes, casos, agenda e tarefas em tempo real.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/app/clientes" className="btn-ghost !border-white/20 !bg-white/10">
+              Clientes
+            </Link>
+            <Link to="/app/casos" className="btn-ghost !border-white/20 !bg-white/10">
+              Casos
+            </Link>
+            <Link to="/app/tarefas" className="btn-primary shadow-[0_10px_30px_rgba(255,255,255,0.18)]">
+              Nova tarefa
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -369,7 +382,7 @@ export function DashboardPage() {
       <Hero1951 />
 
       <Tabs defaultValue="insights" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 rounded-2xl border border-white/10 bg-white/5 p-1">
+        <TabsList className="grid w-full grid-cols-4 rounded-2xl border border-white/15 bg-gradient-to-r from-white/10 to-white/5 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
           <TabsTrigger value="insights">Insights</TabsTrigger>
           <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
           <TabsTrigger value="agenda">Agenda</TabsTrigger>
@@ -378,39 +391,33 @@ export function DashboardPage() {
 
         <TabsContent value="insights" className="mt-4 space-y-6">
           <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-            <Link to="/app/tarefas" className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10">
-              <div className="text-xs text-white/60">Pendentes</div>
-              <div className="mt-2 text-2xl font-semibold text-white">{loading ? '—' : kpis.pending}</div>
-            </Link>
-            <Link to="/app/tarefas" className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10">
-              <div className="text-xs text-white/60">Atrasadas</div>
-              <div className="mt-2 text-2xl font-semibold text-red-200">{loading ? '—' : kpis.overdue}</div>
-            </Link>
-            <Link to="/app/tarefas" className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10">
-              <div className="text-xs text-white/60">Pausadas</div>
-              <div className="mt-2 text-2xl font-semibold text-amber-200">{loading ? '—' : kpis.paused}</div>
-            </Link>
-            <Link to="/app/tarefas" className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10">
-              <div className="text-xs text-white/60">Vencem hoje</div>
-              <div className="mt-2 text-2xl font-semibold text-white">{loading ? '—' : kpis.today}</div>
-            </Link>
-            <Link to="/app/tarefas" className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10">
-              <div className="text-xs text-white/60">48h</div>
-              <div className="mt-2 text-2xl font-semibold text-white">{loading ? '—' : kpis.due48}</div>
-            </Link>
-            <Link to="/app/agenda" className="rounded-2xl border border-white/10 bg-white/5 p-4 hover:bg-white/10">
-              <div className="text-xs text-white/60">Agenda hoje</div>
-              <div className="mt-2 text-2xl font-semibold text-white">{loading ? '—' : kpis.agendaToday}</div>
-            </Link>
+            {kpiCards.map((k) => (
+              <Link
+                key={k.label}
+                to={k.to}
+                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-4 transition-all hover:-translate-y-0.5 hover:border-amber-300/30 hover:from-white/15 hover:to-white/10"
+              >
+                <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-amber-300/10 blur-2xl transition-opacity group-hover:bg-amber-300/20" />
+                <div className="relative flex items-start justify-between gap-3">
+                  <div className="text-xs text-white/65">{k.label}</div>
+                  <span className="badge border-white/15 bg-white/5 text-[10px] text-white/70">{k.chip}</span>
+                </div>
+                <div className={`relative mt-2 text-2xl font-semibold ${k.tone}`}>{loading ? '—' : k.value}</div>
+                <div className="relative mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-amber-300/50 to-white/40 transition-all group-hover:w-2/3" />
+                </div>
+              </Link>
+            ))}
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
+            <Card className="lg:col-span-2 border-white/15 bg-gradient-to-br from-white/10 via-white/5 to-transparent">
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold text-white">Esteira (14 dias)</div>
                   <div className="text-xs text-white/60">Criadas vs Concluídas — se criadas &gt; concluídas, a fila cresce.</div>
                 </div>
+                <span className="badge border-amber-300/30 bg-amber-300/10 text-amber-100">Produtividade</span>
               </div>
 
               <div className="mt-4 h-[260px]">
@@ -427,8 +434,11 @@ export function DashboardPage() {
               </div>
             </Card>
 
-            <Card>
-              <div className="text-sm font-semibold text-white">Atalhos</div>
+            <Card className="border-white/15 bg-gradient-to-b from-white/10 to-white/5">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold text-white">Atalhos</div>
+                <span className="badge">Ações rápidas</span>
+              </div>
               <div className="mt-3 grid gap-2">
                 <Link to="/app/tarefas/kanban" className="btn-primary">Kanban</Link>
                 <Link to="/app/agenda" className="btn-ghost">Agenda</Link>
@@ -528,10 +538,10 @@ export function DashboardPage() {
 
           <div className="mt-4 grid gap-2">
             {teamStats.rows.slice(0, 8).map((r) => (
-              <div key={r.userId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 p-3">
+              <div key={r.userId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-gradient-to-r from-white/10 to-white/5 p-3">
                 <div className="text-sm font-semibold text-white">{r.label}</div>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="badge">{r.total} abertas</span>
+                  <span className="badge border-white/20 bg-white/10">{r.total} abertas</span>
                   {r.due48 ? <span className="badge badge-gold">{r.due48} (48h)</span> : null}
                   {r.overdue ? <span className="badge border-red-400/30 bg-red-400/10 text-red-200">{r.overdue} atras.</span> : null}
                 </div>

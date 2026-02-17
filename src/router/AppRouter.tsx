@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { RequireAuth } from '@/auth/RequireAuth';
@@ -6,83 +7,90 @@ import { AuthLayout } from '@/ui/layouts/AuthLayout';
 import { AppLayout } from '@/ui/layouts/AppLayout';
 import { PublicLayout } from '@/ui/layouts/PublicLayout';
 
-import { LandingPage } from '@/ui/pages/LandingPage';
-import { HelixDemoPage } from '@/ui/pages/HelixDemoPage';
-import { LoginPage } from '@/ui/pages/LoginPage';
+const LandingPage = lazy(() => import('@/ui/pages/LandingPage').then((m) => ({ default: m.LandingPage })));
+const HelixDemoPage = lazy(() => import('@/ui/pages/HelixDemoPage').then((m) => ({ default: m.HelixDemoPage })));
+const LoginPage = lazy(() => import('@/ui/pages/LoginPage').then((m) => ({ default: m.LoginPage })));
 
-import { DashboardPage } from '@/ui/pages/DashboardPage';
-import { ClientsPage } from '@/ui/pages/ClientsPage';
-import { ClientDetailsPage } from '@/ui/pages/ClientDetailsPage';
-import { CasesPage } from '@/ui/pages/CasesPage';
-import { CaseDetailsPage } from '@/ui/pages/CaseDetailsPage';
-
-import { FinancePage } from '@/ui/pages/FinancePage';
-import { FinanceTxDetailsPage } from '@/ui/pages/finance/FinanceTxDetailsPage';
-import { PartnersPage } from '@/ui/pages/finance/PartnersPage';
-import { PayablesPage } from '@/ui/pages/finance/PayablesPage';
-import { AiReportsPage } from '@/ui/pages/AiReportsPage';
-import { ClientPortalPage } from '@/ui/pages/ClientPortalPage';
-import { SettingsPage } from '@/ui/pages/SettingsPage';
-import { AuditPage } from '@/ui/pages/AuditPage';
-import { AgendaPage } from '@/ui/pages/AgendaPage';
-import { AgendaSettingsPage } from '@/ui/pages/AgendaSettingsPage';
-import { TasksPage } from '@/ui/pages/TasksPage';
-import { TasksKanbanPage } from '@/ui/pages/TasksKanbanPage';
-import { TaskDetailsPage } from '@/ui/pages/TaskDetailsPage';
-import { TaskGroupPage } from '@/ui/pages/TaskGroupPage';
+const DashboardPage = lazy(() => import('@/ui/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
+const ClientsPage = lazy(() => import('@/ui/pages/ClientsPage').then((m) => ({ default: m.ClientsPage })));
+const ClientDetailsPage = lazy(() => import('@/ui/pages/ClientDetailsPage').then((m) => ({ default: m.ClientDetailsPage })));
+const CasesPage = lazy(() => import('@/ui/pages/CasesPage').then((m) => ({ default: m.CasesPage })));
+const CaseDetailsPage = lazy(() => import('@/ui/pages/CaseDetailsPage').then((m) => ({ default: m.CaseDetailsPage })));
+const AgendaPage = lazy(() => import('@/ui/pages/AgendaPage').then((m) => ({ default: m.AgendaPage })));
+const AgendaSettingsPage = lazy(() => import('@/ui/pages/AgendaSettingsPage').then((m) => ({ default: m.AgendaSettingsPage })));
+const TasksPage = lazy(() => import('@/ui/pages/TasksPage').then((m) => ({ default: m.TasksPage })));
+const TasksKanbanPage = lazy(() => import('@/ui/pages/TasksKanbanPage').then((m) => ({ default: m.TasksKanbanPage })));
+const TaskDetailsPage = lazy(() => import('@/ui/pages/TaskDetailsPage').then((m) => ({ default: m.TaskDetailsPage })));
+const TaskGroupPage = lazy(() => import('@/ui/pages/TaskGroupPage').then((m) => ({ default: m.TaskGroupPage })));
+const FinancePage = lazy(() => import('@/ui/pages/FinancePage').then((m) => ({ default: m.FinancePage })));
+const FinanceTxDetailsPage = lazy(() =>
+  import('@/ui/pages/finance/FinanceTxDetailsPage').then((m) => ({ default: m.FinanceTxDetailsPage })),
+);
+const PartnersPage = lazy(() => import('@/ui/pages/finance/PartnersPage').then((m) => ({ default: m.PartnersPage })));
+const PayablesPage = lazy(() => import('@/ui/pages/finance/PayablesPage').then((m) => ({ default: m.PayablesPage })));
+const AiReportsPage = lazy(() => import('@/ui/pages/AiReportsPage').then((m) => ({ default: m.AiReportsPage })));
+const ClientPortalPage = lazy(() => import('@/ui/pages/ClientPortalPage').then((m) => ({ default: m.ClientPortalPage })));
+const SettingsPage = lazy(() => import('@/ui/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const AuditPage = lazy(() => import('@/ui/pages/AuditPage').then((m) => ({ default: m.AuditPage })));
 
 export function AppRouter() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Public */}
-        <Route element={<PublicLayout />}>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/demo" element={<HelixDemoPage />} />
-        </Route>
+      <Suspense
+        fallback={
+          <div className="app-bg-dark min-h-screen grid place-items-center text-sm text-white/70">Carregando…</div>
+        }
+      >
+        <Routes>
+          {/* Public */}
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/demo" element={<HelixDemoPage />} />
+          </Route>
 
-        {/* Auth (no sidebar) */}
-        <Route element={<AuthLayout />}>
-          <Route path="/app/login" element={<LoginPage />} />
-        </Route>
+          {/* Auth (no sidebar) */}
+          <Route element={<AuthLayout />}>
+            <Route path="/app/login" element={<LoginPage />} />
+          </Route>
 
-        {/* App (protected) */}
-        <Route element={<AppLayout />}>
-          <Route element={<RequireAuth />}>
-            <Route path="/app" element={<DashboardPage />} />
-            <Route path="/app/clientes" element={<ClientsPage />} />
-            <Route path="/app/clientes/:clientId" element={<ClientDetailsPage />} />
-            <Route path="/app/casos" element={<CasesPage />} />
-            <Route path="/app/casos/:caseId" element={<CaseDetailsPage />} />
-            <Route path="/app/agenda" element={<AgendaPage />} />
-            <Route element={<RequireRole allowed={["admin"]} />}>
-              <Route path="/app/agenda/configuracoes" element={<AgendaSettingsPage />} />
-            </Route>
-            <Route path="/app/tarefas" element={<TasksPage />} />
-            <Route path="/app/tarefas/kanban" element={<TasksKanbanPage />} />
-            <Route path="/app/tarefas/:taskId" element={<TaskDetailsPage />} />
-            <Route element={<RequireRole allowed={["admin"]} />}>
-              <Route path="/app/tarefas/lote/:groupId" element={<TaskGroupPage />} />
-            </Route>
-            <Route element={<RequireRole allowed={["admin", "finance"]} />}>
-              <Route path="/app/financeiro" element={<FinancePage />} />
-              <Route path="/app/financeiro/parceiros" element={<PartnersPage />} />
-              <Route path="/app/financeiro/a-pagar" element={<PayablesPage />} />
-              <Route path="/app/financeiro/:txId" element={<FinanceTxDetailsPage />} />
-            </Route>
+          {/* App (protected) */}
+          <Route element={<AppLayout />}>
+            <Route element={<RequireAuth />}>
+              <Route path="/app" element={<DashboardPage />} />
+              <Route path="/app/clientes" element={<ClientsPage />} />
+              <Route path="/app/clientes/:clientId" element={<ClientDetailsPage />} />
+              <Route path="/app/casos" element={<CasesPage />} />
+              <Route path="/app/casos/:caseId" element={<CaseDetailsPage />} />
+              <Route path="/app/agenda" element={<AgendaPage />} />
+              <Route element={<RequireRole allowed={["admin"]} />}>
+                <Route path="/app/agenda/configuracoes" element={<AgendaSettingsPage />} />
+              </Route>
+              <Route path="/app/tarefas" element={<TasksPage />} />
+              <Route path="/app/tarefas/kanban" element={<TasksKanbanPage />} />
+              <Route path="/app/tarefas/:taskId" element={<TaskDetailsPage />} />
+              <Route element={<RequireRole allowed={["admin"]} />}>
+                <Route path="/app/tarefas/lote/:groupId" element={<TaskGroupPage />} />
+              </Route>
+              <Route element={<RequireRole allowed={["admin", "finance"]} />}>
+                <Route path="/app/financeiro" element={<FinancePage />} />
+                <Route path="/app/financeiro/parceiros" element={<PartnersPage />} />
+                <Route path="/app/financeiro/a-pagar" element={<PayablesPage />} />
+                <Route path="/app/financeiro/:txId" element={<FinanceTxDetailsPage />} />
+              </Route>
 
-            <Route path="/app/relatorios-ia" element={<AiReportsPage />} />
-            <Route path="/app/portal" element={<ClientPortalPage />} />
-            <Route path="/app/configuracoes" element={<SettingsPage />} />
+              <Route path="/app/relatorios-ia" element={<AiReportsPage />} />
+              <Route path="/app/portal" element={<ClientPortalPage />} />
+              <Route path="/app/configuracoes" element={<SettingsPage />} />
 
-            <Route element={<RequireRole allowed={["admin"]} />}>
-              <Route path="/app/configuracoes/auditoria" element={<AuditPage />} />
+              <Route element={<RequireRole allowed={["admin"]} />}>
+                <Route path="/app/configuracoes/auditoria" element={<AuditPage />} />
+              </Route>
             </Route>
           </Route>
-        </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-import { clearOrgId, getOrgId, setOrgId } from '@/lib/apiClient';
+import { clearOrgId, clearTokens, getAccessToken, getOrgId, setOrgId } from '@/lib/apiClient';
 import { getSession, onAuthStateChange, signOut as supaSignOut } from '@/auth/supabaseAuth';
 
 type AuthState = {
@@ -14,7 +14,7 @@ const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [orgIdState, setOrgIdState] = useState<string | null>(() => getOrgId());
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(getAccessToken()));
 
   useEffect(() => {
     let alive = true;
@@ -22,12 +22,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       const session = await getSession();
       if (!alive) return;
-      setIsAuthenticated(Boolean(session));
+      setIsAuthenticated(Boolean(session) || Boolean(getAccessToken()));
     })();
 
     const unsub = onAuthStateChange((session) => {
-      setIsAuthenticated(Boolean(session));
-      if (!session) {
+      const hasToken = Boolean(getAccessToken());
+      setIsAuthenticated(Boolean(session) || hasToken);
+      if (!session && !hasToken) {
         clearOrgId();
         setOrgIdState(null);
       }
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       signOut: async () => {
         await supaSignOut();
+        clearTokens();
         clearOrgId();
         setOrgIdState(null);
         setIsAuthenticated(false);

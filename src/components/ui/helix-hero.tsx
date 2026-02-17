@@ -12,6 +12,7 @@ interface HelixRingsProps {
   levelsDown?: number;
   stepY?: number;
   rotationStep?: number;
+  xOffset?: number;
 }
 
 const HelixRings: React.FC<HelixRingsProps & { quality?: 'low' | 'high' }> = ({
@@ -19,6 +20,7 @@ const HelixRings: React.FC<HelixRingsProps & { quality?: 'low' | 'high' }> = ({
   levelsDown = 10,
   stepY = 0.85,
   rotationStep = Math.PI / 16,
+  xOffset = 5,
   quality = 'high',
 }) => {
   const groupRef = useRef<THREE.Group>(new THREE.Group());
@@ -59,7 +61,7 @@ const HelixRings: React.FC<HelixRingsProps & { quality?: 'low' | 'high' }> = ({
   }
 
   return (
-    <group scale={1} position={[5, 0, 0]} ref={groupRef} rotation={[0, 0, 0]}>
+    <group scale={1} position={[xOffset, 0, 0]} ref={groupRef} rotation={[0, 0, 0]}>
       {elements.map((el) => (
         <mesh
           key={el.id}
@@ -85,7 +87,7 @@ const HelixRings: React.FC<HelixRingsProps & { quality?: 'low' | 'high' }> = ({
   );
 };
 
-const Scene: React.FC<{ quality?: 'low' | 'high' }> = ({ quality = 'high' }) => {
+const Scene: React.FC<{ quality?: 'low' | 'high'; xOffset?: number }> = ({ quality = 'high', xOffset = 5 }) => {
   return (
     <Canvas
       className="h-full w-full"
@@ -110,7 +112,12 @@ const Scene: React.FC<{ quality?: 'low' | 'high' }> = ({ quality = 'high' }) => 
         shadow-mapSize-width={quality === 'high' ? 2048 : 512}
         shadow-mapSize-height={quality === 'high' ? 2048 : 512}
       />
-      <HelixRings quality={quality} levelsUp={quality === 'low' ? 7 : 10} levelsDown={quality === 'low' ? 7 : 10} />
+      <HelixRings
+        quality={quality}
+        xOffset={xOffset}
+        levelsUp={quality === 'low' ? 7 : 10}
+        levelsDown={quality === 'low' ? 7 : 10}
+      />
       {quality === 'high' ? (
         <EffectComposer multisampling={4}>
           <Bloom kernelSize={3} luminanceThreshold={0} luminanceSmoothing={0.4} intensity={0.45} />
@@ -160,6 +167,20 @@ export const Hero: React.FC<HeroProps> = ({ title, description }) => {
     </section>
   );
 };
+
+export function HelixBadge3D({ className = '' }: { className?: string }) {
+  return (
+    <div className={`relative h-36 overflow-hidden rounded-2xl border border-black/10 bg-white ${className}`}>
+      <div className="absolute inset-0 opacity-95">
+        <Scene quality="low" xOffset={0} />
+      </div>
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/35 via-transparent to-black/10" />
+      <div className="pointer-events-none absolute bottom-2 left-2 rounded-full border border-black/10 bg-white/75 px-2 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-neutral-700 backdrop-blur">
+        3D LIVE
+      </div>
+    </div>
+  );
+}
 
 export interface HelixHeroProps {
   title: string;
