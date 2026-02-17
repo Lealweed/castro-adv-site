@@ -74,6 +74,15 @@ function fmtMonthLabel(d: Date) {
   return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
 
+function toDatetimeLocalValue(d: Date) {
+  const yyyy = d.getFullYear();
+  const mm = pad2(d.getMonth() + 1);
+  const dd = pad2(d.getDate());
+  const hh = pad2(d.getHours());
+  const mi = pad2(d.getMinutes());
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
 export function AgendaPage() {
   const [rows, setRows] = useState<AgendaItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,6 +103,7 @@ export function AgendaPage() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [kind, setKind] = useState<'commitment' | 'deadline'>('commitment');
@@ -526,16 +536,7 @@ export function AgendaPage() {
     return [...rows].sort((a, b) => score(a) - score(b));
   }, [rows]);
 
-  const monthGrid = useMemo(() => {
-    if (view !== 'month') return null;
-
-    const y = monthCursor.getFullYear();
-    const m = monthCursor.getMonth();
-    const first = new Date(y, m, 1);
-    const lastDay = new Date(y, m + 1, 0).getDate();
-
-    const firstDow = (first.getDay() + 6) % 7; // Monday=0..Sunday=6
-
+  const monthItemsByDay = useMemo(() => {
     const map = new Map<string, AgendaItem[]>();
     for (const it of rows) {
       const key =
@@ -549,9 +550,23 @@ export function AgendaPage() {
       arr.push(it);
       map.set(key, arr);
     }
+    return map;
+  }, [rows]);
 
-    const cells: Array<{ day: number | null; key: string | null; count: number; hasDeadline: boolean }> = [];
-    for (let i = 0; i < firstDow; i++) cells.push({ day: null, key: null, count: 0, hasDeadline: false });
+  const monthGrid = useMemo(() => {
+    if (view !== 'month') return null;
+
+    const y = monthCursor.getFullYear();
+    const m = monthCursor.getMonth();
+    const first = new Date(y, m, 1);
+    const lastDay = new Date(y, m + 1, 0).getDate();
+
+    const firstDow = (first.getDay() + 6) % 7; // Monday=0..Sunday=6
+
+    const map = monthItemsByDay;
+
+    const cells: Array<{ day: number | null; key: string | null; count: number; hasDeadline: boolean; isSelected: boolean }> = [];
+    for (let i = 0; i < firstDow; i++) cells.push({ day: null, key: null, count: 0, hasDeadline: false, isSelected: false });
     for (let day = 1; day <= lastDay; day++) {
       const key = `${y}-${pad2(m + 1)}-${pad2(day)}`;
       const list = map.get(key) || [];
@@ -560,11 +575,33 @@ export function AgendaPage() {
         key,
         count: list.length,
         hasDeadline: list.some((x) => x.kind === 'deadline'),
+        isSelected: selectedDayKey === key,
       });
     }
 
     return { cells };
-  }, [view, monthCursor, rows]);
+  }, [view, monthCursor, monthItemsByDay, selectedDayKey]);
+
+  const selectedDayItems = useMemo(() => {
+    if (!selectedDayKey) return [] as AgendaItem[];
+    const list = monthItemsByDay.get(selectedDayKey) || [];
+    return [...list].sort((a, b) => {
+      const ta = a.kind === 'deadline' ? new Date(`${a.due_date}T00:00:00`).getTime() : new Date(a.starts_at || 0).getTime();
+      const tb = b.kind === 'deadline' ? new Date(`${b.due_date}T00:00:00`).getTime() : new Date(b.starts_at || 0).getTime();
+      return ta - tb;
+    });
+  }, [selectedDayKey, monthItemsByDay]);
+
+  function openCreateForDay(dayKey: string) {
+    setSelectedDayKey(dayKey);
+    const base = new Date(`${dayKey}T09:00:00`);
+    const end = new Date(`${dayKey}T10:00:00`);
+    setKind('commitment');
+    setStartsAt(toDatetimeLocalValue(base));
+    setEndsAt(toDatetimeLocalValue(end));
+    setDueDate(dayKey);
+    setCreateOpen(true);
+  }
 
   return (
     <div className="space-y-6">
@@ -636,7 +673,10 @@ export function AgendaPage() {
           {view === 'month' ? (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))}
+                onClick={() => {
+                  setSelectedDayKey(null);
+                  setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1));
+                }}
                 className="btn-ghost"
               >
                 ‹
@@ -645,7 +685,10 @@ export function AgendaPage() {
                 {fmtMonthLabel(monthCursor)}
               </div>
               <button
-                onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}
+                onClick={() => {
+                  setSelectedDayKey(null);
+                  setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1));
+                }}
                 className="btn-ghost"
               >
                 ›
@@ -878,12 +921,26 @@ export function AgendaPage() {
             ))}
 
             {monthGrid.cells.map((c, idx) => (
-              <div
+              <button
                 key={c.key || `empty-${idx}`}
+                type="button"
+                onClick={() => {
+                  if (!c.key) return;
+                  setSelectedDayKey(c.key);
+                }}
+                onDoubleClick={() => {
+                  if (!c.key) return;
+                  openCreateForDay(c.key);
+                }}
                 className={
-                  'min-h-[64px] rounded-xl border border-white/10 bg-white/5 p-2 ' +
-                  (c.day ? 'text-white' : 'opacity-30')
+                  'min-h-[64px] rounded-xl border p-2 text-left transition ' +
+                  (c.day
+                    ? c.isSelected
+                      ? 'border-white/30 bg-white/15 text-white'
+                      : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
+                    : 'border-white/10 bg-white/5 opacity-30')
                 }
+                title={c.key ? `Clique para ver dia • duplo clique para novo item (${c.key})` : undefined}
               >
                 {c.day ? (
                   <div className="flex items-start justify-between">
@@ -900,12 +957,36 @@ export function AgendaPage() {
                     ) : null}
                   </div>
                 ) : null}
-              </div>
+              </button>
             ))}
           </div>
           <div className="mt-4 text-xs text-white/50">
-            Dica: o número no canto indica quantos itens existem no dia (prazos ficam em destaque dourado).
+            Dica: clique no dia para ver os itens e dê duplo clique para criar um novo evento já com a data preenchida.
           </div>
+
+          {selectedDayKey ? (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="text-sm font-semibold text-white">Dia selecionado: {selectedDayKey}</div>
+                <button type="button" className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs" onClick={() => openCreateForDay(selectedDayKey)}>
+                  Novo nesse dia
+                </button>
+              </div>
+
+              {selectedDayItems.length ? (
+                <div className="grid gap-2">
+                  {selectedDayItems.map((it) => (
+                    <div key={it.id} className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/80">
+                      <span className="font-semibold text-white">{it.title}</span>
+                      <span className="ml-2 badge">{it.kind === 'deadline' ? 'Prazo' : 'Compromisso'}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-white/60">Sem itens nesse dia.</div>
+              )}
+            </div>
+          ) : null}
         </Card>
       ) : null}
 
