@@ -1,12 +1,6 @@
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
-let _cachedRole: string | null = null;
-let _cachedAt = 0;
-
 export async function getMyOfficeRole() {
-  const now = Date.now();
-  if (_cachedRole && now - _cachedAt < 10_000) return _cachedRole;
-
   const sb = requireSupabase();
   const user = await getAuthedUser();
 
@@ -19,10 +13,7 @@ export async function getMyOfficeRole() {
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  const role = (data as any)?.role || '';
-  _cachedRole = role;
-  _cachedAt = now;
-  return role;
+  return ((data as any)?.role || '') as string;
 }
 
 export async function requireRole(allowed: string[]) {
