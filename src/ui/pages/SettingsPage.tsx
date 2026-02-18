@@ -45,9 +45,14 @@ function roleLabel(role: string) {
   }
 }
 
+function isOfficeMembersPolicyError(msg: string) {
+  return msg.toLowerCase().includes('infinite recursion detected in policy for relation "office_members"');
+}
+
 export function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [policyBlocked, setPolicyBlocked] = useState(false);
 
   const [meId, setMeId] = useState<string>('');
 
@@ -71,11 +76,16 @@ export function SettingsPage() {
   async function load() {
     setLoading(true);
     setError(null);
+    setPolicyBlocked(false);
 
     try {
       const sb = requireSupabase();
       const user = await getAuthedUser();
       setMeId(user.id);
+
+      // load invites even when office query fails
+      const myInvites = await listMyOfficeInvites().catch(() => [] as any);
+      setInvites((myInvites || []) as any);
 
       // Find my office by membership
       const { data: myMembership, error: memErr } = await sb
@@ -86,12 +96,17 @@ export function SettingsPage() {
         .limit(1)
         .maybeSingle();
 
-      if (memErr) throw new Error(memErr.message);
+      if (memErr) {
+        if (isOfficeMembersPolicyError(memErr.message || '')) {
+          setPolicyBlocked(true);
+          setOffice(null);
+          setMembers([]);
+          setLoading(false);
+          return;
+        }
+        throw new Error(memErr.message);
+      }
       const officeId = (myMembership as any)?.office_id as string | undefined;
-
-      // load invites even when office isn't set yet (so user can accept and join)
-      const myInvites = await listMyOfficeInvites().catch(() => [] as any);
-      setInvites((myInvites || []) as any);
 
       if (!officeId) {
         setOffice(null);
@@ -106,7 +121,16 @@ export function SettingsPage() {
       ]);
 
       if (oErr) throw new Error(oErr.message);
-      if (msErr) throw new Error(msErr.message);
+      if (msErr) {
+        if (isOfficeMembersPolicyError(msErr.message || '')) {
+          setPolicyBlocked(true);
+          setOffice((officeRow || null) as any);
+          setMembers([]);
+          setLoading(false);
+          return;
+        }
+        throw new Error(msErr.message);
+      }
 
       const members = (ms || []) as any[];
       const userIds = Array.from(new Set(members.map((m) => m.user_id).filter(Boolean)));
@@ -255,6 +279,12 @@ export function SettingsPage() {
       </div>
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
+      {policyBlocked ? (
+        <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-100">
+          A política RLS de <strong>office_members</strong> está com recursão infinita. A tela continua acessível,
+          mas ações de membros/permissões ficam bloqueadas até ajustar as policies no Supabase.
+        </div>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
@@ -306,7 +336,7 @@ export function SettingsPage() {
             </div>
           ) : null}
 
-          {office && isAdmin ? (
+          {office && isAdmin && !policyBlocked ? (
             <div className="mt-4 grid gap-6">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-sm font-semibold text-white">Criar convite (por e-mail)</div>
@@ -371,7 +401,7 @@ export function SettingsPage() {
             </div>
           ) : null}
 
-          {office ? (
+          {office && !policyBlocked ? (
             <div className="mt-4 grid gap-2">
               {members.map((m) => (
                 <div key={m.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
@@ -408,6 +438,12 @@ export function SettingsPage() {
               ))}
 
               {!loading && members.length === 0 ? <div className="text-sm text-white/60">Sem membros.</div> : null}
+            </div>
+          ) : null}
+
+          {policyBlocked ? (
+            <div className="mt-3 text-xs text-amber-100/90">
+              Gestão de membros temporariamente indisponível por erro de policy RLS em <code>office_members</code>.
             </div>
           ) : null}
 

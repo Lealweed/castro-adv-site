@@ -14,8 +14,8 @@ type TaskLite = {
 
 type FinanceLite = {
   id: string;
-  kind: 'income' | 'expense' | string;
-  amount: number;
+  type: 'income' | 'expense' | string;
+  amount_cents: number;
   paid_at: string | null;
   status: string | null;
 };
@@ -60,7 +60,7 @@ export function AiReportsPage() {
           sb.from('tasks').select('id,status_v2,due_at,created_at,done_at,assigned_to_user_id').limit(1200),
           sb
             .from('finance_transactions')
-            .select('id,kind,amount,paid_at,status')
+            .select('id,type,amount_cents,paid_at,status')
             .gte('created_at', since7)
             .limit(1200),
           sb
@@ -114,9 +114,13 @@ export function AiReportsPage() {
       cancelled: tasks.filter((t) => (t.status_v2 || '').toLowerCase() === 'cancelled').length,
     };
 
-    const paid = finance.filter((f) => (f.status || '').toLowerCase() === 'paid');
-    const weekIncome = paid.filter((f) => f.kind === 'income').reduce((acc, f) => acc + Number(f.amount || 0), 0);
-    const weekExpense = paid.filter((f) => f.kind === 'expense').reduce((acc, f) => acc + Number(f.amount || 0), 0);
+    const paid = finance.filter((f) => !!f.paid_at || (f.status || '').toLowerCase() === 'paid');
+    const weekIncome = paid
+      .filter((f) => f.type === 'income')
+      .reduce((acc, f) => acc + Number(f.amount_cents || 0) / 100, 0);
+    const weekExpense = paid
+      .filter((f) => f.type === 'expense')
+      .reduce((acc, f) => acc + Number(f.amount_cents || 0) / 100, 0);
 
     const upcomingAgenda = agenda
       .map((a) => ({
