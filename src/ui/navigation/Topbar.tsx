@@ -1,9 +1,22 @@
-import { Search, Bell } from 'lucide-react';
+import { Search, Bell, Moon, Sun } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { useAuth } from '@/auth/authStore';
+import { getStoredTheme, setTheme, type AppTheme } from '@/lib/theme';
 
 export function Topbar() {
   const auth = useAuth();
+  const [theme, setThemeState] = useState<AppTheme>('dark');
+
+  useEffect(() => {
+    setThemeState(getStoredTheme());
+  }, []);
+
+  function onToggleTheme() {
+    const next: AppTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    setThemeState(next);
+  }
 
   return (
     <header className="sticky top-0 z-20 border-b border-white/10 bg-neutral-950/80 backdrop-blur-xl">
@@ -22,6 +35,15 @@ export function Topbar() {
               disabled
             />
           </div>
+          <button
+            className="rounded-xl border border-white/10 bg-white/5 p-2 text-white/80 hover:bg-white/10"
+            aria-label="Alternar tema claro/escuro"
+            onClick={onToggleTheme}
+            title={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+
           <button
             className="rounded-xl border border-white/10 bg-white/5 p-2 text-white/80 hover:bg-white/10"
             aria-label="Notificações"

@@ -6,6 +6,9 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import './index.css';
 import { AppRouter } from './router/AppRouter';
 import { AuthProvider } from '@/auth/authStore';
+import { initTheme } from '@/lib/theme';
+
+initTheme();
 
 const queryClient = new QueryClient({
   defaultOptions: {

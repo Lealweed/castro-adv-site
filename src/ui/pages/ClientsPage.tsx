@@ -18,6 +18,7 @@ type ClientRow = {
   phone: string | null;
   email: string | null;
   avatar_path: string | null;
+  user_id: string | null;
   created_at: string;
 };
 
@@ -37,6 +38,7 @@ export function ClientsPage() {
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newNotes, setNewNotes] = useState('');
+  const [newSourceChannel, setNewSourceChannel] = useState<'advogado' | 'recepcao' | 'web' | 'indicacao' | 'outro'>('recepcao');
 
   const [govLoginHint, setGovLoginHint] = useState('');
   const [govNotes, setGovNotes] = useState('');
@@ -68,7 +70,7 @@ export function ClientsPage() {
 
       const { data, error: qErr } = await sb
         .from('clients')
-        .select('id,name,person_type,cpf,cnpj,whatsapp,phone,email,avatar_path,created_at')
+        .select('id,name,person_type,cpf,cnpj,whatsapp,phone,email,avatar_path,user_id,created_at')
         .order('created_at', { ascending: false });
 
       if (qErr) throw new Error(qErr.message);
@@ -94,6 +96,7 @@ export function ClientsPage() {
     setNewEmail('');
     setNewPhone('');
     setNewNotes('');
+    setNewSourceChannel('recepcao');
     setGovLoginHint('');
     setGovNotes('');
 
@@ -144,6 +147,8 @@ export function ClientsPage() {
       const sb = requireSupabase();
       const user = await getAuthedUser();
 
+      const sourceTag = `[#origem:${newSourceChannel}]`;
+
       const payload: any = {
         user_id: user.id,
         person_type: personType,
@@ -151,7 +156,7 @@ export function ClientsPage() {
         whatsapp: onlyDigits(newWhatsapp),
         email: newEmail.trim() || null,
         phone: onlyDigits(newPhone) || null,
-        notes: newNotes.trim() || null,
+        notes: `${sourceTag} ${newNotes.trim()}`.trim(),
         gov_login_hint: govLoginHint.trim() || null,
         gov_notes: govNotes.trim() || null,
         address_cep: onlyDigits(cep) || null,
@@ -326,6 +331,17 @@ export function ClientsPage() {
                   ) : null}
                 </div>
               </div>
+
+              <label className="text-sm text-white/80">
+                Origem do cadastro
+                <select className="input" value={newSourceChannel} onChange={(e) => setNewSourceChannel(e.target.value as any)}>
+                  <option value="advogado">Advogado</option>
+                  <option value="recepcao">Recepção</option>
+                  <option value="web">Web</option>
+                  <option value="indicacao">Indicação</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </label>
 
               <label className="text-sm text-white/80 md:col-span-2">
                 Observações
