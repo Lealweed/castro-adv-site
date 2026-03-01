@@ -572,7 +572,6 @@ export function TasksPage() {
                   className="select"
                   value={assignedTo}
                   onChange={(e) => setAssignedTo(e.target.value)}
-                  disabled={!isAdmin}
                 >
                   {(profiles.length ? profiles : [{ user_id: myUserId, display_name: null, email: null, office_id: null }]).map((p) => (
                     <option key={p.user_id} value={p.user_id}>
@@ -580,11 +579,9 @@ export function TasksPage() {
                     </option>
                   ))}
                 </select>
-                {!isAdmin ? <div className="mt-1 text-xs text-white/50">Apenas administradores podem delegar tarefas.</div> : null}
               </label>
 
-              {isAdmin ? (
-                <div className="md:col-span-3 grid gap-3">
+              <div className="md:col-span-3 grid gap-3">
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
@@ -678,7 +675,6 @@ export function TasksPage() {
                     ) : null}
                   </div>
                 </div>
-              ) : null}
             </div>
 
             <div className="flex flex-wrap gap-3">
