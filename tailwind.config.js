@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+const colors = require('tailwindcss/colors');
+
 export default {
     darkMode: ['class'],
     content: ['./index.html', './src/**/*.{ts,tsx}'],
@@ -13,6 +15,7 @@ export default {
   			sm: 'calc(var(--radius) - 4px)'
   		},
   		colors: {
+        amber: colors.indigo, // Remap amber (gold) to indigo (Trust Blue) globally
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
