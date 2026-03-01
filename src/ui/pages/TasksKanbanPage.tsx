@@ -44,6 +44,7 @@ type TaskRow = {
   cancel_reason: string | null;
   done_at: string | null;
   created_at: string;
+  updated_at: string | null;
 };
 
 const COLUMNS: { id: TaskStatus; label: string }[] = [
@@ -100,6 +101,22 @@ function slaBadge(t: { due_at: string | null; status_v2: TaskStatus; priority: s
   }
 
   return { label: 'SLA ok', cls: 'badge border-emerald-400/30 bg-emerald-400/10 text-emerald-200' };
+}
+
+function staleBadge(t: { updated_at: string | null; created_at: string; status_v2: TaskStatus }) {
+  if (t.status_v2 === 'done' || t.status_v2 === 'cancelled') return null;
+
+  const lastChange = t.updated_at ? new Date(t.updated_at).getTime() : new Date(t.created_at).getTime();
+  const diffDays = Math.floor((Date.now() - lastChange) / (1000 * 60 * 60 * 24));
+
+  if (diffDays >= 7) {
+    return { label: `Parada há ${diffDays} dias`, cls: 'badge border-rose-500/40 bg-rose-500/15 text-rose-200' };
+  }
+  if (diffDays >= 3) {
+    return { label: `Parada há ${diffDays} dias`, cls: 'badge border-amber-400/30 bg-amber-400/10 text-amber-200' };
+  }
+  
+  return null;
 }
 
 export function TasksKanbanPage() {
@@ -166,7 +183,7 @@ export function TasksKanbanPage() {
         sb
           .from('tasks')
           .select(
-            'id,title,priority,status_v2,due_at,assigned_to_user_id,client_id,case_id,paused_at,pause_reason,cancelled_at,cancel_reason,done_at,created_at',
+            'id,title,priority,status_v2,due_at,assigned_to_user_id,client_id,case_id,paused_at,pause_reason,cancelled_at,cancel_reason,done_at,created_at,updated_at',
           )
           .order('created_at', { ascending: false })
           .limit(500),
@@ -471,6 +488,7 @@ export function TasksKanbanPage() {
                       {list.map((t) => {
                         const due = dueBadge(t);
                         const sla = slaBadge(t);
+                        const stale = staleBadge(t);
                         const assignee = t.assigned_to_user_id ? profileMap.get(t.assigned_to_user_id) : null;
                         const client = t.client_id ? clientsMap.get(t.client_id) : null;
                         const kase = t.case_id ? casesMap.get(t.case_id) : null;
@@ -482,7 +500,10 @@ export function TasksKanbanPage() {
                                 <Link to={`/app/tarefas/${t.id}`} className="text-sm font-semibold text-white hover:underline">
                                   {t.title}
                                 </Link>
-                                {due ? <span className={due.cls}>{due.label}</span> : null}
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                  {due ? <span className={due.cls}>{due.label}</span> : null}
+                                  {stale ? <span className={stale.cls}>{stale.label}</span> : null}
+                                </div>
                               </div>
 
                               {sla ? <div className="mt-2"><span className={sla.cls}>{sla.label}</span></div> : null}
