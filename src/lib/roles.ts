@@ -12,23 +12,30 @@ function normalizeRole(role: string | null | undefined) {
 }
 
 export async function getMyOfficeRole() {
+  // Prefer live role from Supabase office_members to avoid stale localStorage role.
+  try {
+    const sb = requireSupabase();
+    const user = await getAuthedUser();
+
+    const { data, error } = await sb
+      .from('office_members')
+      .select('role')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (!error) {
+      const live = normalizeRole((data as any)?.role || '');
+      if (live) return live;
+    }
+  } catch {
+    // ignore and fallback to stored role
+  }
+
+  // Fallback to backend role stored in localStorage
   const stored = normalizeRole(getStoredRole());
-  if (stored) return stored;
-
-  // Legacy fallback (while some flows still rely on Supabase office_members)
-  const sb = requireSupabase();
-  const user = await getAuthedUser();
-
-  const { data, error } = await sb
-    .from('office_members')
-    .select('role')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw new Error(error.message);
-  return normalizeRole((data as any)?.role || '');
+  return stored;
 }
 
 export async function requireRole(allowed: string[]) {
