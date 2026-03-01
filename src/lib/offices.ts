@@ -14,11 +14,12 @@ export type OfficeInviteRow = {
 
 export async function listMyOfficeInvites() {
   const sb = requireSupabase();
-  await getAuthedUser();
+  const user = await getAuthedUser();
 
   const { data, error } = await sb
     .from('office_invites')
     .select('id,office_id,email,role,created_at,accepted_at,accepted_by_user_id,revoked_at,revoked_by_user_id')
+    .ilike('email', String(user.email || '').toLowerCase())
     .is('accepted_at', null)
     .is('revoked_at', null)
     .order('created_at', { ascending: false })
@@ -44,18 +45,21 @@ export async function acceptOfficeInvite(inviteId: string) {
   if ((inv as any).revoked_at) throw new Error('Convite revogado.');
   if ((inv as any).accepted_at) throw new Error('Convite já aceito.');
 
-  // Join office
+  // Join office (idempotent: if already member, continue)
   const { error: mErr } = await sb
     .from('office_members')
     .insert({ office_id: (inv as any).office_id, user_id: user.id, role: (inv as any).role } as any);
 
-  if (mErr) throw new Error(mErr.message);
+  if (mErr && !String(mErr.message || '').toLowerCase().includes('duplicate')) {
+    throw new Error(mErr.message);
+  }
 
-  // Mark invite as accepted (RLS: invited user can update)
+  // Mark invite as accepted (even if membership already existed)
   const { error: upErr } = await sb
     .from('office_invites')
     .update({ accepted_at: new Date().toISOString(), accepted_by_user_id: user.id } as any)
-    .eq('id', inviteId);
+    .eq('id', inviteId)
+    .is('accepted_at', null);
 
   if (upErr) throw new Error(upErr.message);
 

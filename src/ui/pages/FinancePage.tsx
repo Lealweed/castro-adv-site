@@ -2,6 +2,8 @@ import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { getMyOfficeRole } from '@/lib/roles';
+import { getAuthedUser } from '@/lib/supabaseDb';
 import {
   brlToCents,
   centsToBRL,
@@ -33,6 +35,8 @@ export function FinancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCharts, setShowCharts] = useState(false);
+  const [myRole, setMyRole] = useState<string>('');
+  const [meId, setMeId] = useState<string>('');
 
   const [createOpen, setCreateOpen] = useState(false);
   const [type, setType] = useState<'income' | 'expense'>('income');
@@ -60,7 +64,9 @@ export function FinancePage() {
     setError(null);
 
     try {
-      const data = await listFinanceTx(50);
+      const [data, role, me] = await Promise.all([listFinanceTx(50), getMyOfficeRole().catch(() => ''), getAuthedUser()]);
+      setMyRole(role || '');
+      setMeId(me.id);
       setRows(data);
       setLoading(false);
     } catch (err: any) {
@@ -105,25 +111,36 @@ export function FinancePage() {
     };
   }, [type]);
 
+  const isAdmin = myRole === 'admin';
+  const isFinance = myRole === 'finance';
+  const isOperator = myRole === 'staff';
+  const canSeeFullFinance = isAdmin || isFinance;
+
+  const roleScopedRows = useMemo(() => {
+    if (canSeeFullFinance) return rows;
+    // advogado/member/staff só veem o que lançaram
+    return rows.filter((r) => r.user_id === meId);
+  }, [rows, canSeeFullFinance, meId]);
+
   const summary = useMemo(() => {
-    const plannedIncome = rows
+    const plannedIncome = roleScopedRows
       .filter((r) => r.type === 'income' && r.status === 'planned')
       .reduce((a, r) => a + r.amount_cents, 0);
-    const plannedExpense = rows
+    const plannedExpense = roleScopedRows
       .filter((r) => r.type === 'expense' && r.status === 'planned')
       .reduce((a, r) => a + r.amount_cents, 0);
-    const paidIncome = rows
+    const paidIncome = roleScopedRows
       .filter((r) => r.type === 'income' && r.status === 'paid')
       .reduce((a, r) => a + r.amount_cents, 0);
-    const paidExpense = rows
+    const paidExpense = roleScopedRows
       .filter((r) => r.type === 'expense' && r.status === 'paid')
       .reduce((a, r) => a + r.amount_cents, 0);
     const netPaid = paidIncome - paidExpense;
     return { plannedIncome, plannedExpense, paidIncome, paidExpense, netPaid };
-  }, [rows]);
+  }, [roleScopedRows]);
 
   const filteredRows = useMemo(() => {
-    let out = rows;
+    let out = roleScopedRows;
 
     if (statusFilter !== 'all') {
       out = out.filter((r) => r.status === statusFilter);
@@ -135,11 +152,11 @@ export function FinancePage() {
     }
 
     return out;
-  }, [rows, statusFilter, search]);
+  }, [roleScopedRows, statusFilter, search]);
 
   const pdvSummary = useMemo(() => {
     const today = todayStr();
-    const todayPaid = rows.filter((r) => r.status === 'paid' && r.occurred_on === today);
+    const todayPaid = roleScopedRows.filter((r) => r.status === 'paid' && r.occurred_on === today);
     const inCents = todayPaid.filter((r) => r.type === 'income').reduce((a, r) => a + r.amount_cents, 0);
     const outCents = todayPaid.filter((r) => r.type === 'expense').reduce((a, r) => a + r.amount_cents, 0);
     const openingCents = brlToCents(openingAmount) || 0;
@@ -149,7 +166,7 @@ export function FinancePage() {
       openingCents,
       balanceCents: openingCents + inCents - outCents,
     };
-  }, [rows, openingAmount]);
+  }, [roleScopedRows, openingAmount]);
 
   async function onCreate() {
     if (!description.trim()) return;
@@ -279,15 +296,21 @@ export function FinancePage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-          <Link to="/app/financeiro/parceiros" className="btn-ghost">
-            Parceiros
-          </Link>
-          <Link to="/app/financeiro/a-pagar" className="btn-ghost">
-            A pagar
-          </Link>
-          <button onClick={() => setCreateOpen(true)} className="btn-primary">
-            Novo lançamento
-          </button>
+          {canSeeFullFinance ? (
+            <>
+              <Link to="/app/financeiro/parceiros" className="btn-ghost">
+                Parceiros
+              </Link>
+              <Link to="/app/financeiro/a-pagar" className="btn-ghost">
+                A pagar
+              </Link>
+            </>
+          ) : null}
+          {!isOperator ? (
+            <button onClick={() => setCreateOpen(true)} className="btn-primary">
+              Novo lançamento
+            </button>
+          ) : null}
           </div>
         </div>
       </div>
@@ -334,6 +357,8 @@ export function FinancePage() {
         </div>
       </Card>
 
+      {!isOperator ? (
+      <>
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
           <div className="text-[11px] text-white/60">Buscar lançamento</div>
@@ -514,6 +539,15 @@ export function FinancePage() {
           </div>
         </div>
       </Card>
+      </>
+      ) : (
+        <Card>
+          <div className="text-sm font-semibold text-white">Acesso operacional</div>
+          <div className="mt-2 text-sm text-white/70">
+            Seu perfil de Operador acessa somente o PDV para lançamentos rápidos de caixa.
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

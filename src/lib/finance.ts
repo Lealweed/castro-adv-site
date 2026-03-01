@@ -8,6 +8,7 @@ export type FinanceCategory = {
 
 export type FinanceTx = {
   id: string;
+  user_id: string;
   type: 'income' | 'expense' | string;
   status: 'planned' | 'paid' | 'cancelled' | string;
   occurred_on: string;
@@ -42,7 +43,7 @@ export async function listFinanceTx(limit = 50): Promise<FinanceTx[]> {
   const { data, error } = await sb
     .from('finance_transactions')
     .select(
-      'id,type,status,occurred_on,due_date,description,amount_cents,payment_method,notes,reminder_1d_sent_at,category_id,category:finance_categories(name),created_at',
+      'id,user_id,type,status,occurred_on,due_date,description,amount_cents,payment_method,notes,reminder_1d_sent_at,category_id,category:finance_categories(name),created_at',
     )
     .order('occurred_on', { ascending: false })
     .order('created_at', { ascending: false })
