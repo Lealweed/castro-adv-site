@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   BarChart3,
@@ -12,6 +13,7 @@ import {
   Users,
 } from 'lucide-react';
 import { cn } from '@/ui/utils/cn';
+import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 const items = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard },
@@ -26,6 +28,28 @@ const items = [
 ];
 
 export function Sidebar() {
+  const [userName, setUserName] = useState<string>('Carregando...');
+  
+  useEffect(() => {
+    (async () => {
+      try {
+        const sb = requireSupabase();
+        const user = await getAuthedUser();
+        
+        const { data: profile } = await sb
+          .from('user_profiles')
+          .select('display_name, email')
+          .eq('user_id', user.id)
+          .maybeSingle();
+          
+        const name = profile?.display_name || profile?.email?.split('@')[0] || 'Usuário';
+        setUserName(name);
+      } catch {
+        setUserName('Usuário');
+      }
+    })();
+  }, []);
+
   return (
     <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-neutral-950/70 backdrop-blur-xl md:block">
       <div className="flex h-16 items-center gap-3 px-4">
@@ -61,9 +85,9 @@ export function Sidebar() {
 
       <div className="mt-auto p-4">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-          <div className="text-xs font-semibold text-white">Organização</div>
-          <div className="mt-1 text-sm text-white/80">Castro de Oliveira Advocacia</div>
-          <div className="mt-2 text-xs text-white/60">Plano: Pro • 12 usuários</div>
+          <div className="text-xs font-semibold text-white">Usuário Logado</div>
+          <div className="mt-1 text-sm text-white/80">{userName}</div>
+          <div className="mt-2 text-[10px] uppercase font-bold text-amber-200/70 tracking-wider">Castro de Oliveira Adv</div>
         </div>
       </div>
     </aside>
