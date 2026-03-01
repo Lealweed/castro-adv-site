@@ -59,7 +59,12 @@ export function PayablesPage() {
           <h1 className="text-2xl font-semibold text-white">A pagar parceiros</h1>
           <p className="text-sm text-white/60">Repasses pendentes (splits) por lançamento.</p>
         </div>
-        <div className="text-sm font-semibold text-white">Total: {centsToBRL(total)}</div>
+        <div className="flex items-center gap-4">
+          <div className="text-sm font-semibold text-white">Total: {centsToBRL(total)}</div>
+          <Link to="/app/financeiro" className="btn-ghost">
+            Voltar
+          </Link>
+        </div>
       </div>
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}

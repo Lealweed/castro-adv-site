@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
 import { createPartner, deletePartner, listPartners, type PartnerRow } from '@/lib/partners';
@@ -66,9 +67,14 @@ export function PartnersPage() {
           <h1 className="text-2xl font-semibold text-white">Parceiros</h1>
           <p className="text-sm text-white/60">Advogados/parceiros externos para repasses.</p>
         </div>
-        <button onClick={() => setCreateOpen(true)} className="btn-primary">
-          Novo parceiro
-        </button>
+        <div className="flex items-center gap-2">
+          <Link to="/app/financeiro" className="btn-ghost">
+            Voltar
+          </Link>
+          <button onClick={() => setCreateOpen(true)} className="btn-primary">
+            Novo parceiro
+          </button>
+        </div>
       </div>
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
