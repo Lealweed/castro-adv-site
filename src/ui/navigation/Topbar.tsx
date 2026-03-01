@@ -1,4 +1,4 @@
-import { Search, Bell, Moon, Sun, Menu, X, LayoutDashboard, Users, Briefcase, Calendar, CheckSquare, Coins, Sparkles, Building2, Cog } from 'lucide-react';
+import { Search, Bell, Moon, Sun, Menu, X, LayoutDashboard, Users, Briefcase, Calendar, CheckSquare, Coins, Sparkles, Building2, Cog, HardDrive } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 
@@ -13,6 +13,7 @@ const mobileItems = [
   { to: '/app/agenda', label: 'Agenda', icon: Calendar },
   { to: '/app/tarefas', label: 'Tarefas', icon: CheckSquare },
   { to: '/app/financeiro', label: 'Financeiro', icon: Coins },
+  { to: '/app/drive', label: 'Smart Drive', icon: HardDrive },
   { to: '/app/relatorios-ia', label: 'Relatórios com IA', icon: Sparkles },
   { to: '/app/portal', label: 'Portal do Cliente', icon: Building2 },
   { to: '/app/configuracoes', label: 'Configurações', icon: Cog },

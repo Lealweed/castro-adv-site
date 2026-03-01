@@ -30,7 +30,9 @@ const PartnersPage = lazy(() => import('@/ui/pages/finance/PartnersPage').then((
 const PayablesPage = lazy(() => import('@/ui/pages/finance/PayablesPage').then((m) => ({ default: m.PayablesPage })));
 const AiReportsPage = lazy(() => import('@/ui/pages/AiReportsPage').then((m) => ({ default: m.AiReportsPage })));
 const ClientPortalPage = lazy(() => import('@/ui/pages/ClientPortalPage').then((m) => ({ default: m.ClientPortalPage })));
+const DrivePage = lazy(() => import('@/ui/pages/DrivePage').then((m) => ({ default: m.DrivePage })));
 const SettingsPage = lazy(() => import('@/ui/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const TeamPage = lazy(() => import('@/ui/pages/TeamPage').then((m) => ({ default: m.TeamPage })));
 const AuditPage = lazy(() => import('@/ui/pages/AuditPage').then((m) => ({ default: m.AuditPage })));
 
 export function AppRouter() {
@@ -78,10 +80,12 @@ export function AppRouter() {
               <Route path="/app/financeiro/:txId" element={<FinanceTxDetailsPage />} />
 
               <Route path="/app/relatorios-ia" element={<AiReportsPage />} />
+              <Route path="/app/drive" element={<DrivePage />} />
               <Route path="/app/portal" element={<ClientPortalPage />} />
               <Route path="/app/configuracoes" element={<SettingsPage />} />
 
               <Route element={<RequireRole allowed={["admin"]} />}>
+                <Route path="/app/configuracoes/equipe" element={<TeamPage />} />
                 <Route path="/app/configuracoes/auditoria" element={<AuditPage />} />
               </Route>
             </Route>

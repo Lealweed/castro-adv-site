@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Sparkles,
   Users,
+  HardDrive,
 } from 'lucide-react';
 import { cn } from '@/ui/utils/cn';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
@@ -22,6 +23,7 @@ const items = [
   { to: '/app/agenda', label: 'Agenda', icon: Calendar },
   { to: '/app/tarefas', label: 'Tarefas', icon: CheckSquare },
   { to: '/app/financeiro', label: 'Financeiro', icon: Coins },
+  { to: '/app/drive', label: 'Smart Drive', icon: HardDrive },
   { to: '/app/relatorios-ia', label: 'Relatórios com IA', icon: Sparkles },
   { to: '/app/portal', label: 'Portal do Cliente', icon: Building2 },
   { to: '/app/configuracoes', label: 'Configurações', icon: Cog },
