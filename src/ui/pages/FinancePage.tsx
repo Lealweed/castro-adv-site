@@ -111,9 +111,9 @@ export function FinancePage() {
     };
   }, [type]);
 
-  const isAdmin = myRole === 'admin';
+  const isAdmin = myRole === 'admin' || myRole === 'owner';
   const isFinance = myRole === 'finance';
-  const isOperator = myRole === 'staff';
+  const isOperator = myRole === 'staff' || myRole === 'secretary' || myRole === 'assistant';
   const canSeeFullFinance = isAdmin || isFinance;
 
   const roleScopedRows = useMemo(() => {
