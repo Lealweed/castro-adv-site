@@ -230,14 +230,14 @@ export function CasesPage() {
             <div className="text-sm font-semibold text-white">Lista de casos</div>
             <div className="text-xs text-white/60">Busque por título, CNJ, cliente ou área.</div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             <input
-              className="input !h-10 !py-2 !text-sm"
+              className="input !mt-0 !text-sm"
               placeholder="Buscar…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
-            <select className="select !h-10" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select className="select !mt-0 !text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="all">Todos status</option>
               <option value="aberto">Abertos</option>
               <option value="and">Em andamento</option>
@@ -245,7 +245,7 @@ export function CasesPage() {
             </select>
             {role === 'admin' ? (
               <select
-                className="select !h-10"
+                className="select !mt-0 !text-sm"
                 value={responsibleFilter}
                 onChange={(e) => setResponsibleFilter(e.target.value)}
               >
