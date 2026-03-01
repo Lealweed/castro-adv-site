@@ -2,15 +2,17 @@ import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 export type DocumentRow = {
   id: string;
+  user_id: string | null;
   client_id: string;
   case_id: string | null;
   task_id: string | null;
-  kind: 'personal' | 'case' | string;
+  kind: 'personal' | 'case' | 'template' | string;
   title: string;
   file_path: string;
   mime_type: string | null;
   size_bytes: number | null;
   created_at: string;
+  is_public?: boolean;
 };
 
 export async function listClientDocuments(clientId: string) {
@@ -19,7 +21,7 @@ export async function listClientDocuments(clientId: string) {
 
   const { data, error } = await sb
     .from('documents')
-    .select('id,client_id,case_id,task_id,kind,title,file_path,mime_type,size_bytes,created_at')
+    .select('id,user_id,client_id,case_id,task_id,kind,title,file_path,mime_type,size_bytes,created_at,is_public')
     .eq('client_id', clientId)
     .order('created_at', { ascending: false });
 
@@ -29,17 +31,20 @@ export async function listClientDocuments(clientId: string) {
 
 export async function uploadClientDocument(args: {
   clientId: string;
-  kind: 'personal' | 'case';
+  kind: 'personal' | 'case' | 'template';
   title: string;
-  file: File;
+  file: File | Blob;
+  fileName?: string;
   caseId?: string | null;
+  isPublic?: boolean;
 }) {
   const sb = requireSupabase();
   const user = await getAuthedUser();
 
   const docId = crypto.randomUUID();
-  const safeName = (args.file.name || 'arquivo').replace(/[^a-zA-Z0-9._-]/g, '_');
-  const prefix = args.kind === 'case' ? 'cases' : 'personal';
+  const originalName = args.fileName || (args.file instanceof File ? args.file.name : 'documento.docx');
+  const safeName = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const prefix = args.kind === 'case' ? 'cases' : args.kind === 'template' ? 'templates' : 'personal';
   const casePart = args.kind === 'case' && args.caseId ? `/${args.caseId}` : '';
 
   const path = `clients/${args.clientId}/${prefix}${casePart}/${docId}_${safeName}`;
@@ -56,10 +61,11 @@ export async function uploadClientDocument(args: {
     client_id: args.clientId,
     case_id: args.kind === 'case' ? args.caseId || null : null,
     kind: args.kind,
-    title: args.title.trim() || args.file.name,
+    title: args.title.trim() || originalName,
     file_path: path,
     mime_type: args.file.type || null,
     size_bytes: args.file.size || null,
+    is_public: args.isPublic || false,
   } as any);
 
   if (insErr) {
@@ -69,6 +75,18 @@ export async function uploadClientDocument(args: {
   }
 
   return { id: docId, file_path: path };
+}
+
+export async function toggleDocumentVisibility(docId: string, isPublic: boolean) {
+  const sb = requireSupabase();
+  await getAuthedUser();
+
+  const { error } = await sb
+    .from('documents')
+    .update({ is_public: isPublic } as any)
+    .eq('id', docId);
+
+  if (error) throw new Error(error.message);
 }
 
 export async function getDocumentDownloadUrl(filePath: string) {
@@ -86,7 +104,7 @@ export async function listTaskDocuments(taskId: string) {
 
   const { data, error } = await sb
     .from('documents')
-    .select('id,client_id,case_id,task_id,kind,title,file_path,mime_type,size_bytes,created_at')
+    .select('id,user_id,client_id,case_id,task_id,kind,title,file_path,mime_type,size_bytes,created_at')
     .eq('task_id', taskId)
     .order('created_at', { ascending: false });
 
