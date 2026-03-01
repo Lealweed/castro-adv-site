@@ -150,6 +150,32 @@ export function LoginPage() {
           </button>
 
           {error ? <div className="text-sm text-red-200">{error}</div> : null}
+
+          <div className="text-center mt-2">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) {
+                  setError('Digite seu e-mail acima para receber o link de redefinição.');
+                  return;
+                }
+                setLoading(true);
+                setError(null);
+                try {
+                  const { error: resetErr } = await import('@/auth/supabaseAuth').then(m => m.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/app/login' }));
+                  if (resetErr) throw resetErr;
+                  alert('Um link seguro para definir sua senha foi enviado para seu e-mail!');
+                } catch (e: any) {
+                  setError(e?.message || 'Falha ao enviar e-mail de redefinição.');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="text-xs text-white/50 hover:text-white/80 hover:underline"
+            >
+              Primeiro Acesso / Esqueci a Senha
+            </button>
+          </div>
         </form>
       </div>
     </div>

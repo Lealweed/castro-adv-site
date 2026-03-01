@@ -13,6 +13,10 @@ export async function signInWithPassword(email: string, password: string) {
   return ensure().auth.signInWithPassword({ email, password });
 }
 
+export async function resetPasswordForEmail(email: string, options?: any) {
+  return ensure().auth.resetPasswordForEmail(email, options);
+}
+
 export async function signOut() {
   if (!hasSupabaseEnv || !supabase) return;
   await supabase.auth.signOut();
