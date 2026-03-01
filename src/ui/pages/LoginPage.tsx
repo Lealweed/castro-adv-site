@@ -74,23 +74,18 @@ export function LoginPage() {
           nav('/app');
           return;
         } catch (backendErr: any) {
-          const msg = String(backendErr?.message || '');
-          const networkLike = msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('network');
-
           // Se der erro de credenciais no backend novo, vamos tentar no Supabase antigo antes de falhar
-          if (!networkLike) {
-            if (env.supabaseUrl && env.supabaseAnonKey) {
-              const { error: sbError } = await signInWithPassword(email, password);
-              if (sbError) {
-                // Falhou nos dois
-                throw new Error('Falha no login. Verifique seu e-mail e senha.');
-              }
-              // Funcionou no Supabase, prossegue
-              nav('/app');
-              return;
+          if (env.supabaseUrl && env.supabaseAnonKey) {
+            const { error: sbError } = await signInWithPassword(email, password);
+            if (sbError) {
+              // Falhou nos dois
+              throw new Error('Falha no login. Verifique seu e-mail e senha.');
             }
-            throw backendErr;
+            // Funcionou no Supabase, prossegue
+            nav('/app');
+            return;
           }
+          throw backendErr;
         }
       }
 
