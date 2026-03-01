@@ -45,6 +45,13 @@ export function ClientDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [notes, setNotes] = useState('');
+
   useEffect(() => {
     let alive = true;
 
@@ -72,6 +79,10 @@ export function ClientDetailsPage() {
         if (!alive) return;
         const client = (c1.data as any) || null;
         setRow(client);
+        setName(client?.name || '');
+        setPhone(client?.phone || '');
+        setEmail(client?.email || '');
+        setNotes(client?.notes || '');
         setCases((c2.data || []) as CaseLite[]);
 
         if (client?.user_id) {
@@ -102,6 +113,32 @@ export function ClientDetailsPage() {
     };
   }, [clientId]);
 
+  async function onSave() {
+    if (!clientId) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const sb = requireSupabase();
+      const { error: updateErr } = await sb
+        .from('clients')
+        .update({
+          name: name.trim(),
+          phone: phone.trim() || null,
+          email: email.trim() || null,
+          notes: notes.trim() || null,
+        } as any)
+        .eq('id', clientId);
+      if (updateErr) throw new Error(updateErr.message);
+      
+      setRow(prev => prev ? { ...prev, name: name.trim(), phone: phone.trim() || null, email: email.trim() || null, notes: notes.trim() || null } : prev);
+      setEditing(false);
+    } catch (e: any) {
+      setError(e.message || 'Falha ao salvar');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-4">
@@ -120,26 +157,75 @@ export function ClientDetailsPage() {
 
         {!loading && !error && row ? (
           <div className="grid gap-3">
-            <div>
-              <div className="text-xs text-white/50">Nome</div>
-              <div className="text-lg font-semibold text-white">{row.name}</div>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div>
-                <div className="text-xs text-white/50">Telefone</div>
-                <div className="text-sm text-white/80">{row.phone || '—'}</div>
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                {editing ? (
+                  <div className="grid gap-4 mb-4">
+                    <label className="text-sm text-white/80">
+                      Nome
+                      <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+                    </label>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="text-sm text-white/80">
+                        Telefone
+                        <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                      </label>
+                      <label className="text-sm text-white/80">
+                        E-mail
+                        <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} />
+                      </label>
+                    </div>
+                    <label className="text-sm text-white/80">
+                      Observações
+                      <textarea className="input min-h-[100px]" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                    </label>
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={onSave} disabled={saving} className="btn-primary">
+                        {saving ? 'Salvando...' : 'Salvar Alterações'}
+                      </button>
+                      <button onClick={() => {
+                        setEditing(false);
+                        setName(row.name);
+                        setPhone(row.phone || '');
+                        setEmail(row.email || '');
+                        setNotes(row.notes || '');
+                      }} disabled={saving} className="btn-ghost">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <div className="text-xs text-white/50">Nome</div>
+                      <div className="text-lg font-semibold text-white">{row.name}</div>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2 mt-3">
+                      <div>
+                        <div className="text-xs text-white/50">Telefone</div>
+                        <div className="text-sm text-white/80">{row.phone || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-white/50">E-mail</div>
+                        <div className="text-sm text-white/80">{row.email || '—'}</div>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="text-xs text-white/50">Observações</div>
+                      <div className="text-sm text-white/80 whitespace-pre-wrap">{cleanNotes(row.notes) || '—'}</div>
+                    </div>
+                  </>
+                )}
               </div>
-              <div>
-                <div className="text-xs text-white/50">E-mail</div>
-                <div className="text-sm text-white/80">{row.email || '—'}</div>
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-white/50">Observações</div>
-              <div className="text-sm text-white/80">{cleanNotes(row.notes) || '—'}</div>
+              
+              {!editing && (
+                <button onClick={() => setEditing(true)} className="btn-ghost !px-3 !py-1.5 text-xs">
+                  Editar Cliente
+                </button>
+              )}
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-3 mt-2">
               <div className="text-xs font-semibold uppercase tracking-wide text-white/60">Origem do cadastro</div>
               <div className="mt-2 grid gap-2 text-sm text-white/80 md:grid-cols-3">
                 <div>
