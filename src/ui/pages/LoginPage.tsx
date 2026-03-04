@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 
 import { useAuth } from '@/auth/authStore';
@@ -17,6 +17,7 @@ type LoginResponse = {
 
 export function LoginPage() {
   const nav = useNavigate();
+  const loc = useLocation();
   const auth = useAuth();
 
   const [email, setEmail] = useState('');
@@ -24,6 +25,29 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+
+  useEffect(() => {
+    // Check if URL has hash fragment with access_token (successful recovery)
+    // or if the Supabase event fires.
+    const checkRecovery = async () => {
+      if (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) {
+        setIsRecoveryMode(true);
+      }
+      
+      try {
+        const { onAuthStateChange } = await import('@/auth/supabaseAuth');
+        onAuthStateChange(() => {
+          // You could also check event types here if exported, 
+          // but we rely on the URL hash mostly.
+        });
+      } catch (e) {
+        // ignore
+      }
+    };
+    checkRecovery();
+  }, [loc]);
 
   async function loginWithBackend(emailValue: string, passwordValue: string) {
     const res = await fetch(`${env.apiBaseUrl}/auth/login`, {
@@ -52,6 +76,28 @@ export function LoginPage() {
     const firstRole = String(data.organizations?.[0]?.role || '').toLowerCase();
     if (firstRole) {
       setRole(firstRole === 'owner' ? 'admin' : firstRole);
+    }
+  }
+
+  async function onUpdatePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const { supabase } = await import('@/lib/supabaseClient');
+      if (!supabase) throw new Error('Supabase Client not found');
+      
+      const { error: updateErr } = await supabase.auth.updateUser({ password });
+      if (updateErr) throw updateErr;
+      
+      alert('Senha atualizada com sucesso! Você já pode entrar.');
+      setIsRecoveryMode(false);
+      setPassword('');
+      nav('/app');
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao atualizar senha.');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -103,6 +149,45 @@ export function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (isRecoveryMode) {
+    return (
+      <div className="mx-auto w-full max-w-md">
+        <div className="rounded-2xl border border-white/10 bg-neutral-950/50 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] backdrop-blur">
+          <div className="text-xl font-semibold text-white">Criar Nova Senha</div>
+          <div className="mt-1 text-sm text-white/60">Digite a senha que você deseja usar para acessar o sistema.</div>
+
+          <form onSubmit={onUpdatePassword} className="mt-6 grid gap-4">
+            <label className="text-sm text-white/80">
+              Nova Senha
+              <div className="relative mt-1">
+                <input
+                  className="input !mt-0 w-full pr-10"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </label>
+
+            <button disabled={loading} className="btn-primary">
+              {loading ? 'Salvando…' : 'Salvar Nova Senha'}
+            </button>
+
+            {error ? <div className="text-sm text-red-200">{error}</div> : null}
+          </form>
+        </div>
+      </div>
+    );
   }
 
   return (
