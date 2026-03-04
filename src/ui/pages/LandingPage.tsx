@@ -1,9 +1,6 @@
-import { Suspense, lazy } from 'react';
 import { Link } from 'react-router-dom';
 
 import { ShimmerButton } from '@/ui/primitives/ShimmerButton';
-
-const HelixBadge3D = lazy(() => import('@/components/ui/helix-hero').then((m) => ({ default: m.HelixBadge3D })));
 
 function SectionTitle({ kicker, title, desc }: { kicker: string; title: string; desc: string }) {
   return (
@@ -136,9 +133,15 @@ export function LandingPage() {
             <div className="absolute -inset-10 rounded-[32px] bg-[radial-gradient(circle_at_30%_10%,rgba(212,175,55,0.38),transparent_58%)] blur-2xl" />
 
             <div className="relative overflow-hidden rounded-[32px] border border-black/10 bg-white p-5 md:p-6">
-              <Suspense fallback={<div className="h-44 animate-pulse rounded-2xl border border-black/10 bg-[#fbfaf7]" />}>
-                <HelixBadge3D className="mb-5 h-44" xOffset={0.8} quality="low" />
-              </Suspense>
+              <div className="mb-5 flex h-44 items-center justify-center rounded-2xl border border-black/10 bg-[#fbfaf7]">
+                <div className="text-center">
+                  <div className="mx-auto mb-3 grid size-16 place-items-center rounded-full bg-[rgba(212,175,55,0.1)] text-2xl font-bold text-gold">
+                    CO
+                  </div>
+                  <div className="text-sm font-semibold text-neutral-800">Castro de Oliveira</div>
+                  <div className="text-xs text-neutral-500">Advocacia</div>
+                </div>
+              </div>
 
               <div className="grid gap-3">
                 {[
