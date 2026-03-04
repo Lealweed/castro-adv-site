@@ -5,10 +5,10 @@ import { ShimmerButton } from '@/ui/primitives/ShimmerButton';
 function SectionTitle({ kicker, title, desc }: { kicker: string; title: string; desc: string }) {
   return (
     <div className="mx-auto max-w-3xl text-center">
-      <div className="text-xs font-semibold tracking-[0.22em] text-gold">{kicker}</div>
-      <div className="mx-auto mt-3 h-px w-16 bg-[linear-gradient(to_right,transparent,rgba(212,175,55,0.65),transparent)]" />
-      <h2 className="mt-4 text-2xl font-semibold tracking-tight text-neutral-950 md:text-3xl">{title}</h2>
-      <p className="mt-3 text-sm text-neutral-700 md:text-base">{desc}</p>
+      <div className="text-xs font-bold uppercase tracking-[0.3em] text-gold">{kicker}</div>
+      <div className="mx-auto mt-4 h-px w-12 bg-gradient-to-r from-transparent via-gold to-transparent opacity-50" />
+      <h2 className="mt-6 text-3xl font-light tracking-tight text-neutral-900 md:text-5xl font-serif">{title}</h2>
+      <p className="mt-4 text-sm leading-relaxed text-neutral-600 md:text-lg">{desc}</p>
     </div>
   );
 }
@@ -84,89 +84,87 @@ export function LandingPage() {
   return (
     <div>
       {/* HERO */}
-      <section className="mx-auto max-w-6xl px-4 pb-14 pt-14 md:pb-20 md:pt-20">
-        <div className="grid gap-10 md:grid-cols-2 md:items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1 text-xs text-neutral-700">
-              <span className="size-1.5 rounded-full bg-gold" />
+      <section className="relative mx-auto max-w-7xl px-4 pb-16 pt-20 md:pb-32 md:pt-32">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,rgba(212,175,55,0.08),transparent_50%)]" />
+        
+        <div className="grid gap-16 md:grid-cols-2 md:items-center">
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-3 rounded-full border border-gold/20 bg-gold/5 px-4 py-1.5 text-xs font-medium text-neutral-800 shadow-sm backdrop-blur-sm">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gold opacity-50"></span>
+                <span className="relative inline-flex size-2 rounded-full bg-gold"></span>
+              </span>
               {cityDisplay}
             </div>
 
-            <h1 className="mt-6 text-4xl font-semibold leading-tight tracking-tight text-neutral-950 md:text-5xl">
+            <h1 className="mt-8 text-5xl font-light leading-[1.1] tracking-tight text-neutral-900 md:text-7xl font-serif">
               Castro de Oliveira
-              <span className="block text-[rgba(212,175,55,0.95)]">Advocacia</span>
+              <span className="block mt-2 font-medium text-transparent bg-clip-text bg-gradient-to-r from-gold to-[rgba(180,145,45,1)]">Advocacia</span>
             </h1>
 
-            <p className="mt-4 max-w-xl text-base text-neutral-700">
-              Atendimento jurídico com padrão premium: organização, clareza e acompanhamento em tempo real no CRM.
+            <p className="mt-6 max-w-lg text-lg font-light leading-relaxed text-neutral-600">
+              Atendimento jurídico com padrão premium. Unimos o rigor técnico da advocacia à tecnologia para garantir clareza, organização e excelência.
             </p>
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer">
-                <ShimmerButton className="w-full sm:w-auto">Falar no WhatsApp</ShimmerButton>
+            <div className="mt-10 flex flex-col gap-4 sm:flex-row items-center">
+              <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="w-full sm:w-auto">
+                <ShimmerButton className="w-full sm:w-auto !px-8 !py-3.5 !text-base shadow-xl shadow-gold/20 hover:scale-105 transition-transform duration-300">Falar no WhatsApp</ShimmerButton>
               </a>
               <Link
                 to="/app"
-                className="inline-flex w-full items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-neutral-900 transition hover:bg-black/5 sm:w-auto"
+                className="group inline-flex w-full items-center justify-center gap-2 rounded-full border border-neutral-200 bg-white px-8 py-3.5 text-sm font-medium text-neutral-800 transition-all hover:border-gold hover:bg-neutral-50 sm:w-auto shadow-sm"
               >
-                Entrar no CRM
+                Acesso Restrito
+                <span className="text-gold transition-transform group-hover:translate-x-1">→</span>
               </Link>
             </div>
 
-            <div className="mt-8 grid grid-cols-2 gap-3 text-xs text-neutral-700 sm:grid-cols-3">
-              <div className="rounded-xl border border-black/10 bg-white p-3">
-                <div className="text-neutral-950">Gestão</div>
-                <div>tarefas e prazos</div>
+            <div className="mt-14 grid grid-cols-3 gap-6 border-t border-neutral-200/60 pt-8">
+              <div>
+                <div className="text-xl font-light text-neutral-900 font-serif">100%</div>
+                <div className="mt-1 text-xs text-neutral-500 uppercase tracking-widest">Sigilo Absoluto</div>
               </div>
-              <div className="rounded-xl border border-black/10 bg-white p-3">
-                <div className="text-neutral-950">Operação</div>
-                <div>clientes e casos</div>
+              <div>
+                <div className="text-xl font-light text-neutral-900 font-serif">24/7</div>
+                <div className="mt-1 text-xs text-neutral-500 uppercase tracking-widest">Portal Exclusivo</div>
               </div>
-              <div className="rounded-xl border border-black/10 bg-white p-3">
-                <div className="text-neutral-950">Visão</div>
-                <div>dashboard executivo</div>
+              <div>
+                <div className="text-xl font-light text-neutral-900 font-serif">Ágil</div>
+                <div className="mt-1 text-xs text-neutral-500 uppercase tracking-widest">Gestão de Prazos</div>
               </div>
             </div>
           </div>
 
-          <div className="relative">
-            <div className="absolute -inset-10 rounded-[32px] bg-[radial-gradient(circle_at_30%_10%,rgba(212,175,55,0.38),transparent_58%)] blur-2xl" />
+          <div className="relative lg:ml-auto w-full max-w-lg">
+            <div className="absolute -inset-10 rounded-[40px] bg-[radial-gradient(circle_at_50%_50%,rgba(212,175,55,0.15),transparent_60%)] blur-3xl" />
 
-            <div className="relative overflow-hidden rounded-[32px] border border-black/10 bg-white p-5 md:p-6">
-              <div className="mb-5 flex h-44 items-center justify-center rounded-2xl border border-black/10 bg-[#fbfaf7]">
+            <div className="relative overflow-hidden rounded-[32px] border border-white/50 bg-white/80 p-8 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] backdrop-blur-xl">
+              <div className="mb-8 flex flex-col items-center justify-center space-y-4">
+                <div className="grid size-20 place-items-center rounded-2xl bg-gradient-to-br from-gold/20 to-gold/5 text-3xl font-serif text-gold shadow-inner border border-gold/10">
+                  CO
+                </div>
                 <div className="text-center">
-                  <div className="mx-auto mb-3 grid size-16 place-items-center rounded-full bg-[rgba(212,175,55,0.1)] text-2xl font-bold text-gold">
-                    CO
-                  </div>
-                  <div className="text-sm font-semibold text-neutral-800">Castro de Oliveira</div>
-                  <div className="text-xs text-neutral-500">Advocacia</div>
+                  <div className="text-lg font-serif text-neutral-900">Portal do Cliente</div>
+                  <div className="text-xs tracking-widest uppercase text-gold mt-1">Ambiente Seguro</div>
                 </div>
               </div>
 
-              <div className="grid gap-3">
+              <div className="grid gap-4">
                 {[
-                  'Visão consolidada de tarefas e SLA',
-                  'Funções por perfil (admin, financeiro, equipe)',
-                  'Fluxo premium para operação jurídica',
-                ].map((item) => (
-                  <div key={item} className="rounded-2xl border border-black/10 bg-[#fbfaf7] px-4 py-3 text-sm text-neutral-800">
-                    {item}
+                  { title: 'Acompanhamento processual', desc: 'Acesso em tempo real aos andamentos' },
+                  { title: 'Smart Drive Privado', desc: 'Envio seguro de documentos e provas' },
+                  { title: 'Comunicação Oficial', desc: 'Histórico de atividades e prazos do caso' },
+                ].map((item, i) => (
+                  <div key={i} className="group rounded-2xl border border-neutral-100 bg-white/60 p-4 transition-all hover:border-gold/30 hover:bg-white hover:shadow-md hover:shadow-gold/5">
+                    <div className="flex items-center gap-3">
+                      <div className="size-2 rounded-full bg-gold/50 group-hover:bg-gold transition-colors" />
+                      <div>
+                        <div className="text-sm font-medium text-neutral-900">{item.title}</div>
+                        <div className="text-xs text-neutral-500 mt-0.5">{item.desc}</div>
+                      </div>
+                    </div>
                   </div>
                 ))}
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-black/10 bg-white p-4">
-                <div className="text-xs font-semibold tracking-[0.22em] text-gold">ENDEREÇO</div>
-                <div className="mt-2 text-sm text-neutral-700">{address.line1}</div>
-                <div className="text-sm text-neutral-700">{address.line2}</div>
-                <a
-                  className="mt-3 inline-flex text-xs font-semibold text-neutral-950 underline decoration-[rgba(212,175,55,0.7)] underline-offset-4 hover:decoration-[rgba(212,175,55,1)]"
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Abrir no Google Maps
-                </a>
               </div>
             </div>
           </div>
@@ -174,33 +172,27 @@ export function LandingPage() {
       </section>
 
       {/* ÁREAS */}
-      <section className="mx-auto max-w-6xl px-4 py-16 md:py-20" id="areas">
+      <section className="mx-auto max-w-7xl px-4 py-20 md:py-32" id="areas">
         <SectionTitle
-          kicker="ÁREAS DE ATUAÇÃO"
-          title="Atendimento em áreas essenciais"
-          desc="Atuamos com foco em orientação, prevenção e condução processual conforme a necessidade de cada caso."
+          kicker="ESPECIALIDADES"
+          title="Atuação Jurídica Estratégica"
+          desc="Assessoramos nossos clientes com clareza, transparência e alta capacidade técnica, visando sempre a melhor condução do cenário apresentado."
         />
 
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
+        <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {areas.map((a) => (
-            <div key={a.title} className="rounded-2xl border border-black/10 bg-white p-5">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-neutral-950">{a.title}</div>
-                <div className="text-xs font-semibold text-gold">Atuação</div>
-              </div>
-              <div className="mt-3 text-sm text-neutral-700">
-                <ul className="grid gap-2">
-                  {a.items.map((it) => (
-                    <li key={it} className="flex items-start gap-2">
-                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-gold" />
-                      <span>{it}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="mt-4 h-px bg-black/10" />
-              <div className="mt-4 text-xs text-neutral-600">
-                Atendimento mediante análise do caso concreto.
+            <div key={a.title} className="group relative overflow-hidden rounded-3xl border border-neutral-100 bg-white p-8 transition-all hover:border-gold/30 hover:shadow-[0_20px_40px_-15px_rgba(212,175,55,0.1)]">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gold/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              
+              <div className="text-xl font-serif text-neutral-900">{a.title}</div>
+              
+              <div className="mt-6 space-y-3">
+                {a.items.map((it) => (
+                  <div key={it} className="flex items-start gap-3">
+                    <span className="mt-1.5 flex size-1.5 shrink-0 rounded-full bg-gold/60" />
+                    <span className="text-sm text-neutral-600 leading-relaxed">{it}</span>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
@@ -208,47 +200,48 @@ export function LandingPage() {
       </section>
 
       {/* ESCRITÓRIO */}
-      <section className="mx-auto max-w-6xl px-4 py-16 md:py-20" id="escritorio">
-        <div className="rounded-3xl border border-black/10 bg-white p-8 md:p-10">
-          <div className="grid gap-10 md:grid-cols-2 md:items-center">
+      <section className="bg-neutral-50 border-y border-neutral-200/60" id="escritorio">
+        <div className="mx-auto max-w-7xl px-4 py-20 md:py-32">
+          <div className="grid gap-16 md:grid-cols-2 md:items-center">
             <div>
-              <div className="text-xs font-semibold tracking-[0.22em] text-gold">O ESCRITÓRIO</div>
-              <div className="mt-3 text-2xl font-semibold tracking-tight text-neutral-950 md:text-3xl">
-                Princípios, forma de atuação e compromisso com a ética
-              </div>
-              <p className="mt-3 text-sm text-neutral-700 md:text-base">
-                O Castro de Oliveira Advocacia atua com foco em orientação clara, organização e condução responsável de demandas jurídicas.
-                Este site possui caráter informativo e institucional.
+              <div className="text-xs font-bold tracking-[0.3em] uppercase text-gold">O Escritório</div>
+              <h2 className="mt-4 text-3xl font-light tracking-tight text-neutral-900 md:text-5xl font-serif">
+                Princípios e<br/>Compromisso Ético
+              </h2>
+              <p className="mt-6 text-base text-neutral-600 leading-relaxed">
+                O Castro de Oliveira Advocacia foi fundado com o propósito de oferecer uma advocacia organizada, ágil e absolutamente transparente. 
+                Rejeitamos promessas irreais de resultado; focamos no estudo profundo de cada caso e na comunicação assertiva.
               </p>
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <div className="mt-10 grid gap-4 sm:grid-cols-2">
                 {[
-                  { title: 'Ética', desc: 'Atuação pautada por responsabilidade e discrição.' },
-                  { title: 'Clareza', desc: 'Comunicação objetiva para decisões bem informadas.' },
-                  { title: 'Estratégia', desc: 'Análise do caso e condução com método.' },
-                  { title: 'Organização', desc: 'Controle de informações e prazos com rotina.' },
+                  { title: 'Ética', desc: 'Respeito estrito às normas.' },
+                  { title: 'Clareza', desc: 'Comunicação sem juridiquês.' },
+                  { title: 'Estratégia', desc: 'Foco na melhor resolução.' },
+                  { title: 'Tecnologia', desc: 'Prazos e dados seguros.' },
                 ].map((v) => (
-                  <div key={v.title} className="rounded-2xl border border-black/10 bg-[#fbfaf7] p-4">
-                    <div className="text-sm font-semibold text-neutral-950">{v.title}</div>
-                    <div className="mt-1 text-sm text-neutral-700">{v.desc}</div>
+                  <div key={v.title} className="rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-sm">
+                    <div className="text-sm font-semibold text-neutral-900 uppercase tracking-wide">{v.title}</div>
+                    <div className="mt-2 text-sm text-neutral-500">{v.desc}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="relative">
-              <div className="absolute -inset-8 rounded-[28px] bg-[radial-gradient(circle_at_60%_10%,rgba(212,175,55,0.28),transparent_60%)] blur-2xl" />
-              <div className="relative overflow-hidden rounded-[28px] border border-black/10 bg-[#0b0b0b] p-7 text-white">
-                <div className="text-xs font-semibold tracking-[0.22em] text-[rgba(212,175,55,0.9)]">DIRETRIZ</div>
-                <div className="mt-3 text-lg font-semibold">Comunicação sóbria, sem promessas de resultado</div>
-                <div className="mt-3 text-sm text-white/80">
-                  Atendimento direcionado ao caso concreto, com orientação responsável e respeito às normas aplicáveis.
+            <div className="relative lg:ml-auto w-full max-w-md">
+              <div className="absolute -inset-8 rounded-[40px] bg-[radial-gradient(circle_at_50%_50%,rgba(212,175,55,0.15),transparent_60%)] blur-2xl" />
+              <div className="relative overflow-hidden rounded-[32px] border border-neutral-800 bg-neutral-950 p-10 text-white shadow-2xl">
+                <div className="text-xs font-bold tracking-[0.3em] text-gold uppercase">Diretriz Interna</div>
+                <div className="mt-6 text-2xl font-serif font-light leading-snug">
+                  "Atendimento voltado à orientação responsável, técnica apurada e absoluto respeito aos limites legais e factuais do caso concreto."
                 </div>
-                <div className="mt-6 h-px bg-white/10" />
-                <div className="mt-6 text-sm text-white/80">
-                  <div className="font-semibold text-white">Contato</div>
-                  <div className="mt-2">WhatsApp: {whatsappDisplay}</div>
-                  <div className="mt-2">{cityDisplay}</div>
+                
+                <div className="mt-10 h-px bg-white/10" />
+                <div className="mt-6">
+                  <div className="text-xs text-white/50 uppercase tracking-widest font-semibold mb-2">Central de Atendimento</div>
+                  <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-lg text-white hover:text-gold transition-colors">
+                    {whatsappDisplay} <span className="text-gold">↗</span>
+                  </a>
                 </div>
               </div>
             </div>
@@ -257,14 +250,14 @@ export function LandingPage() {
       </section>
 
       {/* EQUIPE */}
-      <section className="mx-auto max-w-6xl px-4 py-16 md:py-20" id="equipe">
+      <section className="mx-auto max-w-7xl px-4 py-20 md:py-32" id="equipe">
         <SectionTitle
-          kicker="EQUIPE"
-          title="Pessoas por trás do trabalho"
-          desc="Estrutura enxuta e organizada para atendimento e gestão interna."
+          kicker="Nossa Equipe"
+          title="Profissionais Dedicados"
+          desc="Uma estrutura coesa e organizada para garantir que a estratégia e o andamento do seu caso fluam com perfeição."
         />
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+        <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {team.map((m) => {
             const initials = m.name
               .split(' ')
@@ -274,20 +267,18 @@ export function LandingPage() {
               .join('');
 
             return (
-              <div key={m.name} className="rounded-2xl border border-black/10 bg-white p-5">
-                <div className="flex items-start gap-3">
-                  <div className="grid size-11 shrink-0 place-items-center rounded-full border border-black/10 bg-[#fbfaf7] text-sm font-semibold text-neutral-950">
-                    <span className="text-gold">{initials}</span>
+              <div key={m.name} className="group rounded-3xl border border-neutral-100 bg-white p-6 transition-all hover:border-gold/20 hover:shadow-lg hover:shadow-neutral-900/5">
+                <div className="flex items-center gap-4 mb-5">
+                  <div className="grid size-14 shrink-0 place-items-center rounded-full bg-neutral-50 border border-neutral-100 text-lg font-serif text-gold group-hover:scale-105 transition-transform">
+                    {initials}
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-neutral-950">{m.name}</div>
-                    <div className="mt-0.5 text-sm text-neutral-700">{m.role}</div>
-                    {m.oab ? <div className="mt-0.5 text-xs text-neutral-600">{m.oab}</div> : null}
+                  <div>
+                    <div className="text-lg font-serif text-neutral-900">{m.name}</div>
+                    <div className="text-sm font-medium text-gold">{m.role}</div>
+                    {m.oab && <div className="text-xs text-neutral-400 mt-0.5">{m.oab}</div>}
                   </div>
                 </div>
-
-                <div className="mt-4 h-px bg-black/10" />
-                <div className="mt-4 text-xs leading-relaxed text-neutral-700">{m.bio}</div>
+                <div className="text-sm leading-relaxed text-neutral-600">{m.bio}</div>
               </div>
             );
           })}
@@ -295,78 +286,64 @@ export function LandingPage() {
       </section>
 
       {/* CONTATO */}
-      <section className="mx-auto max-w-6xl px-4 py-16 md:py-20" id="contato">
-        <SectionTitle
-          kicker="CONTATO"
-          title="Fale com a equipe"
-          desc="Para atendimento, envie uma mensagem no WhatsApp. Retornamos conforme disponibilidade."
-        />
+      <section className="bg-neutral-950 text-white" id="contato">
+        <div className="mx-auto max-w-7xl px-4 py-20 md:py-32">
+          <div className="grid gap-12 md:grid-cols-2 lg:gap-24">
+            <div>
+              <div className="text-xs font-bold tracking-[0.3em] uppercase text-gold">Agende uma Consulta</div>
+              <h2 className="mt-4 text-4xl font-light tracking-tight md:text-5xl font-serif">Fale com nossa<br/>equipe jurídica</h2>
+              <p className="mt-6 text-lg text-neutral-400 font-light max-w-md">
+                Envie uma mensagem descrevendo brevemente seu cenário. Retornaremos com agilidade para analisar a viabilidade do atendimento.
+              </p>
 
-        <div className="mt-10 grid gap-4 md:grid-cols-2">
-          <div className="rounded-3xl border border-black/10 bg-white p-7 md:p-9">
-            <div className="text-xs font-semibold tracking-[0.22em] text-gold">WHATSAPP</div>
-            <div className="mt-3 text-xl font-semibold tracking-tight text-neutral-950 md:text-2xl">
-              Atendimento via WhatsApp
-            </div>
-            <p className="mt-3 text-sm text-neutral-700">
-              Envie uma mensagem e informe brevemente o assunto. Se preferir, inclua seu nome e um resumo do caso.
-            </p>
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer">
-                <ShimmerButton className="w-full sm:w-auto">Abrir WhatsApp</ShimmerButton>
-              </a>
-              <Link
-                to="/app"
-                className="inline-flex w-full items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-neutral-900 transition hover:bg-black/5 sm:w-auto"
-              >
-                Área do Advogado
-              </Link>
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-black/10 bg-[#fbfaf7] p-4 text-sm text-neutral-700">
-              <div>
-                <span className="font-semibold text-neutral-950">Número:</span> {whatsappDisplay}
+              <div className="mt-10 space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="mt-1 text-gold">✦</div>
+                  <div>
+                    <div className="font-semibold text-white">WhatsApp Direto</div>
+                    <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="text-neutral-400 hover:text-gold transition-colors block mt-1">
+                      {whatsappDisplay}
+                    </a>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-4">
+                  <div className="mt-1 text-gold">✦</div>
+                  <div>
+                    <div className="font-semibold text-white">Endereço Presencial</div>
+                    <a href={mapsUrl} target="_blank" rel="noreferrer" className="text-neutral-400 hover:text-gold transition-colors block mt-1 leading-relaxed">
+                      {address.line1}<br/>{address.line2}
+                    </a>
+                  </div>
+                </div>
               </div>
-              <div className="mt-2 text-xs text-neutral-600">Ao clicar, você será direcionado para o WhatsApp.</div>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-black/10 bg-white p-7 md:p-9">
-            <div className="text-xs font-semibold tracking-[0.22em] text-gold">ENDEREÇO</div>
-            <div className="mt-3 text-xl font-semibold tracking-tight text-neutral-950 md:text-2xl">
-              Atendimento presencial
-            </div>
-            <p className="mt-3 text-sm text-neutral-700">
-              Endereço para referência e localização. Consulte a equipe para confirmar disponibilidade.
-            </p>
-
-            <div className="mt-6 rounded-2xl border border-black/10 bg-[#fbfaf7] p-4 text-sm text-neutral-700">
-              <div className="font-semibold text-neutral-950">{address.line1}</div>
-              <div className="mt-1">{address.line2}</div>
-              <a
-                className="mt-3 inline-flex text-xs font-semibold text-neutral-950 underline decoration-[rgba(212,175,55,0.7)] underline-offset-4 hover:decoration-[rgba(212,175,55,1)]"
-                href={mapsUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Abrir no Google Maps
-              </a>
             </div>
 
-            <div className="mt-6 rounded-2xl border border-black/10 bg-white p-4">
-              <div className="text-xs font-semibold tracking-[0.22em] text-gold">LOCALIZAÇÃO</div>
-              <div className="mt-2 text-sm text-neutral-700">{cityDisplay}</div>
+            <div className="relative">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.1),transparent_70%)]" />
+              <div className="relative rounded-[32px] border border-white/10 bg-white/5 p-8 backdrop-blur-sm sm:p-10">
+                <div className="text-2xl font-serif font-light mb-8">Acesso Restrito</div>
+                
+                <p className="text-neutral-400 mb-8 text-sm leading-relaxed">
+                  Ambiente exclusivo para clientes e equipe técnica. Acompanhe processos, envie documentos e acesse prazos com total segurança e sigilo através da nossa plataforma.
+                </p>
+
+                <Link
+                  to="/app"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-sm font-bold text-neutral-900 transition-all hover:bg-gold hover:text-white group"
+                >
+                  Entrar no Portal
+                  <span className="transition-transform group-hover:translate-x-1">→</span>
+                </Link>
+                
+                <div className="mt-6 text-center text-xs text-neutral-500">
+                  Site com caráter exclusivamente informativo e institucional.
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
-
-      <div className="mx-auto max-w-6xl px-4 pb-12">
-        <div className="text-xs text-neutral-600">
-          Aviso: este site possui caráter exclusivamente informativo e institucional.
-        </div>
-      </div>
     </div>
   );
 }
