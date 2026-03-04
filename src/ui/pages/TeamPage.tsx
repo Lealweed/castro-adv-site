@@ -10,6 +10,8 @@ type Member = {
   role: string;
   email?: string;
   full_name?: string;
+  oab_number?: string;
+  oab_uf?: string;
   created_at: string;
   stats?: {
     activeCases: number;
@@ -47,20 +49,38 @@ export function TeamPage() {
         
       if (error) throw error;
 
+      const userIds = data.map((m: any) => m.user_id);
+      const { data: profilesData } = await sb
+        .from('user_profiles')
+        .select('user_id, display_name, email, oab_number, oab_uf')
+        .in('user_id', userIds);
+
+      const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p]));
+
       // Mock user details since we can't join auth.users directly
-      const enriched = data.map((m: any) => ({
-        ...m,
-        email: `usuario-${m.user_id.slice(0, 4)}@exemplo.com`, 
-        full_name: 'Dr(a). Associado',
-        stats: {
-          activeCases: Math.floor(Math.random() * 20) + 2,
-          tasksDone: Math.floor(Math.random() * 50) + 10,
-          tasksOverdue: Math.floor(Math.random() * 5)
-        }
-      }));
+      const enriched = data.map((m: any) => {
+        const p = profilesMap.get(m.user_id);
+        return {
+          ...m,
+          email: p?.email || `usuario-${m.user_id.slice(0, 4)}@exemplo.com`, 
+          full_name: p?.display_name || p?.email?.split('@')[0] || 'Dr(a). Associado',
+          oab_number: p?.oab_number || '',
+          oab_uf: p?.oab_uf || '',
+          stats: {
+            activeCases: Math.floor(Math.random() * 20) + 2,
+            tasksDone: Math.floor(Math.random() * 50) + 10,
+            tasksOverdue: Math.floor(Math.random() * 5)
+          }
+        };
+      });
 
       setMembers(enriched);
-      if (enriched.length > 0) setSelectedMember(enriched[0]);
+      if (enriched.length > 0 && !selectedMember) {
+        setSelectedMember(enriched[0]);
+      } else if (selectedMember) {
+        const updated = enriched.find((m: any) => m.id === selectedMember.id);
+        if (updated) setSelectedMember(updated);
+      }
     } catch (err) {
       console.error('Erro ao carregar equipe:', err);
     } finally {
@@ -107,6 +127,21 @@ export function TeamPage() {
     } else {
       loadTeam();
       setSelectedMember(null);
+    }
+  }
+
+  async function updateOab(userId: string, oabNumber: string, oabUf: string) {
+    const sb = requireSupabase();
+    const { error } = await sb
+      .from('user_profiles')
+      .update({ oab_number: oabNumber, oab_uf: oabUf })
+      .eq('user_id', userId);
+
+    if (error) {
+      alert('Erro ao atualizar OAB: ' + error.message);
+    } else {
+      alert('OAB salva com sucesso!');
+      loadTeam();
     }
   }
 
@@ -234,6 +269,44 @@ export function TeamPage() {
                     </button>
                   </div>
                 </div>
+
+                {['admin', 'lawyer'].includes(selectedMember.role) && (
+                  <div className="mb-5 bg-blue-900/10 border border-blue-500/20 rounded-xl p-4">
+                    <div className="text-sm font-semibold text-blue-200 mb-2">Integração PJe (Intimações Automáticas)</div>
+                    <div className="flex gap-3 items-end">
+                      <label className="text-xs text-white/60 flex-1">
+                        Número OAB
+                        <input 
+                          className="input mt-1 !py-2 !text-sm" 
+                          placeholder="Ex: 12345" 
+                          defaultValue={selectedMember.oab_number || ''}
+                          id={`oab_number_${selectedMember.id}`}
+                        />
+                      </label>
+                      <label className="text-xs text-white/60 w-24">
+                        UF OAB
+                        <input 
+                          className="input mt-1 !py-2 !text-sm uppercase" 
+                          placeholder="Ex: SP" 
+                          maxLength={2}
+                          defaultValue={selectedMember.oab_uf || ''}
+                          id={`oab_uf_${selectedMember.id}`}
+                        />
+                      </label>
+                      <button 
+                        onClick={() => {
+                          const num = (document.getElementById(`oab_number_${selectedMember.id}`) as HTMLInputElement)?.value;
+                          const uf = (document.getElementById(`oab_uf_${selectedMember.id}`) as HTMLInputElement)?.value;
+                          updateOab(selectedMember.user_id, num, uf);
+                        }}
+                        className="btn-primary !px-4 !py-2 !h-[38px] !text-sm shrink-0"
+                      >
+                        Salvar OAB
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-white/40 mt-2">Ao preencher, o sistema fará a varredura automática do Diário de Justiça Eletrônico Nacional vinculando as intimações ao perfil.</p>
+                  </div>
+                )}
 
                 <div className="bg-black/30 rounded-xl p-4 border border-white/5">
                   <div className="flex items-center gap-2 mb-3">

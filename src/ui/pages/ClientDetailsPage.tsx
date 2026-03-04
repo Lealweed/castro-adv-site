@@ -22,6 +22,7 @@ type ClientRow = {
   id: string;
   name: string;
   phone: string | null;
+  whatsapp: string | null;
   email: string | null;
   notes: string | null;
   user_id: string | null;
@@ -49,6 +50,7 @@ export function ClientDetailsPage() {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -65,7 +67,7 @@ export function ClientDetailsPage() {
         await getAuthedUser();
 
         const [c1, c2] = await Promise.all([
-          sb.from('clients').select('id,name,phone,email,notes,user_id,created_at').eq('id', clientId).maybeSingle(),
+          sb.from('clients').select('id,name,phone,whatsapp,email,notes,user_id,created_at').eq('id', clientId).maybeSingle(),
           sb
             .from('cases')
             .select('id,title,status,process_number,area,created_at')
@@ -81,6 +83,7 @@ export function ClientDetailsPage() {
         setRow(client);
         setName(client?.name || '');
         setPhone(client?.phone || '');
+        setWhatsapp(client?.whatsapp || '');
         setEmail(client?.email || '');
         setNotes(client?.notes || '');
         setCases((c2.data || []) as CaseLite[]);
@@ -124,13 +127,14 @@ export function ClientDetailsPage() {
         .update({
           name: name.trim(),
           phone: phone.trim() || null,
+          whatsapp: whatsapp.trim() || null,
           email: email.trim() || null,
           notes: notes.trim() || null,
         } as any)
         .eq('id', clientId);
       if (updateErr) throw new Error(updateErr.message);
       
-      setRow(prev => prev ? { ...prev, name: name.trim(), phone: phone.trim() || null, email: email.trim() || null, notes: notes.trim() || null } : prev);
+      setRow(prev => prev ? { ...prev, name: name.trim(), phone: phone.trim() || null, whatsapp: whatsapp.trim() || null, email: email.trim() || null, notes: notes.trim() || null } : prev);
       setEditing(false);
     } catch (e: any) {
       setError(e.message || 'Falha ao salvar');
@@ -165,10 +169,14 @@ export function ClientDetailsPage() {
                       Nome
                       <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
                     </label>
-                    <div className="grid gap-3 md:grid-cols-2">
+                    <div className="grid gap-3 md:grid-cols-3">
                       <label className="text-sm text-white/80">
                         Telefone
                         <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                      </label>
+                      <label className="text-sm text-white/80">
+                        WhatsApp
+                        <input className="input" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
                       </label>
                       <label className="text-sm text-white/80">
                         E-mail
@@ -187,6 +195,7 @@ export function ClientDetailsPage() {
                         setEditing(false);
                         setName(row.name);
                         setPhone(row.phone || '');
+                        setWhatsapp(row.whatsapp || '');
                         setEmail(row.email || '');
                         setNotes(row.notes || '');
                       }} disabled={saving} className="btn-ghost">
@@ -200,10 +209,14 @@ export function ClientDetailsPage() {
                       <div className="text-xs text-white/50">Nome</div>
                       <div className="text-lg font-semibold text-white">{row.name}</div>
                     </div>
-                    <div className="grid gap-3 md:grid-cols-2 mt-3">
+                    <div className="grid gap-3 md:grid-cols-3 mt-3">
                       <div>
                         <div className="text-xs text-white/50">Telefone</div>
                         <div className="text-sm text-white/80">{row.phone || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-white/50">WhatsApp</div>
+                        <div className="text-sm text-white/80">{row.whatsapp || '—'}</div>
                       </div>
                       <div>
                         <div className="text-xs text-white/50">E-mail</div>
