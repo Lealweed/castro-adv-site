@@ -58,7 +58,34 @@ export function ClientsPage() {
 
   const [saving, setSaving] = useState(false);
 
-  const ordered = useMemo(() => rows, [rows]);
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 50;
+
+  const filtered = useMemo(() => {
+    let out = rows;
+    if (q.trim()) {
+      const needle = q.trim().toLowerCase();
+      out = out.filter(c => 
+        c.name.toLowerCase().includes(needle) || 
+        (c.cpf && c.cpf.includes(needle)) ||
+        (c.cnpj && c.cnpj.includes(needle)) ||
+        (c.whatsapp && c.whatsapp.includes(needle))
+      );
+    }
+    return out;
+  }, [rows, q]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+
+  const ordered = useMemo(() => {
+    const start = (page - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [q]);
 
   async function load() {
     setLoading(true);
@@ -419,6 +446,20 @@ export function ClientsPage() {
       ) : null}
 
       <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="w-full sm:w-72">
+            <input
+              className="input !mt-0 !py-2 !text-sm"
+              placeholder="Buscar por nome, CPF/CNPJ ou WhatsApp..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+          <div className="text-xs text-white/50">
+            {filtered.length} cliente{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+
         {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
         {error && !createOpen ? <div className="text-sm text-red-200">{error}</div> : null}
 
@@ -492,8 +533,30 @@ export function ClientsPage() {
                 </Link>
               ))}
 
-              {ordered.length === 0 ? <div className="text-sm text-white/60">Nenhum cliente cadastrado.</div> : null}
+              {ordered.length === 0 ? <div className="text-sm text-white/60">Nenhum cliente encontrado.</div> : null}
             </div>
+
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
+                <button
+                  disabled={page === 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="btn-ghost !px-3 !py-1.5 !text-xs disabled:opacity-30"
+                >
+                  Anterior
+                </button>
+                <div className="text-xs text-white/50">
+                  Página {page} de {totalPages}
+                </div>
+                <button
+                  disabled={page === totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="btn-ghost !px-3 !py-1.5 !text-xs disabled:opacity-30"
+                >
+                  Próxima
+                </button>
+              </div>
+            )}
           </>
         ) : null}
       </Card>
