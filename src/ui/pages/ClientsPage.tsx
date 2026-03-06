@@ -60,7 +60,7 @@ export function ClientsPage() {
 
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
-  const itemsPerPage = 50;
+  const itemsPerPage = 25;
 
   const filtered = useMemo(() => {
     let out = rows;
