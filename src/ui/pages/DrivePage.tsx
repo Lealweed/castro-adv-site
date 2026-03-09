@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Download, Trash2, Eye, EyeOff, Bot } from 'lucide-react';
+import { FileText, Download, Trash2, Eye, EyeOff, Bot, Upload } from 'lucide-react';
 
 import { Card } from '@/ui/widgets/Card';
 import type { DocumentRow } from '@/lib/documents';
-import { deleteDocument, getDocumentDownloadUrl, toggleDocumentVisibility } from '@/lib/documents';
+import { deleteDocument, getDocumentDownloadUrl, toggleDocumentVisibility, uploadClientDocument } from '@/lib/documents';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
+import { loadClientsLite } from '@/lib/loadClientsLite';
+import type { ClientLite } from '@/lib/types';
 
 export function DrivePage() {
   const [rows, setRows] = useState<(DocumentRow & { client_name?: string })[]>([]);
@@ -15,6 +17,18 @@ export function DrivePage() {
   const [q, setQ] = useState('');
   const [type, setType] = useState<'all' | 'pdf' | 'image' | 'doc' | 'other'>('all');
   const [visibility, setVisibility] = useState<'all' | 'public' | 'private'>('all');
+
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [clients, setClients] = useState<ClientLite[]>([]);
+  
+  // Upload form state
+  const [upTitle, setUpTitle] = useState('');
+  const [upKind, setUpKind] = useState<'personal' | 'template'>('personal');
+  const [upClientId, setUpClientId] = useState('');
+  const [upPublic, setUpPublic] = useState(false);
+  const [upFile, setUpFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function load() {
     setLoading(true);
@@ -37,6 +51,10 @@ export function DrivePage() {
       }));
 
       setRows(docs);
+      
+      const loadedClients = await loadClientsLite().catch(() => [] as ClientLite[]);
+      setClients(loadedClients);
+
       setLoading(false);
     } catch (err: any) {
       setError(err?.message || 'Falha ao carregar documentos do Drive.');
@@ -113,6 +131,44 @@ export function DrivePage() {
     }
   }
 
+  async function onUpload() {
+    if (!upFile) return;
+    if (upKind === 'personal' && !upClientId) {
+      setError('Selecione um cliente para vincular o documento.');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      // If template, clientId doesn't matter as much but the schema expects it.
+      // We will just use the first client ID if none selected, or a dummy if none exist.
+      let targetClientId = upClientId;
+      if (upKind === 'template' && !targetClientId) {
+        if (clients.length > 0) targetClientId = clients[0].id;
+        else throw new Error("Cadastre ao menos um cliente para poder subir modelos.");
+      }
+
+      await uploadClientDocument({
+        clientId: targetClientId,
+        kind: upKind,
+        title: upTitle.trim() || upFile.name,
+        file: upFile,
+        isPublic: upKind === 'template' ? false : upPublic,
+      });
+
+      setUploadOpen(false);
+      setUpTitle('');
+      setUpFile(null);
+      setUpPublic(false);
+      setSaving(false);
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao enviar documento.');
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -120,9 +176,81 @@ export function DrivePage() {
           <h1 className="text-2xl font-semibold text-white">Drive do Escritório</h1>
           <p className="text-sm text-white/60">Repositório central de documentos, contratos e provas de todos os clientes.</p>
         </div>
+        <button onClick={() => setUploadOpen(true)} className="btn-primary">
+          <Upload className="w-4 h-4 mr-2 inline" />
+          Novo Documento
+        </button>
       </div>
 
       {error ? <div className="text-sm text-red-200 bg-red-500/10 p-3 rounded-xl border border-red-500/20">{error}</div> : null}
+
+      {uploadOpen && (
+        <div className="rounded-2xl border border-blue-500/30 bg-blue-500/5 p-5 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+          <h3 className="text-sm font-semibold text-white mb-4">Adicionar Documento ao Drive Global</h3>
+          
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="text-sm text-white/80">
+              Tipo do Arquivo
+              <select className="select !mt-1" value={upKind} onChange={e => setUpKind(e.target.value as any)}>
+                <option value="personal">Documento / Prova do Cliente</option>
+                <option value="template">Modelo Word para Geração (Contratos/Procurações)</option>
+              </select>
+            </label>
+
+            <label className="text-sm text-white/80">
+              Vincular a um Cliente
+              <select className="select !mt-1" value={upClientId} onChange={e => setUpClientId(e.target.value)}>
+                <option value="">Selecione o Cliente...</option>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </label>
+
+            <label className="text-sm text-white/80">
+              Nome de exibição (opcional)
+              <input className="input !mt-1" value={upTitle} onChange={(e) => setUpTitle(e.target.value)} placeholder="Ex: CNH do Cliente" />
+            </label>
+            
+            <div>
+              <label className="text-sm text-white/80 block mb-1">
+                Selecione o arquivo
+              </label>
+              <input
+                ref={fileInputRef}
+                className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-white/10 rounded-xl bg-black/20"
+                type="file"
+                onChange={(e) => setUpFile(e.target.files?.[0] || null)}
+                accept={upKind === 'template' ? '.docx' : 'application/pdf,image/*,.doc,.docx'}
+              />
+              {upKind === 'template' && <p className="text-xs text-amber-200/70 mt-1">Apenas arquivos .docx são aceitos como modelos.</p>}
+            </div>
+            
+            {upKind !== 'template' && (
+              <label className="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-black/20 cursor-pointer hover:bg-white/5 transition-colors col-span-2">
+                <input 
+                  type="checkbox" 
+                  checked={upPublic} 
+                  onChange={(e) => setUpPublic(e.target.checked)} 
+                  className="w-4 h-4 text-amber-400 rounded border-white/20 bg-transparent focus:ring-amber-400 focus:ring-offset-gray-900"
+                />
+                <div>
+                  <div className="text-sm font-semibold text-white">Tornar visível para o Cliente</div>
+                  <div className="text-xs text-white/50">O cliente poderá ver e baixar este arquivo pelo Portal VIP.</div>
+                </div>
+              </label>
+            )}
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <button disabled={saving || !upFile || (!upClientId && upKind === 'personal')} onClick={() => void onUpload()} className="btn-primary">
+              {saving ? 'Enviando...' : 'Salvar no Drive'}
+            </button>
+            <button disabled={saving} onClick={() => { setUploadOpen(false); setUpFile(null); }} className="btn-ghost">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-3 md:grid-cols-4">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-3 md:col-span-2">
