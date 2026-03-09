@@ -13,7 +13,7 @@ export async function loadCasesLite(): Promise<CaseLite[]> {
 
   const { data, error } = await sb
     .from('cases')
-    .select('id,title,client_id, client:clients(name)')
+    .select('id,title,client_id, client:clients!cases_client_id_fkey(name)')
     .order('created_at', { ascending: false })
     .limit(300);
 

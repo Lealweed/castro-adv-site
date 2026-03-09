@@ -84,7 +84,7 @@ export function CasesPage() {
       const [{ data: casesData, error: qErr }, clientsLite] = await Promise.all([
         sb
           .from('cases')
-          .select('id,title,status,created_at,client_id,process_number,area,responsible_user_id, client:clients(name)')
+          .select('id,title,status,created_at,client_id,process_number,area,responsible_user_id, client:clients!cases_client_id_fkey(name)')
           .order('created_at', { ascending: false }),
         loadClientsLite().catch(() => [] as ClientLite[]),
       ]);

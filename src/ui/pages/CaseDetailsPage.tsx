@@ -81,7 +81,7 @@ export function CaseDetailsPage() {
       const { data, error: qErr } = await sb
         .from('cases')
         .select(
-          'id,office_id,title,status,description,created_at,client_id, client:clients(id,name), case_clients(client:clients(id,name)), process_number, area,court,district,counterparty_name,counterparty_doc,counterparty_whatsapp,claim_value,distributed_at,responsible_user_id, datajud_last_movement_text, datajud_last_movement_at, datajud_last_checked_at',
+          'id,office_id,title,status,description,created_at,client_id, client:clients!cases_client_id_fkey(id,name), case_clients(client:clients(id,name)), process_number, area,court,district,counterparty_name,counterparty_doc,counterparty_whatsapp,claim_value,distributed_at,responsible_user_id, datajud_last_movement_text, datajud_last_movement_at, datajud_last_checked_at',
         )
         .eq('id', caseId)
         .maybeSingle();
