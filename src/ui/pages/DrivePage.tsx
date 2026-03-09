@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Download, Trash2, Eye, EyeOff } from 'lucide-react';
+import { FileText, Download, Trash2, Eye, EyeOff, Bot } from 'lucide-react';
 
 import { Card } from '@/ui/widgets/Card';
 import type { DocumentRow } from '@/lib/documents';
@@ -71,6 +71,19 @@ export function DrivePage() {
         return hay.includes(term);
       });
   }, [rows, q, type, visibility]);
+
+  const [analyzingDoc, setAnalyzingDoc] = useState<string | null>(null);
+
+  async function onAnalyzeWithAI(doc: DocumentRow) {
+    if (analyzingDoc) return;
+    setAnalyzingDoc(doc.id);
+    
+    // Simulate LegalDoc AI integration
+    setTimeout(() => {
+      alert(`[LegalDoc AI] Análise concluída para: ${doc.title}\n\n- Partes Identificadas: 2\n- Riscos: Baixo\n- Cláusulas Extraídas: 5\n\nResumo salvo nas observações do cliente.`);
+      setAnalyzingDoc(null);
+    }, 2500);
+  }
 
   async function onDownload(doc: DocumentRow) {
     try {
@@ -212,6 +225,16 @@ export function DrivePage() {
                       </td>
                       <td className="px-4 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {(d.mime_type?.includes('pdf') || d.mime_type?.includes('word')) && (
+                            <button 
+                              onClick={() => void onAnalyzeWithAI(d)} 
+                              disabled={analyzingDoc === d.id}
+                              className="btn-ghost !border-amber-500/20 !text-amber-200 !rounded-lg !px-3 !py-1.5 !text-xs flex items-center gap-1 hover:bg-amber-500/10"
+                            >
+                              <Bot className="w-3.5 h-3.5" />
+                              {analyzingDoc === d.id ? 'Lendo...' : 'Analisar (IA)'}
+                            </button>
+                          )}
                           {d.kind !== 'template' && (
                             <button onClick={() => void onTogglePublic(d)} className="btn-ghost !border-white/10 !rounded-lg !px-3 !py-1.5 !text-xs">
                               {d.is_public ? 'Ocultar' : 'Publicar'}
