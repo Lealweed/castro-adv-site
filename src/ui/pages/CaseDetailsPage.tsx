@@ -18,6 +18,7 @@ type CaseRow = {
   created_at: string;
   client_id: string | null;
   client?: { id: string; name: string }[] | null;
+  case_clients?: { client: { id: string; name: string } }[] | null;
 
   process_number: string | null;
 
@@ -80,7 +81,7 @@ export function CaseDetailsPage() {
       const { data, error: qErr } = await sb
         .from('cases')
         .select(
-          'id,office_id,title,status,description,created_at,client_id, client:clients(id,name), process_number, area,court,district,counterparty_name,counterparty_doc,counterparty_whatsapp,claim_value,distributed_at,responsible_user_id, datajud_last_movement_text, datajud_last_movement_at, datajud_last_checked_at',
+          'id,office_id,title,status,description,created_at,client_id, client:clients(id,name), case_clients(client:clients(id,name)), process_number, area,court,district,counterparty_name,counterparty_doc,counterparty_whatsapp,claim_value,distributed_at,responsible_user_id, datajud_last_movement_text, datajud_last_movement_at, datajud_last_checked_at',
         )
         .eq('id', caseId)
         .maybeSingle();
@@ -211,9 +212,14 @@ export function CaseDetailsPage() {
           <h1 className="text-2xl font-semibold text-white">Caso</h1>
           <p className="text-sm text-white/60">Detalhes (Supabase).</p>
         </div>
-        <Link to="/app/casos" className="btn-ghost">
-          Voltar
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to={`/app/tarefas/kanban?new=1&caseId=${caseId || ''}`} className="btn-primary !rounded-lg !px-4 !py-2 !text-sm flex items-center gap-2">
+            <span className="text-lg leading-none">+</span> Nova Tarefa
+          </Link>
+          <Link to="/app/casos" className="btn-ghost">
+            Voltar
+          </Link>
+        </div>
       </div>
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
@@ -239,15 +245,25 @@ export function CaseDetailsPage() {
                 <input className="input mt-1" value={status} onChange={(e) => setStatus(e.target.value)} />
               </label>
               <div>
-                <div className="text-sm text-white/80">Cliente</div>
-                <div className="mt-2">
-                  {row.client?.[0] ? (
-                    <Link to={`/app/clientes/${row.client[0].id}`} className="link-accent">
-                      {row.client[0].name}
-                    </Link>
-                  ) : (
-                    <div className="text-sm text-white/70">—</div>
-                  )}
+                <div className="text-sm text-white/80">Clientes Vinculados</div>
+                <div className="mt-2 flex flex-col gap-1">
+                  {(() => {
+                    const allClients = new Map<string, {id: string, name: string}>();
+                    if (row.client?.[0]) allClients.set(row.client[0].id, row.client[0]);
+                    row.case_clients?.forEach(cc => {
+                      if (cc.client) allClients.set(cc.client.id, cc.client);
+                    });
+                    
+                    const clientList = Array.from(allClients.values());
+                    
+                    if (clientList.length === 0) return <div className="text-sm text-white/70">—</div>;
+                    
+                    return clientList.map(c => (
+                      <Link key={c.id} to={`/app/clientes/${c.id}`} className="link-accent text-sm">
+                        {c.name}
+                      </Link>
+                    ));
+                  })()}
                 </div>
               </div>
 
