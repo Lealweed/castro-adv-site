@@ -46,7 +46,7 @@ export function CasesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newStatus, setNewStatus] = useState('aberto');
-  const [newClientId, setNewClientId] = useState<string>('');
+  const [newClientIds, setNewClientIds] = useState<string[]>([]);
   const [newProcessNumber, setNewProcessNumber] = useState('');
   const [newArea, setNewArea] = useState('');
   const [saving, setSaving] = useState(false);
@@ -119,7 +119,7 @@ export function CasesPage() {
       const clientId = params.get('clientId') || '';
       if (wantNew) {
         setCreateOpen(true);
-        if (clientId) setNewClientId(clientId);
+        if (clientId) setNewClientIds([clientId]);
         // cleanup URL
         params.delete('new');
         params.delete('clientId');
@@ -139,21 +139,32 @@ export function CasesPage() {
       const sb = requireSupabase();
       const user = await getAuthedUser();
 
-      const { error: iErr } = await sb.from('cases').insert({
+      // Ensure we have a primary client_id for the legacy column, if needed.
+      const primaryClientId = newClientIds.length > 0 ? newClientIds[0] : null;
+
+      const { data: createdCase, error: iErr } = await sb.from('cases').insert({
         user_id: user.id,
         title: newTitle.trim(),
         status: newStatus.trim() || 'aberto',
-        client_id: newClientId || null,
+        client_id: primaryClientId,
         process_number: newProcessNumber.trim() || null,
         area: newArea.trim() || null,
-      } as any);
+      } as any).select('id').single();
 
       if (iErr) throw new Error(iErr.message);
+
+      if (newClientIds.length > 0) {
+        const caseClients = newClientIds.map(cid => ({
+          case_id: createdCase.id,
+          client_id: cid
+        }));
+        await sb.from('case_clients').insert(caseClients as any);
+      }
 
       setCreateOpen(false);
       setNewTitle('');
       setNewStatus('aberto');
-      setNewClientId('');
+      setNewClientIds([]);
       setNewProcessNumber('');
       setNewArea('');
       setSaving(false);
@@ -198,15 +209,37 @@ export function CasesPage() {
                 <input className="input" value={newArea} onChange={(e) => setNewArea(e.target.value)} placeholder="Ex.: Previdenciário" />
               </label>
               <label className="md:col-span-2 text-sm text-white/80">
-                Cliente
-                <select className="select" value={newClientId} onChange={(e) => setNewClientId(e.target.value)}>
-                  <option value="">Sem cliente vinculado</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                Clientes Vinculados
+                <div className="flex flex-col gap-2 mt-1">
+                  <div className="flex flex-wrap gap-2">
+                    {newClientIds.map((cid) => {
+                      const cName = clients.find(c => c.id === cid)?.name || 'Desconhecido';
+                      return (
+                        <div key={cid} className="flex items-center gap-1 bg-white/10 rounded-md px-2 py-1 text-xs">
+                          {cName}
+                          <button type="button" onClick={() => setNewClientIds(prev => prev.filter(x => x !== cid))} className="text-red-300 ml-1 hover:text-red-100">x</button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <select 
+                    className="select" 
+                    value="" 
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val && !newClientIds.includes(val)) {
+                        setNewClientIds(prev => [...prev, val]);
+                      }
+                    }}
+                  >
+                    <option value="">Adicionar cliente...</option>
+                    {clients.filter(c => !newClientIds.includes(c.id)).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </label>
             </div>
 
