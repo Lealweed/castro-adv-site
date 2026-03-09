@@ -80,6 +80,15 @@ const whatsappE164 = '5591983485747';
 const whatsappDisplay = '(91) 98348-5747';
 const cityDisplay = 'Parauapebas — Pará';
 
+const testimonials = [
+  { name: 'Ricardo P.', initials: 'RP', text: 'Profissionalismo impecável. Conduziram meu caso com total transparência e resolveram em tempo recorde. Recomendo de olhos fechados.', rating: 5 },
+  { name: 'Juliana S.', initials: 'JS', text: 'Escritório extremamente organizado. O portal exclusivo para clientes me deu muita paz de espírito, conseguia acompanhar tudo pelo celular.', rating: 5 },
+  { name: 'Empresa A. C.', initials: 'EA', text: 'A assessoria empresarial deles mudou a forma como fechamos contratos. Assertivos, diretos e sem juridiquês.', rating: 5 },
+  { name: 'Marcos V.', initials: 'MV', text: 'Tive um problema trabalhista complexo e fui muito bem orientado. Eles focam na melhor estratégia sem falsas promessas.', rating: 5 },
+  { name: 'Fernanda L.', initials: 'FL', text: 'Excelente atendimento desde a recepção até a advogada especialista. Muito respeito e ética profissional no trato com o cliente.', rating: 5 },
+  { name: 'Carlos A.', initials: 'CA', text: 'Equipe sempre disponível e ágil. Ter os andamentos do tribunal atualizados na plataforma deles faz toda a diferença.', rating: 5 },
+];
+
 export function LandingPage() {
   return (
     <div>
@@ -282,6 +291,52 @@ export function LandingPage() {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* TESTIMONIALS */}
+      <section className="mx-auto max-w-7xl px-4 pb-20 md:pb-32" id="avaliacoes">
+        <SectionTitle
+          kicker="DEPOIMENTOS"
+          title="O que dizem sobre nós"
+          desc="Opiniões de quem confiou em nosso trabalho. A satisfação de nossos clientes é o maior atestado da nossa competência."
+        />
+
+        <div className="mt-16 w-full flex-col items-center justify-center overflow-hidden flex">
+          <div className="group flex overflow-hidden p-2 [--gap:1.5rem] [gap:var(--gap)] flex-row [--duration:60s] w-full max-w-7xl relative">
+            <div className="flex shrink-0 justify-around [gap:var(--gap)] animate-marquee flex-row group-hover:[animation-play-state:paused] w-full">
+              {[...Array(3)].map((_, setIndex) =>
+                testimonials.map((t, i) => (
+                  <div key={`${setIndex}-${i}`} className="w-[350px] shrink-0 rounded-3xl border border-neutral-100 bg-white p-6 shadow-[0_20px_40px_-15px_rgba(212,175,55,0.05)] transition-transform hover:-translate-y-1">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="grid size-12 place-items-center rounded-full bg-gradient-to-br from-gold/20 to-gold/5 text-gold font-serif font-semibold border border-gold/10">
+                        {t.initials}
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-neutral-900">{t.name}</div>
+                        <div className="text-xs text-gold flex gap-0.5 mt-0.5">
+                          {[...Array(t.rating)].map((_, r) => (
+                            <span key={r}>★</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-neutral-600 leading-relaxed italic">"{t.text}"</p>
+                  </div>
+                )),
+              )}
+            </div>
+
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-white to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/4 bg-gradient-to-l from-white to-transparent" />
+          </div>
+          
+          <div className="mt-8 text-center">
+            <a href="https://g.page/r/YOUR_GOOGLE_MAPS_LINK_HERE/review" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gold hover:text-gold/80 transition-colors">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"></path><polygon points="9 9 9 14 14 9 9 9"></polygon></svg>
+              Avaliar no Google
+            </a>
+          </div>
         </div>
       </section>
 
