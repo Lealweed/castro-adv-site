@@ -8,6 +8,12 @@ import { getMyOfficeRole } from '@/lib/roles';
 import { listOfficeMemberProfiles, type OfficeMemberProfile } from '@/lib/officeContext';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
+type ChecklistItem = {
+  id: string;
+  text: string;
+  done: boolean;
+};
+
 type TaskRow = {
   id: string;
   title: string;
@@ -22,6 +28,7 @@ type TaskRow = {
   client_id: string | null;
   case_id: string | null;
   office_id?: string | null;
+  checklist?: ChecklistItem[] | null;
   client?: { id: string; name: string }[] | null;
   // NOTE: 'case' is a reserved word — aliased as case_rel in the Supabase query
   case_rel?: { id: string; title: string }[] | null;
@@ -65,6 +72,57 @@ export function TaskDetailsPage() {
   const [addPartUserId, setAddPartUserId] = useState('');
   const [addPartRole, setAddPartRole] = useState<'assignee' | 'reviewer' | 'protocol' | string>('assignee');
   const [addingPart, setAddingPart] = useState(false);
+
+  // Checklist de fases
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [newItemText, setNewItemText] = useState('');
+  const [savingChecklist, setSavingChecklist] = useState(false);
+
+  async function saveChecklist(next: ChecklistItem[]) {
+    if (!taskId) return;
+    setSavingChecklist(true);
+    try {
+      const sb = requireSupabase();
+      await getAuthedUser();
+      const { error: uErr } = await sb
+        .from('tasks')
+        .update({ checklist: next } as any)
+        .eq('id', taskId);
+      if (uErr) throw new Error(uErr.message);
+      setChecklist(next);
+    } catch (e: any) {
+      setError(e?.message || 'Falha ao salvar checklist.');
+    } finally {
+      setSavingChecklist(false);
+    }
+  }
+
+  async function addChecklistItem() {
+    const text = newItemText.trim();
+    if (!text) return;
+    const item: ChecklistItem = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      text,
+      done: false,
+    };
+    setNewItemText('');
+    await saveChecklist([...checklist, item]);
+  }
+
+  async function toggleChecklistItem(id: string) {
+    const next = checklist.map((it) =>
+      it.id === id ? { ...it, done: !it.done } : it
+    );
+    // Optimistic update first
+    setChecklist(next);
+    await saveChecklist(next);
+  }
+
+  async function removeChecklistItem(id: string) {
+    const next = checklist.filter((it) => it.id !== id);
+    setChecklist(next);
+    await saveChecklist(next);
+  }
 
   async function onAddParticipant() {
     if (!row) return;
@@ -142,7 +200,7 @@ export function TaskDetailsPage() {
       const { data, error: qErr } = await sb
         .from('tasks')
         .select(
-          'id,office_id,title,description,status_v2,priority,due_at,created_at,client_id,case_id,assigned_to_user_id,last_assigned_by_user_id,last_assigned_at, client:clients(id,name), case_rel:cases(id,title)',
+          'id,office_id,title,description,checklist,status_v2,priority,due_at,created_at,client_id,case_id,assigned_to_user_id,last_assigned_by_user_id,last_assigned_at, client:clients(id,name), case_rel:cases(id,title)',
         )
         .eq('id', taskId)
         .maybeSingle();
@@ -150,6 +208,8 @@ export function TaskDetailsPage() {
       if (qErr) throw new Error(qErr.message);
       const t = (data as any) || null;
       setRow(t);
+      // Initialize checklist state from the loaded row
+      setChecklist(Array.isArray(t?.checklist) ? t.checklist : []);
 
       const r = await getMyOfficeRole().catch(() => '');
       setRole(r);
@@ -307,6 +367,119 @@ export function TaskDetailsPage() {
           </div>
         ) : null}
       </Card>
+
+      {/* ── Checklist de Fases ── */}
+      {!loading && row ? (
+        <Card>
+          <div className="grid gap-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-white">Fases da Tarefa</div>
+                <div className="text-xs text-white/50">Checklist de etapas desta tarefa.</div>
+              </div>
+              {savingChecklist ? (
+                <span className="text-xs text-white/40 animate-pulse">Salvando…</span>
+              ) : null}
+            </div>
+
+            {/* Barra de progresso */}
+            {checklist.length > 0 ? (() => {
+              const done = checklist.filter((it) => it.done).length;
+              const total = checklist.length;
+              const pct = Math.round((done / total) * 100);
+              return (
+                <div>
+                  <div className="mb-1 flex items-center justify-between text-xs text-white/60">
+                    <span>{done} de {total} concluída{total !== 1 ? 's' : ''}</span>
+                    <span className={pct === 100 ? 'text-emerald-400 font-semibold' : ''}>{pct}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${pct}%`,
+                        background: pct === 100
+                          ? 'linear-gradient(90deg, #34d399, #10b981)'
+                          : 'linear-gradient(90deg, #60a5fa, #818cf8)',
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })() : null}
+
+            {/* Lista de itens */}
+            <div className="grid gap-2">
+              {checklist.map((item) => (
+                <div
+                  key={item.id}
+                  className={
+                    'flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-all ' +
+                    (item.done
+                      ? 'border-white/5 bg-white/3 opacity-60'
+                      : 'border-white/10 bg-white/5')
+                  }
+                >
+                  <input
+                    type="checkbox"
+                    checked={item.done}
+                    disabled={savingChecklist}
+                    onChange={() => void toggleChecklistItem(item.id)}
+                    className="h-4 w-4 shrink-0 accent-emerald-400 cursor-pointer"
+                  />
+                  <span
+                    className={
+                      'flex-1 text-sm ' +
+                      (item.done ? 'line-through text-white/40' : 'text-white/90')
+                    }
+                  >
+                    {item.text}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={savingChecklist}
+                    onClick={() => void removeChecklistItem(item.id)}
+                    className="shrink-0 rounded-lg px-2 py-1 text-xs text-white/30 hover:text-red-300 hover:bg-red-500/10 transition"
+                    title="Remover fase"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+
+              {!checklist.length ? (
+                <div className="text-sm text-white/40">Nenhuma fase adicionada ainda.</div>
+              ) : null}
+            </div>
+
+            {/* Input para nova fase */}
+            <div className="flex gap-2">
+              <input
+                className="input flex-1"
+                placeholder="Nova fase…"
+                value={newItemText}
+                disabled={savingChecklist}
+                onChange={(e) => setNewItemText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    void addChecklistItem();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                disabled={savingChecklist || !newItemText.trim()}
+                onClick={() => void addChecklistItem()}
+                className="btn-primary !rounded-xl !px-4"
+                title="Adicionar fase (Enter)"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </Card>
+      ) : null}
 
       {!loading && row ? (
         <Card>
