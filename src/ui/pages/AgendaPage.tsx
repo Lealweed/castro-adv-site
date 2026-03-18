@@ -126,6 +126,11 @@ export function AgendaPage() {
   const [casesLite, setCasesLite] = useState<CaseLite[]>([]);
   const [linkClientId, setLinkClientId] = useState('');
   const [linkCaseId, setLinkCaseId] = useState('');
+  const [linkCaseTitle, setLinkCaseTitle] = useState('');
+
+  // Modal de seleção de caso
+  const [casePickerOpen, setCasePickerOpen] = useState(false);
+  const [casePickerQuery, setCasePickerQuery] = useState('');
 
   const [remindersOpen, setRemindersOpen] = useState<null | { item: AgendaItem }>(null);
   const [reminders, setReminders] = useState<any[]>([]);
@@ -367,6 +372,9 @@ export function AgendaPage() {
       setDueDate('');
       setLinkClientId('');
       setLinkCaseId('');
+      setLinkCaseTitle('');
+      setCasePickerOpen(false);
+      setCasePickerQuery('');
       setSaving(false);
       await load();
     } catch (err: any) {
@@ -882,19 +890,97 @@ export function AgendaPage() {
                   ))}
                 </select>
               </label>
-              <label className="text-sm text-white/80">
+              <div className="text-sm text-white/80">
                 Caso (opcional)
-                <select className="select" value={linkCaseId} onChange={(e) => setLinkCaseId(e.target.value)}>
-                  <option value="">—</option>
-                  {casesLite
-                    .filter((c) => (!linkClientId ? true : c.client_id === linkClientId))
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.title}
-                      </option>
-                    ))}
-                </select>
-              </label>
+                {/* Botão que abre o modal de busca */}
+                <div className="mt-0.5 flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-sm flex-1 text-left"
+                    onClick={() => {
+                      setCasePickerQuery('');
+                      setCasePickerOpen(true);
+                    }}
+                  >
+                    {linkCaseTitle ? (
+                      <span className="text-white">{linkCaseTitle}</span>
+                    ) : (
+                      <span className="text-white/40">— Selecionar caso —</span>
+                    )}
+                  </button>
+                  {linkCaseId ? (
+                    <button
+                      type="button"
+                      className="btn-ghost !rounded-lg !px-2 !py-1.5 !text-xs"
+                      onClick={() => { setLinkCaseId(''); setLinkCaseTitle(''); }}
+                    >
+                      ✕
+                    </button>
+                  ) : null}
+                </div>
+
+                {/* Modal inline de busca de casos */}
+                {casePickerOpen && (
+                  <div className="mt-2 rounded-2xl border border-white/20 bg-neutral-900 p-4 shadow-xl">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div className="text-xs font-semibold text-white/70">Buscar caso</div>
+                      <button
+                        type="button"
+                        className="text-xs text-white/50 hover:text-white"
+                        onClick={() => setCasePickerOpen(false)}
+                      >
+                        Fechar
+                      </button>
+                    </div>
+                    <input
+                      autoFocus
+                      className="input !mt-0 !py-2 !text-sm"
+                      placeholder="Título, nº processo ou cliente..."
+                      value={casePickerQuery}
+                      onChange={(e) => setCasePickerQuery(e.target.value)}
+                    />
+                    <div className="mt-3 max-h-60 overflow-y-auto grid gap-1">
+                      {(() => {
+                        const q = casePickerQuery.trim().toLowerCase();
+                        const clientsMap = new Map(clientsLite.map((c) => [c.id, c]));
+                        const filtered = casesLite.filter((c) => {
+                          if (!q) return true;
+                          if (c.title.toLowerCase().includes(q)) return true;
+                          if (c.process_number && c.process_number.toLowerCase().includes(q)) return true;
+                          const client = c.client_id ? clientsMap.get(c.client_id) : null;
+                          if (client && client.name.toLowerCase().includes(q)) return true;
+                          return false;
+                        });
+                        if (!filtered.length) {
+                          return <div className="text-sm text-white/50 py-2">Nenhum caso encontrado.</div>;
+                        }
+                        return filtered.slice(0, 50).map((c) => {
+                          const client = c.client_id ? clientsLite.find((cl) => cl.id === c.client_id) : null;
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left hover:bg-white/10 transition"
+                              onClick={() => {
+                                setLinkCaseId(c.id);
+                                setLinkCaseTitle(c.title);
+                                setCasePickerOpen(false);
+                                setCasePickerQuery('');
+                              }}
+                            >
+                              <div className="text-sm font-semibold text-white">{c.title}</div>
+                              <div className="mt-0.5 text-xs text-white/50">
+                                {c.process_number ? <span className="mr-2">Nº {c.process_number}</span> : null}
+                                {client ? <span>Cliente: {client.name}</span> : null}
+                              </div>
+                            </button>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-3">
