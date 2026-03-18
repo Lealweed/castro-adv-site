@@ -68,6 +68,43 @@ export function CaseDetailsPage() {
   const [distributedAt, setDistributedAt] = useState('');
   const [responsibleUserId, setResponsibleUserId] = useState('');
 
+  // vincular cliente
+  const [linkClientOpen, setLinkClientOpen] = useState(false);
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState('');
+  const [linkingSaving, setLinkingSaving] = useState(false);
+
+  async function loadClients() {
+    try {
+      const sb = requireSupabase();
+      const { data } = await sb.from('clients').select('id, name').order('name');
+      setClients((data || []) as { id: string; name: string }[]);
+    } catch {
+      // silencia erros de carregamento
+    }
+  }
+
+  async function linkClient() {
+    if (!caseId) return;
+    setLinkingSaving(true);
+    setError(null);
+    try {
+      const sb = requireSupabase();
+      await getAuthedUser();
+      const { error: uErr } = await sb
+        .from('cases')
+        .update({ client_id: selectedClientId || null } as any)
+        .eq('id', caseId);
+      if (uErr) throw new Error(uErr.message);
+      setLinkClientOpen(false);
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao vincular cliente.');
+    } finally {
+      setLinkingSaving(false);
+    }
+  }
+
   async function load() {
     if (!caseId) return;
 
@@ -245,7 +282,22 @@ export function CaseDetailsPage() {
                 <input className="input mt-1" value={status} onChange={(e) => setStatus(e.target.value)} />
               </label>
               <div>
-                <div className="text-sm text-white/80">Clientes Vinculados</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-sm text-white/80">Clientes Vinculados</div>
+                  <button
+                    type="button"
+                    className="btn-ghost !rounded-lg !px-2 !py-1 !text-xs"
+                    onClick={() => {
+                      // inicializa o select com o cliente atual
+                      const firstClient = row.client?.[0];
+                      setSelectedClientId(firstClient?.id || '');
+                      void loadClients();
+                      setLinkClientOpen(true);
+                    }}
+                  >
+                    Alterar Cliente
+                  </button>
+                </div>
                 <div className="mt-2 flex flex-col gap-1">
                   {(() => {
                     const allClients = new Map<string, {id: string, name: string}>();
@@ -253,11 +305,8 @@ export function CaseDetailsPage() {
                     row.case_clients?.forEach(cc => {
                       if (cc.client) allClients.set(cc.client.id, cc.client);
                     });
-                    
                     const clientList = Array.from(allClients.values());
-                    
                     if (clientList.length === 0) return <div className="text-sm text-white/70">—</div>;
-                    
                     return clientList.map(c => (
                       <Link key={c.id} to={`/app/clientes/${c.id}`} className="link-accent text-sm">
                         {c.name}
@@ -265,6 +314,37 @@ export function CaseDetailsPage() {
                     ));
                   })()}
                 </div>
+
+                {linkClientOpen && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
+                    <select
+                      className="select flex-1 text-sm"
+                      value={selectedClientId}
+                      onChange={(e) => setSelectedClientId(e.target.value)}
+                    >
+                      <option value="">— Sem cliente —</option>
+                      {clients.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={linkingSaving}
+                      onClick={() => void linkClient()}
+                      className="btn-primary !rounded-lg !px-3 !py-1.5 !text-xs"
+                    >
+                      {linkingSaving ? 'Salvando…' : 'Confirmar'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={linkingSaving}
+                      onClick={() => setLinkClientOpen(false)}
+                      className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
               </div>
 
               <label className="text-sm text-white/80">

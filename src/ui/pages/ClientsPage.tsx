@@ -40,6 +40,19 @@ export function ClientsPage() {
   const [newNotes, setNewNotes] = useState('');
   const [newSourceChannel, setNewSourceChannel] = useState<'advogado' | 'recepcao' | 'web' | 'indicacao' | 'outro'>('recepcao');
 
+  // novos campos pessoais
+  const [newRg, setNewRg] = useState('');
+  const [newBirthDate, setNewBirthDate] = useState('');
+  const [newMaritalStatus, setNewMaritalStatus] = useState('');
+  const [newProfession, setNewProfession] = useState('');
+  const [newNationality, setNewNationality] = useState('Brasileiro(a)');
+
+  // representante legal
+  const [hasLegalRep, setHasLegalRep] = useState(false);
+  const [legalRepName, setLegalRepName] = useState('');
+  const [legalRepCpf, setLegalRepCpf] = useState('');
+  const [legalRepRg, setLegalRepRg] = useState('');
+
   const [govLoginHint, setGovLoginHint] = useState('');
   const [govNotes, setGovNotes] = useState('');
 
@@ -124,6 +137,15 @@ export function ClientsPage() {
     setNewPhone('');
     setNewNotes('');
     setNewSourceChannel('recepcao');
+    setNewRg('');
+    setNewBirthDate('');
+    setNewMaritalStatus('');
+    setNewProfession('');
+    setNewNationality('Brasileiro(a)');
+    setHasLegalRep(false);
+    setLegalRepName('');
+    setLegalRepCpf('');
+    setLegalRepRg('');
     setGovLoginHint('');
     setGovNotes('');
 
@@ -176,6 +198,24 @@ export function ClientsPage() {
 
       const sourceTag = `[#origem:${newSourceChannel}]`;
 
+      // Monta dados extras pessoais no campo notes
+      const extraPersonalParts: string[] = [];
+      if (newRg.trim()) extraPersonalParts.push(`RG: ${newRg.trim()}`);
+      if (newBirthDate) extraPersonalParts.push(`Nasc.: ${newBirthDate}`);
+      if (newMaritalStatus) extraPersonalParts.push(`Est. Civil: ${newMaritalStatus}`);
+      if (newProfession.trim()) extraPersonalParts.push(`Profissão: ${newProfession.trim()}`);
+      if (newNationality.trim()) extraPersonalParts.push(`Nac.: ${newNationality.trim()}`);
+      const extraPersonalTag = extraPersonalParts.length ? `[${extraPersonalParts.join(' | ')}]` : '';
+
+      // Monta representante legal no gov_notes
+      let legalRepTag = '';
+      if (hasLegalRep && legalRepName.trim()) {
+        const repParts = [`Nome: ${legalRepName.trim()}`];
+        if (legalRepCpf.trim()) repParts.push(`CPF: ${legalRepCpf.trim()}`);
+        if (legalRepRg.trim()) repParts.push(`RG: ${legalRepRg.trim()}`);
+        legalRepTag = `[Representante Legal — ${repParts.join(', ')}]`;
+      }
+
       const payload: any = {
         user_id: user.id,
         person_type: personType,
@@ -183,9 +223,9 @@ export function ClientsPage() {
         whatsapp: onlyDigits(newWhatsapp),
         email: newEmail.trim() || null,
         phone: onlyDigits(newPhone) || null,
-        notes: `${sourceTag} ${newNotes.trim()}`.trim(),
+        notes: [sourceTag, extraPersonalTag, newNotes.trim()].filter(Boolean).join(' ').trim(),
         gov_login_hint: govLoginHint.trim() || null,
-        gov_notes: govNotes.trim() || null,
+        gov_notes: [legalRepTag, govNotes.trim()].filter(Boolean).join('\n').trim() || null,
         address_cep: onlyDigits(cep) || null,
         address_street: street.trim() || null,
         address_number: number.trim() || null,
@@ -325,6 +365,39 @@ export function ClientsPage() {
                 />
               </label>
 
+              <label className="text-sm text-white/80">
+                RG
+                <input className="input" value={newRg} onChange={(e) => setNewRg(e.target.value)} placeholder="00.000.000-0" />
+              </label>
+
+              <label className="text-sm text-white/80">
+                Data de Nascimento
+                <input className="input" type="date" value={newBirthDate} onChange={(e) => setNewBirthDate(e.target.value)} />
+              </label>
+
+              <label className="text-sm text-white/80">
+                Estado Civil
+                <select className="input" value={newMaritalStatus} onChange={(e) => setNewMaritalStatus(e.target.value)}>
+                  <option value="">— Selecione —</option>
+                  <option value="Solteiro(a)">Solteiro(a)</option>
+                  <option value="Casado(a)">Casado(a)</option>
+                  <option value="Divorciado(a)">Divorciado(a)</option>
+                  <option value="Viúvo(a)">Viúvo(a)</option>
+                  <option value="União Estável">União Estável</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </label>
+
+              <label className="text-sm text-white/80">
+                Profissão
+                <input className="input" value={newProfession} onChange={(e) => setNewProfession(e.target.value)} />
+              </label>
+
+              <label className="text-sm text-white/80">
+                Nacionalidade
+                <input className="input" value={newNationality} onChange={(e) => setNewNationality(e.target.value)} />
+              </label>
+
               <div className="text-sm text-white/80">
                 Foto (opcional)
                 <div className="mt-2 flex items-center gap-3">
@@ -383,7 +456,7 @@ export function ClientsPage() {
                     <input className="input" value={cep} onChange={(e) => setCep(e.target.value)} inputMode="numeric" />
                   </label>
                   <label className="text-sm text-white/80">
-                    Rua
+                    Logradouro
                     <input className="input" value={street} onChange={(e) => setStreet(e.target.value)} />
                   </label>
                   <label className="text-sm text-white/80">
@@ -407,10 +480,47 @@ export function ClientsPage() {
                     <input className="input" value={stateUf} onChange={(e) => setStateUf(e.target.value.toUpperCase().slice(0, 2))} />
                   </label>
                 </div>
-              </div>
+            </div>
 
-              <div className="md:col-span-2">
-                <div className="text-sm font-semibold text-white">Gov.br (sem senha)</div>
+            {/* Representante Legal */}
+            <div className="md:col-span-2">
+              <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-white/80">
+                <input
+                  type="checkbox"
+                  checked={hasLegalRep}
+                  onChange={(e) => setHasLegalRep(e.target.checked)}
+                  className="h-4 w-4 rounded border-white/30 bg-white/10 accent-amber-400"
+                />
+                Possui Representante Legal
+              </label>
+
+              {hasLegalRep && (
+                <div className="mt-3 grid gap-3 rounded-xl border border-white/10 bg-white/5 p-4 md:grid-cols-2">
+                  <div className="text-sm font-semibold text-white md:col-span-2">Dados do Representante Legal</div>
+                  <label className="text-sm text-white/80 md:col-span-2">
+                    Nome do Representante
+                    <input className="input" value={legalRepName} onChange={(e) => setLegalRepName(e.target.value)} />
+                  </label>
+                  <label className="text-sm text-white/80">
+                    CPF do Representante
+                    <input
+                      className="input"
+                      value={legalRepCpf}
+                      onChange={(e) => setLegalRepCpf(formatCpf(e.target.value))}
+                      placeholder="000.000.000-00"
+                      inputMode="numeric"
+                    />
+                  </label>
+                  <label className="text-sm text-white/80">
+                    RG do Representante
+                    <input className="input" value={legalRepRg} onChange={(e) => setLegalRepRg(e.target.value)} />
+                  </label>
+                </div>
+              )}
+            </div>
+
+            <div className="md:col-span-2">
+              <div className="text-sm font-semibold text-white">Gov.br (sem senha)</div>
                 <div className="mt-2 grid gap-3 md:grid-cols-2">
                   <label className="text-sm text-white/80">
                     Dica de login (ex.: e-mail/telefone)
