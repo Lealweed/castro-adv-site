@@ -340,29 +340,67 @@ export function TasksKanbanPage() {
 
   const activeTask = useMemo(() => (activeId ? rows.find((r) => r.id === activeId) || null : null), [activeId, rows]);
 
+  /**
+   * Resolve the column (TaskStatus) for a given id:
+   * - If the id matches a column directly, return it.
+   * - If the id matches a task, return that task's current status_v2
+   *   (uses the latest rows snapshot, safe even during optimistic updates
+   *    because we never mutate the original task's status before onDragEnd).
+   */
   function findContainer(id: string): TaskStatus | null {
-    if ((COLUMNS as any).some((c: any) => c.id === id)) return id as TaskStatus;
-    const t = rows.find((r) => r.id === id);
-    return (t?.status_v2 as TaskStatus) || null;
+    // Check if it's a column id
+    const col = COLUMNS.find((c) => c.id === id);
+    if (col) return col.id;
+    // Otherwise it must be a task id — look up its column
+    const task = rows.find((r) => r.id === id);
+    if (task) return task.status_v2 as TaskStatus;
+    console.warn('[Kanban] findContainer: id not found in columns or tasks:', id);
+    return null;
   }
 
   async function onDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveId(null);
-    if (!over) return;
+
+    if (!over) {
+      console.log('[Kanban] onDragEnd: dropped outside any droppable — no-op');
+      return;
+    }
 
     const activeTaskId = String(active.id);
     const overId = String(over.id);
 
-    const from = findContainer(activeTaskId);
-    const to = findContainer(overId);
-    if (!from || !to) return;
-    if (from === to) return;
-
+    // Retrieve the task being dragged
     const task = rows.find((r) => r.id === activeTaskId);
-    if (!task) return;
+    if (!task) {
+      console.warn('[Kanban] onDragEnd: active task not found in rows:', activeTaskId);
+      return;
+    }
 
-    // move across columns
+    // 'from' is always the task's own status_v2 — immune to React state ordering issues.
+    // 'to'   is derived from over.id (could be a column or another task's id).
+    const from: TaskStatus = task.status_v2 as TaskStatus;
+    const to = findContainer(overId);
+
+    console.log('[Kanban] onDragEnd:', { activeTaskId, overId, from, to });
+
+    if (!to) {
+      console.warn('[Kanban] onDragEnd: could not resolve destination column for overId:', overId);
+      return;
+    }
+
+    // Same column — no status change needed
+    if (from === to) {
+      console.log('[Kanban] onDragEnd: same column, skipping update');
+      return;
+    }
+
+    // Clear any stuck busyId before attempting the update
+    if (busyId && busyId !== activeTaskId) {
+      console.warn('[Kanban] onDragEnd: clearing stale busyId:', busyId);
+      setBusyId(null);
+    }
+
     await setStatus(task, to);
   }
 
