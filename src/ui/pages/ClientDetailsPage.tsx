@@ -6,6 +6,7 @@ import { DocumentsSection } from '@/ui/widgets/DocumentsSection';
 import { ClientLinksSection } from '@/ui/widgets/ClientLinksSection';
 import { TimelineSection } from '@/ui/widgets/TimelineSection';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
+import { sendWhatsAppText } from '@/lib/evolutionApi';
 
 function extractSourceFromNotes(notes: string | null) {
   if (!notes) return null;
@@ -143,6 +144,19 @@ export function ClientDetailsPage() {
     }
   }
 
+  async function handleSendWhatsApp(whatsappNumber: string) {
+    const message = prompt('Digite a mensagem para enviar via WhatsApp:');
+    if (!message) return;
+    
+    try {
+      await sendWhatsAppText(whatsappNumber, message);
+      alert('Enviado!');
+    } catch (err: any) {
+      alert('Erro ao enviar');
+      console.error('WhatsApp send error:', err);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-4">
@@ -216,7 +230,18 @@ export function ClientDetailsPage() {
                       </div>
                       <div>
                         <div className="text-xs text-white/50">WhatsApp</div>
-                        <div className="text-sm text-white/80">{row.whatsapp || '—'}</div>
+                        <div className="text-sm text-white/80 flex items-center gap-2">
+                          <span>{row.whatsapp || '—'}</span>
+                          {row.whatsapp && (
+                            <button
+                              onClick={() => handleSendWhatsApp(row.whatsapp!)}
+                              className="btn-ghost !px-2 !py-1 !text-xs whitespace-nowrap"
+                              title="Enviar mensagem via WhatsApp"
+                            >
+                              💬 Zap
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div>
                         <div className="text-xs text-white/50">E-mail</div>
