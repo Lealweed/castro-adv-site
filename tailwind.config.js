@@ -14,8 +14,26 @@ export default {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+      fontFamily: {
+        display: ['"Playfair Display"', 'Georgia', 'serif'],
+        body: ['Raleway', 'system-ui', 'sans-serif'],
+      },
   		colors: {
-        amber: colors.indigo, // Remap amber (gold) to indigo (Trust Blue) globally
+        amber: colors.indigo, // Remap amber (gold) to indigo (Trust Blue) globally for app
+        // Luxury landing page gold palette
+        gold: {
+          100: '#F5EDD5',
+          200: '#E8D5A3',
+          300: '#D9BC72',
+          400: '#C9A96E',
+          500: '#B8860B',
+          600: '#8B6914',
+          700: '#5C4305',
+          800: '#3D2D04',
+          900: '#1F1602',
+        },
+        luxury: '#0C0A09',
+        cream: '#F5F0E8',
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
@@ -58,17 +76,21 @@ export default {
   			}
   		},
   		animation: {
-  			'border-beam': 'border-beam calc(var(--duration)*1s) infinite linear'
+  			'border-beam': 'border-beam calc(var(--duration)*1s) infinite linear',
+        'marquee': 'marquee 32s linear infinite',
   		},
   		keyframes: {
   			'border-beam': {
   				'100%': {
   					'offset-distance': '100%'
   				}
-  			}
+  			},
+        'marquee': {
+          '0%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-100%)' },
+        },
   		}
   	}
   },
   plugins: [require("tailwindcss-animate")],
 };
-

@@ -1,39 +1,48 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-import { ShimmerButton } from '@/ui/primitives/ShimmerButton';
+// ---------------------------------------------------------------------------
+// Motion variants
+// ---------------------------------------------------------------------------
+const stagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.11 } },
+};
 
-function SectionTitle({ kicker, title, desc }: { kicker: string; title: string; desc: string }) {
-  return (
-    <div className="mx-auto max-w-3xl text-center">
-      <div className="text-xs font-light uppercase tracking-[0.25em] text-amber-200/80">{kicker}</div>
-      <div className="mx-auto mt-3 h-px w-16 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-70" />
-      <h2 className="mt-8 text-4xl md:text-6xl font-serif font-light tracking-wide text-white drop-shadow-[0_2px_12px_rgba(233,207,167,0.10)]">{title}</h2>
-      <p className="mt-6 text-lg leading-relaxed text-slate-300/90 font-light">{desc}</p>
-    </div>
-  );
-}
+const EASE = [0.16, 1, 0.3, 1] as [number, number, number, number];
 
+const itemFade = {
+  hidden: { opacity: 0, y: 28 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.65, ease: EASE },
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Static data
+// ---------------------------------------------------------------------------
 const areas = [
   {
     title: 'Cível',
-    items: ['Contratos', 'Responsabilidade civil', 'Cobranças e acordos'],
+    items: ['Contratos e obrigações', 'Responsabilidade civil', 'Cobranças e acordos'],
   },
   {
     title: 'Criminal',
-    items: ['Orientação e acompanhamento', 'Defesa técnica', 'Atuação em fases investigatórias e processuais'],
+    items: ['Orientação e acompanhamento', 'Defesa técnica especializada', 'Fases investigatórias e processuais'],
   },
   {
     title: 'Empresarial',
-    items: ['Apoio a rotinas empresariais', 'Contratos e negociações', 'Prevenção de riscos'],
+    items: ['Apoio a rotinas empresariais', 'Contratos e negociações', 'Prevenção e gestão de riscos'],
   },
   {
     title: 'Família',
-    items: ['Divórcio e dissolução', 'Guarda e convivência', 'Pensão e alimentos'],
+    items: ['Divórcio e dissolução', 'Guarda e convivência', 'Pensão alimentícia'],
   },
   {
     title: 'Trabalhista',
-    items: ['Orientação em relações de trabalho', 'Acordos e tratativas', 'Acompanhamento de demandas'],
+    items: ['Relações e orientação trabalhista', 'Acordos e tratativas', 'Acompanhamento de demandas'],
   },
 ];
 
@@ -47,7 +56,7 @@ const team = [
   {
     name: 'Zuleide Castro',
     role: 'Advogada',
-    bio: 'Atendimento humanizado e condução estratégica de casos, com comunicação clara e organização de informações do cliente.',
+    bio: 'Atendimento humanizado e condução estratégica de casos, com comunicação clara e organização das informações do cliente.',
   },
   {
     name: 'Victor',
@@ -62,374 +71,671 @@ const team = [
   {
     name: 'Maria',
     role: 'Assessora Jurídica',
-    bio: 'Suporte ao time jurídico, organização de demandas e acompanhamento de atividades para manter o atendimento ágil e preciso.',
+    bio: 'Suporte ao time jurídico, organização de demandas e acompanhamento de atividades para manter o atendimento ágil.',
   },
 ];
 
-const address = {
-  line1: 'Avenida Tupinambá, 19 — Galeria Parque 610, Sala 01',
-  line2: 'Bairro Parque dos Carajás, Parauapebas — Pará, CEP 68515-000',
-};
+const testimonials = [
+  {
+    name: 'Ricardo P.',
+    initials: 'RP',
+    text: 'Profissionalismo impecável. Conduziram meu caso com total transparência e resolveram em tempo recorde. Recomendo de olhos fechados.',
+    rating: 5,
+  },
+  {
+    name: 'Juliana S.',
+    initials: 'JS',
+    text: 'Escritório extremamente organizado. O portal exclusivo para clientes me deu muita paz de espírito — acompanhava tudo pelo celular.',
+    rating: 5,
+  },
+  {
+    name: 'Empresa A. C.',
+    initials: 'EA',
+    text: 'A assessoria empresarial mudou a forma como fechamos contratos. Assertivos, diretos e sem juridiquês.',
+    rating: 5,
+  },
+  {
+    name: 'Marcos V.',
+    initials: 'MV',
+    text: 'Tive um problema trabalhista complexo e fui muito bem orientado. Eles focam na melhor estratégia sem falsas promessas.',
+    rating: 5,
+  },
+  {
+    name: 'Fernanda L.',
+    initials: 'FL',
+    text: 'Excelente atendimento desde a recepção até a advogada especialista. Muito respeito e ética profissional no trato com o cliente.',
+    rating: 5,
+  },
+  {
+    name: 'Carlos A.',
+    initials: 'CA',
+    text: 'Equipe sempre disponível e ágil. Ter os andamentos do tribunal atualizados na plataforma deles faz toda a diferença.',
+    rating: 5,
+  },
+];
 
-const mapsUrl =
-  'https://www.google.com/maps/search/?api=1&query=' +
-  encodeURIComponent(
-    'Avenida Tupinambá, 19 Galeria parque 610 Sala 01 Bairro Parque dos Carajás, Parauapebas - Pará 68515-000'
-  );
+const principles = [
+  { title: 'Ética', desc: 'Respeito estrito às normas e limites da atuação.' },
+  { title: 'Clareza', desc: 'Comunicação direta, sem juridiquês.' },
+  { title: 'Estratégia', desc: 'Foco na melhor resolução possível.' },
+  { title: 'Tecnologia', desc: 'Prazos e dados seguros em plataforma própria.' },
+];
 
 const whatsappE164 = '5591983485747';
 const whatsappDisplay = '(91) 98348-5747';
+const address = {
+  line1: 'Avenida Tupinambá, 19 — Galeria Parque 610, Sala 01',
+  line2: 'Bairro Parque dos Carajás, Parauapebas — Pará',
+};
+const mapsUrl =
+  'https://www.google.com/maps/search/?api=1&query=' +
+  encodeURIComponent(
+    'Avenida Tupinambá, 19 Galeria parque 610 Sala 01 Bairro Parque dos Carajás, Parauapebas - Pará 68515-000',
+  );
 
-const testimonials = [
-  { name: 'Ricardo P.', initials: 'RP', text: 'Profissionalismo impecável. Conduziram meu caso com total transparência e resolveram em tempo recorde. Recomendo de olhos fechados.', rating: 5 },
-  { name: 'Juliana S.', initials: 'JS', text: 'Escritório extremamente organizado. O portal exclusivo para clientes me deu muita paz de espírito, conseguia acompanhar tudo pelo celular.', rating: 5 },
-  { name: 'Empresa A. C.', initials: 'EA', text: 'A assessoria empresarial deles mudou a forma como fechamos contratos. Assertivos, diretos e sem juridiquês.', rating: 5 },
-  { name: 'Marcos V.', initials: 'MV', text: 'Tive um problema trabalhista complexo e fui muito bem orientado. Eles focam na melhor estratégia sem falsas promessas.', rating: 5 },
-  { name: 'Fernanda L.', initials: 'FL', text: 'Excelente atendimento desde a recepção até a advogada especialista. Muito respeito e ética profissional no trato com o cliente.', rating: 5 },
-  { name: 'Carlos A.', initials: 'CA', text: 'Equipe sempre disponível e ágil. Ter os andamentos do tribunal atualizados na plataforma deles faz toda a diferença.', rating: 5 },
-];
+// ---------------------------------------------------------------------------
+// Button class helpers
+// ---------------------------------------------------------------------------
+const goldBtn =
+  'inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-gold-400 to-gold-300 text-luxury font-body font-semibold text-[11px] uppercase tracking-[0.2em] px-8 py-4 shadow-[0_0_24px_rgba(201,169,110,0.18)] hover:shadow-[0_0_40px_rgba(201,169,110,0.38)] hover:brightness-110 transition-all duration-300';
 
+const outlineBtn =
+  'inline-flex items-center justify-center gap-2 rounded-full border border-gold-400/50 text-gold-400 font-body font-semibold text-[11px] uppercase tracking-[0.2em] px-8 py-4 hover:bg-gold-400/10 hover:border-gold-400 transition-all duration-300';
+
+const ghostBtn =
+  'group inline-flex items-center justify-center gap-1.5 text-cream/40 font-body text-[11px] uppercase tracking-[0.2em] hover:text-cream/70 transition-colors duration-300';
+
+// ---------------------------------------------------------------------------
+// Reusable sub-components
+// ---------------------------------------------------------------------------
+function GoldDivider() {
+  return (
+    <div className="mx-auto mt-5 h-px w-14 bg-gradient-to-r from-transparent via-gold-400/60 to-transparent" />
+  );
+}
+
+function SectionTitle({
+  kicker,
+  title,
+  desc,
+}: {
+  kicker: string;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <motion.div className="mx-auto max-w-2xl text-center" variants={stagger}>
+      <motion.span
+        variants={itemFade}
+        className="font-body text-[10px] font-semibold uppercase tracking-[0.35em] text-gold-400"
+      >
+        {kicker}
+      </motion.span>
+      <motion.div variants={itemFade}>
+        <GoldDivider />
+      </motion.div>
+      <motion.h2
+        variants={itemFade}
+        className="mt-9 font-display text-4xl font-light italic leading-[1.1] text-cream md:text-5xl"
+      >
+        {title}
+      </motion.h2>
+      <motion.p
+        variants={itemFade}
+        className="mt-5 font-body text-base font-light leading-relaxed text-cream/40"
+      >
+        {desc}
+      </motion.p>
+    </motion.div>
+  );
+}
+
+function AreaCard({ area, wide = false }: { area: (typeof areas)[number]; wide?: boolean }) {
+  void wide;
+  return (
+    <div className="group relative flex h-full min-h-[200px] flex-col overflow-hidden rounded-3xl border border-white/5 bg-[#131110] p-8 transition-all duration-500 hover:-translate-y-1 hover:border-gold-400/25 hover:shadow-[0_24px_48px_-12px_rgba(201,169,110,0.08)]">
+      {/* Hover top-line accent */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold-400/50 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      <h3 className="font-display text-xl font-light italic text-cream">{area.title}</h3>
+      <ul className="mt-5 space-y-2.5">
+        {area.items.map((it) => (
+          <li key={it} className="flex items-start gap-3">
+            <span className="mt-[7px] size-1 shrink-0 rounded-full bg-gold-400/50 transition-colors group-hover:bg-gold-400/80" />
+            <span className="font-body text-sm font-light leading-relaxed text-cream/45">{it}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function TeamCard({ member }: { member: (typeof team)[number] }) {
+  const initials = member.name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]!.toUpperCase())
+    .join('');
+  return (
+    <div className="group rounded-3xl border border-white/5 bg-[#131110] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-400/25 hover:shadow-[0_16px_32px_-8px_rgba(201,169,110,0.08)]">
+      <div className="mb-5 flex items-center gap-4">
+        <div className="grid size-14 shrink-0 place-items-center rounded-full border border-gold-400/20 bg-gold-400/8 font-display text-lg text-gold-400 transition-all group-hover:border-gold-400/40 group-hover:bg-gold-400/12">
+          {initials}
+        </div>
+        <div>
+          <div className="font-display text-base text-cream">{member.name}</div>
+          <div className="mt-0.5 font-body text-xs font-medium uppercase tracking-[0.15em] text-gold-400/80">
+            {member.role}
+          </div>
+          {member.oab && (
+            <div className="mt-0.5 font-body text-[11px] text-cream/30">{member.oab}</div>
+          )}
+        </div>
+      </div>
+      <p className="font-body text-sm font-light leading-relaxed text-cream/40">{member.bio}</p>
+    </div>
+  );
+}
+
+function TestimonialCard({ name, initials, text, rating }: (typeof testimonials)[number]) {
+  return (
+    <div className="w-[340px] shrink-0 rounded-3xl border border-white/6 bg-[#131110] p-6 transition-all hover:-translate-y-0.5 hover:border-gold-400/20">
+      <div className="mb-4 flex items-center gap-3">
+        <div className="grid size-11 place-items-center rounded-full border border-gold-400/20 bg-gold-400/8 font-display text-sm font-semibold text-gold-400">
+          {initials}
+        </div>
+        <div>
+          <div className="font-body text-sm font-semibold text-cream">{name}</div>
+          <div className="mt-0.5 flex gap-0.5 text-gold-400/80 text-xs">
+            {'★'.repeat(rating)}
+          </div>
+        </div>
+      </div>
+      <p className="font-body text-sm font-light italic leading-relaxed text-cream/50">
+        "{text}"
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
 export function LandingPage() {
   return (
-    <div className="bg-slate-950">
-      {/* HERO */}
-      <section className="relative mx-auto max-w-7xl px-4 pb-28 pt-32 md:pb-44 md:pt-52">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,#E9CFA7_0%,transparent_80%)]" />
-        <div className="grid gap-32 md:grid-cols-2 md:items-center">
-          <div className="relative z-10">
-            <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-6 py-2 text-base font-light text-amber-200/80 shadow backdrop-blur-md tracking-widest">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-200/80 opacity-30"></span>
-                <span className="relative inline-flex size-2 rounded-full bg-amber-200/80"></span>
-              </span>
+    <div className="overflow-x-hidden bg-luxury text-cream">
+      {/* ================================================================= */}
+      {/* HERO                                                                */}
+      {/* ================================================================= */}
+      <section className="relative flex min-h-screen flex-col justify-center px-4 pb-16 pt-8">
+        {/* Background atmosphere */}
+        <div className="pointer-events-none absolute inset-0 grain-overlay" />
+        <div className="pointer-events-none absolute right-0 top-0 h-[800px] w-[800px] bg-[radial-gradient(ellipse_at_top_right,rgba(201,169,110,0.07),transparent_62%)]" />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-[500px] w-[500px] bg-[radial-gradient(ellipse_at_bottom_left,rgba(201,169,110,0.04),transparent_65%)]" />
+
+        <div className="mx-auto w-full max-w-7xl">
+          {/* Kicker */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.1 }}
+            className="mb-14 flex items-center gap-4"
+          >
+            <div className="h-px w-10 bg-gold-400/60" />
+            <span className="font-body text-[10px] font-semibold uppercase tracking-[0.38em] text-gold-400">
               Boutique Jurídica de Alto Padrão
-            </div>
+            </span>
+          </motion.div>
 
-            <h1 className="mt-12 text-6xl md:text-8xl font-serif font-light leading-[1.08] tracking-wide text-white drop-shadow-[0_2px_16px_rgba(233,207,167,0.10)]">
-              Castro e Oliveira <span className="hidden md:inline">|</span>
-              <span className="block md:inline font-serif font-light text-amber-200/80 tracking-wide"> Advocacia Estratégica</span>
-            </h1>
+          <div className="grid gap-16 lg:grid-cols-[1fr_400px] lg:items-center xl:grid-cols-[1fr_460px]">
+            {/* ---- Left: Headline + CTA ---- */}
+            <div>
+              <h1 className="font-display text-[clamp(3.5rem,8vw,6.5rem)] font-light leading-[1.02] tracking-tight text-cream">
+                {(['Castro e', 'Oliveira'] as const).map((line, i) => (
+                  <motion.span
+                    key={line}
+                    className="block"
+                    initial={{ opacity: 0, y: 36 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.22 + i * 0.13, duration: 0.72, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    {line}
+                  </motion.span>
+                ))}
+                <motion.span
+                  className="block italic text-gold-400"
+                  initial={{ opacity: 0, y: 36 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.48, duration: 0.72, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  Advocacia Estratégica
+                </motion.span>
+              </h1>
 
-            <p className="mt-10 max-w-2xl text-2xl md:text-3xl font-sans font-light leading-snug text-slate-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.20)]">
-              Atenção meticulosa aos detalhes. Assessoria jurídica de alta complexidade com foco absoluto em resultados e exclusividade.
-            </p>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.72, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                className="mt-10 max-w-[480px] font-body text-lg font-light leading-relaxed text-cream/40"
+              >
+                Atenção meticulosa aos detalhes. Assessoria jurídica de alta complexidade com
+                foco absoluto em resultados e exclusividade.
+              </motion.p>
 
-            <div className="mt-16 flex flex-col gap-5 sm:flex-row items-center">
-              <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="w-full sm:w-auto">
-                <ShimmerButton className="w-full sm:w-auto !px-12 !py-5 !text-lg font-light bg-gradient-to-r from-amber-200/80 via-white/60 to-white/10 text-slate-950 border-white/10 shadow-xl shadow-amber-200/10 hover:scale-105 hover:from-white hover:to-amber-200/80 transition-all duration-300">
+              {/* CTA Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.9, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                className="mt-12 flex flex-col items-start gap-4 sm:flex-row sm:items-center"
+              >
+                <a
+                  href={`https://wa.me/${whatsappE164}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={goldBtn}
+                >
                   Fale com a Equipe
-                </ShimmerButton>
-              </a>
-              <Link
-                to="/portal"
-                className="group w-full sm:w-auto"
-              >
-                <ShimmerButton className="w-full sm:w-auto !px-12 !py-5 !text-lg font-light bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white border-white/10 hover:from-amber-200/80 hover:to-white/80 hover:text-slate-950 transition-all duration-300 shadow-xl shadow-amber-200/10">
+                </a>
+                <Link to="/app/portal" className={outlineBtn}>
                   Acessar Portal
-                </ShimmerButton>
-              </Link>
-              <Link
-                to="/app"
-                className="group w-full sm:w-auto"
-              >
-                <ShimmerButton className="w-full sm:w-auto !px-12 !py-5 !text-lg font-light bg-white text-slate-950 border-white/10 hover:bg-amber-200/80 hover:text-white transition-all duration-300 shadow-md">
+                </Link>
+                <Link to="/app" className={ghostBtn}>
                   Acesso Restrito
-                </ShimmerButton>
-              </Link>
-            </div>
+                  <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">
+                    →
+                  </span>
+                </Link>
+              </motion.div>
 
-            <div className="mt-24 grid grid-cols-1 sm:grid-cols-3 gap-12 border-t border-white/5 pt-12">
-              <div className="text-center">
-                <div className="text-4xl md:text-5xl font-light text-amber-200/80 font-serif drop-shadow-[0_2px_8px_rgba(233,207,167,0.18)]">100%</div>
-                <div className="mt-3 text-base text-slate-200/80 uppercase tracking-widest font-light">Sigilo Absoluto</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl md:text-5xl font-light text-amber-200/80 font-serif drop-shadow-[0_2px_8px_rgba(233,207,167,0.18)]">24/7</div>
-                <div className="mt-3 text-base text-slate-200/80 uppercase tracking-widest font-light">Portal Exclusivo</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl md:text-5xl font-light text-amber-200/80 font-serif drop-shadow-[0_2px_8px_rgba(233,207,167,0.18)]">Ágil</div>
-                <div className="mt-3 text-base text-slate-200/80 uppercase tracking-widest font-light">Gestão de Prazos</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative lg:ml-auto w-full max-w-lg">
-            <div className="absolute -inset-10 rounded-[40px] bg-[radial-gradient(circle_at_50%_50%,rgba(212,175,55,0.15),transparent_60%)] blur-3xl" />
-
-            <div className="relative overflow-hidden rounded-[32px] border border-white/50 bg-white/80 p-8 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] backdrop-blur-xl">
-              <div className="mb-8 flex flex-col items-center justify-center space-y-4">
-                <div className="grid size-20 place-items-center rounded-2xl bg-gradient-to-br from-gold/20 to-gold/5 text-3xl font-serif text-gold shadow-inner border border-gold/10">
-                  CO
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-serif text-white">Portal do Cliente</div>
-                  <div className="text-xs tracking-widest uppercase text-amber-300 mt-1">Ambiente Seguro</div>
-                </div>
-              </div>
-
-              <div className="grid gap-4">
+              {/* Trust metrics */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.1, duration: 0.7 }}
+                className="mt-16 grid grid-cols-3 gap-8 border-t border-white/5 pt-12"
+              >
                 {[
-                  { title: 'Acompanhamento processual', desc: 'Acesso em tempo real aos andamentos' },
-                  { title: 'Smart Drive Privado', desc: 'Envio seguro de documentos e provas' },
-                  { title: 'Comunicação Oficial', desc: 'Histórico de atividades e prazos do caso' },
-                ].map((item, i) => (
-                  <div key={i} className="group rounded-2xl border border-neutral-100 bg-white/60 p-4 transition-all hover:border-gold/30 hover:bg-white hover:shadow-md hover:shadow-gold/5">
-                    <div className="flex items-center gap-3">
-                      <div className="size-2 rounded-full bg-gold/50 group-hover:bg-gold transition-colors" />
-                      <div>
-                        <div className="text-sm font-medium text-amber-400">{item.title}</div>
-                        <div className="text-xs text-slate-400 mt-0.5">{item.desc}</div>
-                      </div>
+                  { value: '100%', label: 'Sigilo Absoluto' },
+                  { value: '24/7', label: 'Portal Exclusivo' },
+                  { value: 'Ágil', label: 'Gestão de Prazos' },
+                ].map((m) => (
+                  <div key={m.label} className="text-center">
+                    <div className="font-display text-3xl font-light text-gold-400 md:text-4xl">
+                      {m.value}
+                    </div>
+                    <div className="mt-2 font-body text-[10px] uppercase tracking-[0.22em] text-cream/30">
+                      {m.label}
                     </div>
                   </div>
                 ))}
-              </div>
+              </motion.div>
             </div>
+
+            {/* ---- Right: Portal preview card ---- */}
+            <motion.div
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5, duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+              className="relative w-full"
+            >
+              {/* Glow behind card */}
+              <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[radial-gradient(circle_at_50%_50%,rgba(201,169,110,0.10),transparent_65%)] blur-3xl" />
+
+              <div className="relative overflow-hidden rounded-3xl border border-gold-400/18 bg-[#0F0D0B] p-8 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)]">
+                {/* Card header */}
+                <div className="mb-8 flex items-center gap-4">
+                  <div className="grid size-14 shrink-0 place-items-center rounded-2xl border border-gold-400/25 bg-gold-400/8 font-display text-xl text-gold-400">
+                    CO
+                  </div>
+                  <div>
+                    <div className="font-display text-base text-cream">Portal do Cliente</div>
+                    <div className="mt-0.5 font-body text-[10px] uppercase tracking-[0.22em] text-gold-400/60">
+                      Ambiente Seguro
+                    </div>
+                  </div>
+                </div>
+
+                {/* Feature list */}
+                <div className="space-y-3">
+                  {[
+                    { title: 'Acompanhamento processual', desc: 'Acesso em tempo real aos andamentos' },
+                    { title: 'Smart Drive Privado', desc: 'Envio seguro de documentos e provas' },
+                    { title: 'Comunicação Oficial', desc: 'Histórico de atividades e prazos do caso' },
+                  ].map((item, i) => (
+                    <div
+                      key={i}
+                      className="group/item rounded-2xl border border-white/5 bg-white/[0.025] p-4 transition-all hover:border-gold-400/22 hover:bg-gold-400/5"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="mt-[6px] size-1.5 shrink-0 rounded-full bg-gold-400/40 transition-colors group-hover/item:bg-gold-400/70" />
+                        <div>
+                          <div className="font-body text-sm font-medium text-cream/80">
+                            {item.title}
+                          </div>
+                          <div className="mt-0.5 font-body text-xs font-light text-cream/35">
+                            {item.desc}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Card CTA */}
+                <div className="mt-6 border-t border-white/5 pt-6">
+                  <Link
+                    to="/app/portal"
+                    className="flex w-full items-center justify-center gap-2 rounded-full border border-gold-400/22 bg-gold-400/8 py-3 font-body text-[10px] uppercase tracking-[0.2em] text-gold-400 transition-all hover:bg-gold-400/16 hover:border-gold-400/40"
+                  >
+                    Acessar Portal →
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
+
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.3, duration: 0.6 }}
+          className="absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2"
+        >
+          <span className="font-body text-[9px] uppercase tracking-[0.35em] text-cream/25">
+            Explorar
+          </span>
+          <motion.div
+            animate={{ y: [0, 7, 0] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+            className="text-sm text-gold-400/30"
+          >
+            ↓
+          </motion.div>
+        </motion.div>
       </section>
 
-      {/* ÁREAS */}
+      {/* ================================================================= */}
+      {/* ÁREAS DE ATUAÇÃO                                                   */}
+      {/* ================================================================= */}
       <motion.section
-        className="mx-auto max-w-7xl px-4 py-20 md:py-32 bg-slate-950"
         id="areas"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.8, ease: 'easeOut' }}
+        className="mx-auto max-w-7xl px-4 py-24 md:py-36"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.08 }}
+        variants={stagger}
       >
         <SectionTitle
-          kicker="ESPECIALIDADES"
+          kicker="Especialidades"
           title="Atuação Jurídica Estratégica"
           desc="Assessoramos nossos clientes com clareza, transparência e alta capacidade técnica, visando sempre a melhor condução do cenário apresentado."
         />
-        <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {areas.map((a) => (
-            <div key={a.title} className="group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 p-8 transition-all hover:border-[#D4AF37]/40 hover:shadow-[0_20px_40px_-15px_rgba(212,175,55,0.08)]">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="text-xl font-serif text-white">{a.title}</div>
-              <div className="mt-6 space-y-3">
-                {a.items.map((it) => (
-                  <div key={it} className="flex items-start gap-3">
-                    <span className="mt-1.5 flex size-1.5 shrink-0 rounded-full bg-[#D4AF37]/80" />
-                    <span className="text-sm text-slate-300 leading-relaxed">{it}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+
+        <motion.div variants={stagger} className="mt-16 grid gap-4 md:grid-cols-3">
+          {/* Row 1 */}
+          {areas.slice(0, 3).map((a) => (
+            <motion.div key={a.title} variants={itemFade}>
+              <AreaCard area={a} />
+            </motion.div>
           ))}
-        </div>
+          {/* Row 2: Família (2 cols) + Trabalhista (1 col) */}
+          <motion.div variants={itemFade} className="md:col-span-2">
+            <AreaCard area={areas[3]!} wide />
+          </motion.div>
+          <motion.div variants={itemFade}>
+            <AreaCard area={areas[4]!} />
+          </motion.div>
+        </motion.div>
       </motion.section>
 
-      {/* ESCRITÓRIO */}
+      {/* ================================================================= */}
+      {/* O ESCRITÓRIO                                                        */}
+      {/* ================================================================= */}
       <motion.section
-        className="bg-slate-950 border-y border-slate-800"
         id="escritorio"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.8, ease: 'easeOut' }}
+        className="border-y border-white/5"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.08 }}
+        variants={stagger}
       >
-        <div className="mx-auto max-w-7xl px-4 py-20 md:py-32">
+        <div className="mx-auto max-w-7xl px-4 py-24 md:py-36">
           <div className="grid gap-16 md:grid-cols-2 md:items-center">
+            {/* Left */}
             <div>
-              <div className="text-xs font-bold tracking-[0.3em] uppercase text-gold">O Escritório</div>
-              <h2 className="mt-4 text-3xl font-light tracking-tight text-neutral-900 md:text-5xl font-serif">
-                Princípios e<br/>Compromisso Ético
-              </h2>
-              <p className="mt-6 text-base text-neutral-600 leading-relaxed">
-                O Castro e Oliveira Advocacia foi fundado com o propósito de oferecer uma advocacia organizada, ágil e absolutamente transparente. 
-                Rejeitamos promessas irreais de resultado; focamos no estudo profundo de cada caso e na comunicação assertiva.
-              </p>
+              <motion.span
+                variants={itemFade}
+                className="font-body text-[10px] font-semibold uppercase tracking-[0.35em] text-gold-400"
+              >
+                O Escritório
+              </motion.span>
+              <motion.h2
+                variants={itemFade}
+                className="mt-5 font-display text-4xl font-light italic leading-[1.1] text-cream md:text-5xl"
+              >
+                Princípios e<br />Compromisso Ético
+              </motion.h2>
+              <motion.p variants={itemFade} className="mt-6 font-body text-base font-light leading-relaxed text-cream/40">
+                O Castro e Oliveira Advocacia foi fundado com o propósito de oferecer uma
+                advocacia organizada, ágil e absolutamente transparente. Rejeitamos promessas
+                irreais; focamos no estudo profundo de cada caso e na comunicação assertiva.
+              </motion.p>
 
-              <div className="mt-10 grid gap-4 sm:grid-cols-2">
-                {[
-                  { title: 'Ética', desc: 'Respeito estrito às normas.' },
-                  { title: 'Clareza', desc: 'Comunicação sem juridiquês.' },
-                  { title: 'Estratégia', desc: 'Foco na melhor resolução.' },
-                  { title: 'Tecnologia', desc: 'Prazos e dados seguros.' },
-                ].map((v) => (
-                  <div key={v.title} className="rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-sm">
-                    <div className="text-sm font-semibold text-amber-400 uppercase tracking-wide">{v.title}</div>
-                    <div className="mt-2 text-sm text-slate-400">{v.desc}</div>
-                  </div>
+              <motion.div
+                variants={stagger}
+                className="mt-10 grid gap-3 sm:grid-cols-2"
+              >
+                {principles.map((v) => (
+                  <motion.div
+                    key={v.title}
+                    variants={itemFade}
+                    className="rounded-2xl border border-white/5 bg-[#131110] p-5 transition-all hover:border-gold-400/20"
+                  >
+                    <div className="font-body text-[10px] font-semibold uppercase tracking-[0.22em] text-gold-400">
+                      {v.title}
+                    </div>
+                    <div className="mt-2 font-body text-sm font-light text-cream/40">{v.desc}</div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             </div>
 
-            <div className="relative lg:ml-auto w-full max-w-md">
-              <div className="absolute -inset-8 rounded-[40px] bg-[radial-gradient(circle_at_50%_50%,rgba(212,175,55,0.15),transparent_60%)] blur-2xl" />
-              <div className="relative overflow-hidden rounded-[32px] border border-neutral-800 bg-neutral-950 p-10 text-white shadow-2xl">
-                <div className="text-xs font-bold tracking-[0.3em] text-amber-300 uppercase">Diretriz Interna</div>
-                <div className="mt-6 text-2xl font-serif font-light leading-snug">
-                  "Atendimento voltado à orientação responsável, técnica apurada e absoluto respeito aos limites legais e factuais do caso concreto."
+            {/* Right: quote card */}
+            <motion.div variants={itemFade} className="relative">
+              <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[radial-gradient(circle_at_50%_50%,rgba(201,169,110,0.08),transparent_65%)] blur-3xl" />
+              <div className="relative overflow-hidden rounded-3xl border border-gold-400/15 bg-[#0F0D0B] p-10 shadow-xl">
+                <div className="font-body text-[10px] font-semibold uppercase tracking-[0.3em] text-gold-400/70">
+                  Diretriz Interna
                 </div>
-                
-                <div className="mt-10 h-px bg-white/10" />
+                <p className="mt-7 font-display text-2xl font-light italic leading-snug text-cream/80">
+                  "Atendimento voltado à orientação responsável, técnica apurada e absoluto
+                  respeito aos limites legais e factuais do caso concreto."
+                </p>
+                <div className="mt-10 h-px bg-white/5" />
                 <div className="mt-6">
-                  <div className="text-xs text-white/50 uppercase tracking-widest font-semibold mb-2">Central de Atendimento</div>
-                  <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-lg text-white hover:text-amber-400 transition-colors">
-                    {whatsappDisplay} <span className="text-amber-400">↗</span>
+                  <div className="font-body text-[10px] font-semibold uppercase tracking-[0.25em] text-cream/30">
+                    Central de Atendimento
+                  </div>
+                  <a
+                    href={`https://wa.me/${whatsappE164}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-flex items-center gap-2 font-body text-lg text-cream/70 transition-colors hover:text-gold-400"
+                  >
+                    {whatsappDisplay}{' '}
+                    <span className="text-sm text-gold-400">↗</span>
                   </a>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </motion.section>
 
-      {/* EQUIPE */}
+      {/* ================================================================= */}
+      {/* EQUIPE                                                              */}
+      {/* ================================================================= */}
       <motion.section
-        className="mx-auto max-w-7xl px-4 py-20 md:py-32 bg-slate-950"
         id="equipe"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.8, ease: 'easeOut' }}
+        className="mx-auto max-w-7xl px-4 py-24 md:py-36"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.08 }}
+        variants={stagger}
       >
         <SectionTitle
           kicker="Nossa Equipe"
           title="Profissionais Dedicados"
           desc="Uma estrutura coesa e organizada para garantir que a estratégia e o andamento do seu caso fluam com perfeição."
         />
-        <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {team.map((m) => {
-            const initials = m.name
-              .split(' ')
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((s) => s[0]!.toUpperCase())
-              .join('');
-            return (
-              <div key={m.name} className="group rounded-3xl border border-slate-800 bg-slate-900 p-6 transition-all hover:border-[#D4AF37]/30 hover:shadow-lg hover:shadow-[#D4AF37]/10">
-                <div className="flex items-center gap-4 mb-5">
-                  <div className="grid size-14 shrink-0 place-items-center rounded-full bg-slate-950 border border-slate-800 text-lg font-serif text-[#D4AF37] group-hover:scale-105 transition-transform">
-                    {initials}
-                  </div>
-                  <div>
-                    <div className="text-lg font-serif text-white">{m.name}</div>
-                    <div className="text-sm font-medium text-[#D4AF37]">{m.role}</div>
-                    {m.oab && <div className="text-xs text-slate-400 mt-0.5">{m.oab}</div>}
-                  </div>
-                </div>
-                <div className="text-sm leading-relaxed text-slate-300">{m.bio}</div>
-              </div>
-            );
-          })}
-        </div>
+
+        <motion.div
+          variants={stagger}
+          className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          {team.map((m) => (
+            <motion.div key={m.name} variants={itemFade}>
+              <TeamCard member={m} />
+            </motion.div>
+          ))}
+        </motion.div>
       </motion.section>
 
-      {/* TESTIMONIALS */}
-      <section className="mx-auto max-w-7xl px-4 pb-20 md:pb-32 bg-slate-950" id="avaliacoes">
-        <SectionTitle
-          kicker="DEPOIMENTOS"
-          title="O que dizem sobre nós"
-          desc="Opiniões de quem confiou em nosso trabalho. A satisfação de nossos clientes é o maior atestado da nossa competência."
-        />
+      {/* ================================================================= */}
+      {/* DEPOIMENTOS                                                         */}
+      {/* ================================================================= */}
+      <section id="avaliacoes" className="border-y border-white/5 py-24 md:py-32">
+        <motion.div
+          className="mx-auto max-w-7xl px-4"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
+          variants={stagger}
+        >
+          <SectionTitle
+            kicker="Depoimentos"
+            title="O que dizem sobre nós"
+            desc="Opiniões de quem confiou em nosso trabalho. A satisfação de nossos clientes é o maior atestado da nossa competência."
+          />
+        </motion.div>
 
-        <div className="mt-16 w-full flex-col items-center justify-center overflow-hidden flex">
-          <div className="group flex overflow-hidden p-2 [--gap:1.5rem] [gap:var(--gap)] flex-row [--duration:60s] w-full max-w-7xl relative">
-            <div className="flex shrink-0 justify-around [gap:var(--gap)] animate-marquee flex-row group-hover:[animation-play-state:paused] w-full">
-              {[...Array(3)].map((_, setIndex) =>
-                testimonials.map((t, i) => (
-                  <div key={`${setIndex}-${i}`} className="w-[350px] shrink-0 rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-[0_20px_40px_-15px_rgba(212,175,55,0.05)] transition-transform hover:-translate-y-1">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="grid size-12 place-items-center rounded-full bg-gradient-to-br from-amber-300/20 to-amber-100/5 text-amber-400 font-serif font-bold border border-amber-300/20">
-                        {t.initials}
-                      </div>
-                      <div>
-                        <div className="text-base font-bold text-white">{t.name}</div>
-                        <div className="text-base text-amber-400 flex gap-0.5 mt-0.5">
-                          {[...Array(t.rating)].map((_, r) => (
-                            <span key={r}>★</span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-lg text-slate-200 leading-relaxed italic font-light">"{t.text}"</p>
-                  </div>
-                )),
-              )}
+        {/* Infinite marquee — two duplicate divs for seamless loop */}
+        <div className="relative mt-16 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+          <div className="flex gap-4">
+            <div className="flex shrink-0 animate-marquee gap-4">
+              {testimonials.map((t, i) => (
+                <TestimonialCard key={`a-${i}`} {...t} />
+              ))}
             </div>
-
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-white to-transparent" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/4 bg-gradient-to-l from-white to-transparent" />
-          </div>
-          
-          <div className="mt-8 text-center">
-            <a href="https://g.page/r/YOUR_GOOGLE_MAPS_LINK_HERE/review" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-400 hover:text-amber-300 transition-colors">
-              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"></path><polygon points="9 9 9 14 14 9 9 9"></polygon></svg>
-              Avaliar no Google
-            </a>
+            <div className="flex shrink-0 animate-marquee gap-4" aria-hidden>
+              {testimonials.map((t, i) => (
+                <TestimonialCard key={`b-${i}`} {...t} />
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CONTATO */}
+      {/* ================================================================= */}
+      {/* CONTATO                                                             */}
+      {/* ================================================================= */}
       <motion.section
-        className="bg-slate-950 text-white"
         id="contato"
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.8, ease: 'easeOut' }}
+        className="mx-auto max-w-7xl px-4 py-24 md:py-36"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.08 }}
+        variants={stagger}
       >
-        <div className="mx-auto max-w-7xl px-4 py-20 md:py-32">
-          <div className="grid gap-12 md:grid-cols-2 lg:gap-24">
-            <div>
-              <div className="text-xs font-bold tracking-[0.3em] uppercase text-amber-300">Agende uma Consulta</div>
-              <h2 className="mt-4 text-4xl font-light tracking-tight md:text-5xl font-serif text-white">Fale com nossa<br/>equipe jurídica</h2>
-              <p className="mt-6 text-lg text-slate-300 font-light max-w-md">
-                Envie uma mensagem descrevendo brevemente seu cenário. Retornaremos com agilidade para analisar a viabilidade do atendimento.
-              </p>
+        <div className="grid gap-12 md:grid-cols-2 lg:gap-24">
+          {/* Left: contact info */}
+          <div>
+            <motion.span
+              variants={itemFade}
+              className="font-body text-[10px] font-semibold uppercase tracking-[0.35em] text-gold-400"
+            >
+              Agende uma Consulta
+            </motion.span>
+            <motion.h2
+              variants={itemFade}
+              className="mt-5 font-display text-4xl font-light italic leading-[1.1] text-cream md:text-5xl"
+            >
+              Fale com nossa<br />equipe jurídica
+            </motion.h2>
+            <motion.p
+              variants={itemFade}
+              className="mt-6 max-w-md font-body text-base font-light leading-relaxed text-cream/40"
+            >
+              Envie uma mensagem descrevendo brevemente seu cenário. Retornaremos com agilidade
+              para analisar a viabilidade do atendimento.
+            </motion.p>
 
-              <div className="mt-10 space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="mt-1 text-amber-400">✦</div>
-                  <div>
-                    <div className="font-semibold text-white">WhatsApp Direto</div>
-                    <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="text-amber-400 hover:text-amber-200 transition-colors block mt-1">
-                      {whatsappDisplay}
-                    </a>
+            <motion.div variants={stagger} className="mt-10 space-y-6">
+              <motion.div variants={itemFade} className="flex items-start gap-4">
+                <div className="mt-1 font-body text-gold-400">✦</div>
+                <div>
+                  <div className="font-body text-sm font-semibold text-cream/80">
+                    WhatsApp Direto
                   </div>
+                  <a
+                    href={`https://wa.me/${whatsappE164}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1 block font-body text-gold-400 transition-colors hover:text-gold-300"
+                  >
+                    {whatsappDisplay}
+                  </a>
                 </div>
-                
-                <div className="flex items-start gap-4">
-                  <div className="mt-1 text-amber-400">✦</div>
-                  <div>
-                    <div className="font-semibold text-white">Endereço Presencial</div>
-                    <a href={mapsUrl} target="_blank" rel="noreferrer" className="text-amber-400 hover:text-amber-200 transition-colors block mt-1 leading-relaxed">
-                      {address.line1}<br/>{address.line2}
-                    </a>
+              </motion.div>
+
+              <motion.div variants={itemFade} className="flex items-start gap-4">
+                <div className="mt-1 font-body text-gold-400">✦</div>
+                <div>
+                  <div className="font-body text-sm font-semibold text-cream/80">
+                    Endereço Presencial
                   </div>
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1 block font-body text-sm leading-relaxed text-gold-400 transition-colors hover:text-gold-300"
+                  >
+                    {address.line1}
+                    <br />
+                    {address.line2}
+                  </a>
                 </div>
-              </div>
-            </div>
-
-            <div className="relative">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.1),transparent_70%)]" />
-              <div className="relative rounded-[32px] border border-slate-800 bg-slate-900 p-8 backdrop-blur-sm sm:p-10">
-                <div className="text-2xl font-serif font-light mb-8 text-white">Acesso Restrito</div>
-                
-                <p className="text-slate-300 mb-8 text-sm leading-relaxed">
-                  Ambiente exclusivo para clientes e equipe técnica. Acompanhe processos, envie documentos e acesse prazos com total segurança e sigilo através da nossa plataforma.
-                </p>
-
-                <Link
-                  to="/app"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-200 to-white px-10 py-4 text-lg font-bold text-slate-950 shadow-2xl shadow-amber-400/30 transition-all hover:bg-amber-200 hover:text-slate-950 group"
-                >
-                  Entrar no Portal
-                  <span className="transition-transform group-hover:translate-x-1">→</span>
-                </Link>
-                
-                <div className="mt-6 text-center text-xs text-slate-400">
-                  Site com caráter exclusivamente informativo e institucional.
-                </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
+
+          {/* Right: restricted access card */}
+          <motion.div variants={itemFade} className="relative">
+            <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[radial-gradient(circle_at_50%_50%,rgba(201,169,110,0.08),transparent_65%)] blur-3xl" />
+            <div className="relative overflow-hidden rounded-3xl border border-gold-400/15 bg-[#0F0D0B] p-8 shadow-xl sm:p-10">
+              <div className="font-display text-2xl font-light italic text-cream/80">
+                Acesso Restrito
+              </div>
+              <p className="mt-4 font-body text-sm font-light leading-relaxed text-cream/35">
+                Ambiente exclusivo para clientes e equipe técnica. Acompanhe processos, envie
+                documentos e acesse prazos com total segurança e sigilo.
+              </p>
+              <Link
+                to="/app"
+                className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-gold-400 to-gold-300 px-10 py-4 font-body text-[11px] font-semibold uppercase tracking-[0.2em] text-luxury shadow-[0_0_32px_rgba(201,169,110,0.2)] transition-all hover:brightness-110 hover:shadow-[0_0_48px_rgba(201,169,110,0.35)] group"
+              >
+                Entrar no Portal
+                <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">
+                  →
+                </span>
+              </Link>
+              <div className="mt-5 text-center font-body text-[11px] text-cream/20">
+                Site com caráter exclusivamente informativo e institucional.
+              </div>
+            </div>
+          </motion.div>
         </div>
       </motion.section>
     </div>
