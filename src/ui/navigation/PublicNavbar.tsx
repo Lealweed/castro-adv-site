@@ -59,20 +59,20 @@ export function PublicNavbar() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-black/10 bg-[#fbfaf7]/80 backdrop-blur supports-[backdrop-filter]:bg-[#fbfaf7]/60">
+    <header className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/90 backdrop-blur supports-[backdrop-filter]:bg-slate-950/80">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
-          <div className="grid size-10 place-items-center overflow-hidden rounded-xl border border-black/10 bg-white">
+          <div className="grid size-10 place-items-center overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
             <img
               src="/brand/logo.jpg"
-              alt="Castro de Oliveira Advocacia"
+              alt="Castro e Oliveira Advocacia"
               className="h-full w-full object-cover"
               loading="eager"
             />
           </div>
           <div className="leading-tight">
-            <div className="text-sm font-semibold tracking-tight text-neutral-950">Castro de Oliveira</div>
-            <div className="text-xs text-neutral-600">Advocacia</div>
+            <div className="text-sm font-semibold tracking-tight text-white">Castro e Oliveira</div>
+            <div className="text-xs text-[#D4AF37]">Advocacia</div>
           </div>
         </Link>
 

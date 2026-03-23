@@ -92,14 +92,14 @@ const testimonials = [
 
 export function LandingPage() {
   return (
-    <div>
+    <div className="bg-slate-950">
       {/* HERO */}
       <section className="relative mx-auto max-w-7xl px-4 pb-16 pt-20 md:pb-32 md:pt-32">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,rgba(212,175,55,0.08),transparent_50%)]" />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,#D4AF37_0%,transparent_60%)]" />
         
         <div className="grid gap-16 md:grid-cols-2 md:items-center">
           <div className="relative z-10">
-            <div className="inline-flex items-center gap-3 rounded-full border border-gold/20 bg-gold/5 px-4 py-1.5 text-xs font-medium text-neutral-800 shadow-sm backdrop-blur-sm">
+            <div className="inline-flex items-center gap-3 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-1.5 text-xs font-medium text-white shadow-sm backdrop-blur-sm">
               <span className="relative flex size-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gold opacity-50"></span>
                 <span className="relative inline-flex size-2 rounded-full bg-gold"></span>
@@ -107,12 +107,12 @@ export function LandingPage() {
               {cityDisplay}
             </div>
 
-            <h1 className="mt-8 text-5xl font-light leading-[1.1] tracking-tight text-neutral-900 md:text-7xl font-serif">
-              Castro de Oliveira
-              <span className="block mt-2 font-medium text-transparent bg-clip-text bg-gradient-to-r from-gold to-[rgba(180,145,45,1)]">Advocacia</span>
+            <h1 className="mt-8 text-5xl font-light leading-[1.1] tracking-tight text-white md:text-7xl font-serif">
+              Castro e Oliveira
+              <span className="block mt-2 font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] to-amber-200">Advocacia</span>
             </h1>
 
-            <p className="mt-6 max-w-lg text-lg font-light leading-relaxed text-neutral-600">
+            <p className="mt-6 max-w-lg text-lg font-light leading-relaxed text-slate-300">
               Atendimento jurídico com padrão premium. Unimos o rigor técnico da advocacia à tecnologia para garantir clareza, organização e excelência.
             </p>
 
@@ -192,7 +192,7 @@ export function LandingPage() {
 
       {/* ÁREAS */}
       <motion.section
-        className="mx-auto max-w-7xl px-4 py-20 md:py-32"
+        className="mx-auto max-w-7xl px-4 py-20 md:py-32 bg-slate-950"
         id="areas"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -206,14 +206,14 @@ export function LandingPage() {
         />
         <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {areas.map((a) => (
-            <div key={a.title} className="group relative overflow-hidden rounded-3xl border border-neutral-100 bg-white p-8 transition-all hover:border-gold/30 hover:shadow-[0_20px_40px_-15px_rgba(212,175,55,0.1)]">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gold/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="text-xl font-serif text-neutral-900">{a.title}</div>
+            <div key={a.title} className="group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 p-8 transition-all hover:border-[#D4AF37]/40 hover:shadow-[0_20px_40px_-15px_rgba(212,175,55,0.08)]">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="text-xl font-serif text-white">{a.title}</div>
               <div className="mt-6 space-y-3">
                 {a.items.map((it) => (
                   <div key={it} className="flex items-start gap-3">
-                    <span className="mt-1.5 flex size-1.5 shrink-0 rounded-full bg-gold/60" />
-                    <span className="text-sm text-neutral-600 leading-relaxed">{it}</span>
+                    <span className="mt-1.5 flex size-1.5 shrink-0 rounded-full bg-[#D4AF37]/80" />
+                    <span className="text-sm text-slate-300 leading-relaxed">{it}</span>
                   </div>
                 ))}
               </div>
@@ -224,7 +224,7 @@ export function LandingPage() {
 
       {/* ESCRITÓRIO */}
       <motion.section
-        className="bg-neutral-50 border-y border-neutral-200/60"
+        className="bg-slate-950 border-y border-slate-800"
         id="escritorio"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -239,7 +239,7 @@ export function LandingPage() {
                 Princípios e<br/>Compromisso Ético
               </h2>
               <p className="mt-6 text-base text-neutral-600 leading-relaxed">
-                O Castro de Oliveira Advocacia foi fundado com o propósito de oferecer uma advocacia organizada, ágil e absolutamente transparente. 
+                O Castro e Oliveira Advocacia foi fundado com o propósito de oferecer uma advocacia organizada, ágil e absolutamente transparente. 
                 Rejeitamos promessas irreais de resultado; focamos no estudo profundo de cada caso e na comunicação assertiva.
               </p>
 
@@ -281,7 +281,7 @@ export function LandingPage() {
 
       {/* EQUIPE */}
       <motion.section
-        className="mx-auto max-w-7xl px-4 py-20 md:py-32"
+        className="mx-auto max-w-7xl px-4 py-20 md:py-32 bg-slate-950"
         id="equipe"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -302,18 +302,18 @@ export function LandingPage() {
               .map((s) => s[0]!.toUpperCase())
               .join('');
             return (
-              <div key={m.name} className="group rounded-3xl border border-neutral-100 bg-white p-6 transition-all hover:border-gold/20 hover:shadow-lg hover:shadow-neutral-900/5">
+              <div key={m.name} className="group rounded-3xl border border-slate-800 bg-slate-900 p-6 transition-all hover:border-[#D4AF37]/30 hover:shadow-lg hover:shadow-[#D4AF37]/10">
                 <div className="flex items-center gap-4 mb-5">
-                  <div className="grid size-14 shrink-0 place-items-center rounded-full bg-neutral-50 border border-neutral-100 text-lg font-serif text-gold group-hover:scale-105 transition-transform">
+                  <div className="grid size-14 shrink-0 place-items-center rounded-full bg-slate-950 border border-slate-800 text-lg font-serif text-[#D4AF37] group-hover:scale-105 transition-transform">
                     {initials}
                   </div>
                   <div>
-                    <div className="text-lg font-serif text-neutral-900">{m.name}</div>
-                    <div className="text-sm font-medium text-gold">{m.role}</div>
-                    {m.oab && <div className="text-xs text-neutral-400 mt-0.5">{m.oab}</div>}
+                    <div className="text-lg font-serif text-white">{m.name}</div>
+                    <div className="text-sm font-medium text-[#D4AF37]">{m.role}</div>
+                    {m.oab && <div className="text-xs text-slate-400 mt-0.5">{m.oab}</div>}
                   </div>
                 </div>
-                <div className="text-sm leading-relaxed text-neutral-600">{m.bio}</div>
+                <div className="text-sm leading-relaxed text-slate-300">{m.bio}</div>
               </div>
             );
           })}
@@ -321,7 +321,7 @@ export function LandingPage() {
       </motion.section>
 
       {/* TESTIMONIALS */}
-      <section className="mx-auto max-w-7xl px-4 pb-20 md:pb-32" id="avaliacoes">
+      <section className="mx-auto max-w-7xl px-4 pb-20 md:pb-32 bg-slate-950" id="avaliacoes">
         <SectionTitle
           kicker="DEPOIMENTOS"
           title="O que dizem sobre nós"
@@ -333,21 +333,21 @@ export function LandingPage() {
             <div className="flex shrink-0 justify-around [gap:var(--gap)] animate-marquee flex-row group-hover:[animation-play-state:paused] w-full">
               {[...Array(3)].map((_, setIndex) =>
                 testimonials.map((t, i) => (
-                  <div key={`${setIndex}-${i}`} className="w-[350px] shrink-0 rounded-3xl border border-neutral-100 bg-white p-6 shadow-[0_20px_40px_-15px_rgba(212,175,55,0.05)] transition-transform hover:-translate-y-1">
+                  <div key={`${setIndex}-${i}`} className="w-[350px] shrink-0 rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-[0_20px_40px_-15px_rgba(212,175,55,0.05)] transition-transform hover:-translate-y-1">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="grid size-12 place-items-center rounded-full bg-gradient-to-br from-gold/20 to-gold/5 text-gold font-serif font-semibold border border-gold/10">
+                      <div className="grid size-12 place-items-center rounded-full bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/5 text-[#D4AF37] font-serif font-semibold border border-[#D4AF37]/20">
                         {t.initials}
                       </div>
                       <div>
-                        <div className="text-sm font-semibold text-neutral-900">{t.name}</div>
-                        <div className="text-xs text-gold flex gap-0.5 mt-0.5">
+                        <div className="text-sm font-semibold text-white">{t.name}</div>
+                        <div className="text-xs text-[#D4AF37] flex gap-0.5 mt-0.5">
                           {[...Array(t.rating)].map((_, r) => (
                             <span key={r}>★</span>
                           ))}
                         </div>
                       </div>
                     </div>
-                    <p className="text-sm text-neutral-600 leading-relaxed italic">"{t.text}"</p>
+                    <p className="text-sm text-slate-300 leading-relaxed italic">"{t.text}"</p>
                   </div>
                 )),
               )}
@@ -368,7 +368,7 @@ export function LandingPage() {
 
       {/* CONTATO */}
       <motion.section
-        className="bg-neutral-950 text-white"
+        className="bg-slate-950 text-white"
         id="contato"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -379,8 +379,8 @@ export function LandingPage() {
           <div className="grid gap-12 md:grid-cols-2 lg:gap-24">
             <div>
               <div className="text-xs font-bold tracking-[0.3em] uppercase text-gold">Agende uma Consulta</div>
-              <h2 className="mt-4 text-4xl font-light tracking-tight md:text-5xl font-serif">Fale com nossa<br/>equipe jurídica</h2>
-              <p className="mt-6 text-lg text-neutral-400 font-light max-w-md">
+              <h2 className="mt-4 text-4xl font-light tracking-tight md:text-5xl font-serif text-white">Fale com nossa<br/>equipe jurídica</h2>
+              <p className="mt-6 text-lg text-slate-300 font-light max-w-md">
                 Envie uma mensagem descrevendo brevemente seu cenário. Retornaremos com agilidade para analisar a viabilidade do atendimento.
               </p>
 
@@ -389,7 +389,7 @@ export function LandingPage() {
                   <div className="mt-1 text-gold">✦</div>
                   <div>
                     <div className="font-semibold text-white">WhatsApp Direto</div>
-                    <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="text-neutral-400 hover:text-gold transition-colors block mt-1">
+                    <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="text-[#D4AF37] hover:text-amber-200 transition-colors block mt-1">
                       {whatsappDisplay}
                     </a>
                   </div>
@@ -399,7 +399,7 @@ export function LandingPage() {
                   <div className="mt-1 text-gold">✦</div>
                   <div>
                     <div className="font-semibold text-white">Endereço Presencial</div>
-                    <a href={mapsUrl} target="_blank" rel="noreferrer" className="text-neutral-400 hover:text-gold transition-colors block mt-1 leading-relaxed">
+                    <a href={mapsUrl} target="_blank" rel="noreferrer" className="text-[#D4AF37] hover:text-amber-200 transition-colors block mt-1 leading-relaxed">
                       {address.line1}<br/>{address.line2}
                     </a>
                   </div>
@@ -409,22 +409,22 @@ export function LandingPage() {
 
             <div className="relative">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.1),transparent_70%)]" />
-              <div className="relative rounded-[32px] border border-white/10 bg-white/5 p-8 backdrop-blur-sm sm:p-10">
-                <div className="text-2xl font-serif font-light mb-8">Acesso Restrito</div>
+              <div className="relative rounded-[32px] border border-slate-800 bg-slate-900 p-8 backdrop-blur-sm sm:p-10">
+                <div className="text-2xl font-serif font-light mb-8 text-white">Acesso Restrito</div>
                 
-                <p className="text-neutral-400 mb-8 text-sm leading-relaxed">
+                <p className="text-slate-300 mb-8 text-sm leading-relaxed">
                   Ambiente exclusivo para clientes e equipe técnica. Acompanhe processos, envie documentos e acesse prazos com total segurança e sigilo através da nossa plataforma.
                 </p>
 
                 <Link
                   to="/app"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-sm font-bold text-neutral-900 transition-all hover:bg-gold hover:text-white group"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#D4AF37] px-8 py-4 text-sm font-bold text-slate-950 transition-all hover:bg-amber-200 hover:text-slate-950 group"
                 >
                   Entrar no Portal
                   <span className="transition-transform group-hover:translate-x-1">→</span>
                 </Link>
                 
-                <div className="mt-6 text-center text-xs text-neutral-500">
+                <div className="mt-6 text-center text-xs text-slate-400">
                   Site com caráter exclusivamente informativo e institucional.
                 </div>
               </div>
