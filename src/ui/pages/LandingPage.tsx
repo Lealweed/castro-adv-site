@@ -337,7 +337,7 @@ export function LandingPage() {
                 >
                   Fale com a Equipe
                 </a>
-                <Link to="/app/portal" className={outlineBtn}>
+                <Link to="/portal" className={outlineBtn}>
                   Acessar Portal
                 </Link>
                 <Link to="/app" className={ghostBtn}>
@@ -425,7 +425,7 @@ export function LandingPage() {
                 {/* Card CTA */}
                 <div className="mt-6 border-t border-white/5 pt-6">
                   <Link
-                    to="/app/portal"
+                    to="/portal"
                     className="flex w-full items-center justify-center gap-2 rounded-full border border-gold-400/22 bg-gold-400/8 py-3 font-body text-[10px] uppercase tracking-[0.2em] text-gold-400 transition-all hover:bg-gold-400/16 hover:border-gold-400/40"
                   >
                     Acessar Portal →
