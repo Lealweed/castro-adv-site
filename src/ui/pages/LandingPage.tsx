@@ -277,6 +277,19 @@ export function LandingPage() {
           <div className="grid gap-16 lg:grid-cols-[1fr_400px] lg:items-center xl:grid-cols-[1fr_460px]">
             {/* ---- Left: Headline + CTA ---- */}
             <div>
+              {/* Kicker */}
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0.1 }}
+                className="mb-14 flex items-center gap-4"
+              >
+                <div className="h-px w-10 bg-gold-400/60" />
+                <span className="font-body text-[10px] font-semibold uppercase tracking-[0.38em] text-gold-400">
+                  Assessoria Jurídica de Alto Padrão
+                </span>
+              </motion.div>
+
               <h1 className="font-display text-[clamp(3.5rem,8vw,6.5rem)] font-light leading-[1.02] tracking-tight text-cream">
                 {(['Castro e', 'Oliveira'] as const).map((line, i) => (
                   <motion.span
