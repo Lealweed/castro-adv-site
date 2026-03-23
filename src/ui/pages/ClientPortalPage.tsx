@@ -1,43 +1,9 @@
-import { useEffect, useState, useRef } from 'react';
-import { Card } from '@/ui/widgets/Card';
-import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
-import { getDocumentDownloadUrl, uploadClientDocument, type DocumentRow } from '@/lib/documents';
-import { Download, Upload, FileText, CheckCircle, Clock } from 'lucide-react';
-
-type ClientCase = {
-  id: string;
-  title: string;
-  status: string;
-  process_number: string | null;
-  area: string | null;
-  court: string | null;
-  datajud_last_movement_text: string | null;
-  datajud_last_movement_at: string | null;
-  responsible_user_id: string | null;
-};
-
-export function ClientPortalPage() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  const [clientProfile, setClientProfile] = useState<any>(null);
-  const [cases, setCases] = useState<ClientCase[]>([]);
-  const [documents, setDocuments] = useState<DocumentRow[]>([]);
-  
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  async function load() {
-    setLoading(true);
-    setError(null);
-    try {
-      const sb = requireSupabase();
-      const user = await getAuthedUser();
-
-import { useEffect, useState, useRef } from 'react';
+// Duplicated block removed
+import { useState, useRef } from 'react';
 import { Card } from '@/ui/widgets/Card';
 import { getDocumentDownloadUrl, uploadClientDocument, type DocumentRow } from '@/lib/documents';
-import { Download, Upload, FileText, CheckCircle, Clock, Eye, EyeOff, LogOut, Folder, MessageCircle, Home, DollarSign } from 'lucide-react';
+import { Download, Upload, Eye, EyeOff, LogOut, Folder, MessageCircle, Home, DollarSign } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 
 export function ClientPortalPage() {
   // Login state
@@ -52,7 +18,7 @@ export function ClientPortalPage() {
   const [client, setClient] = useState<any>(null);
   const [tab, setTab] = useState<'home'|'files'|'finance'|'messages'>('home');
   const [loading, setLoading] = useState(false);
-  const [cases, setCases] = useState<any[]>([]);
+  // const [cases, setCases] = useState<any[]>([]); // Removido pois não é usado
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
@@ -67,7 +33,8 @@ export function ClientPortalPage() {
     setLoggingIn(true);
     setLoginError(null);
     try {
-      const sb = (await import('@/lib/supabaseClient')).supabaseClient;
+      const sb = supabase;
+      if (!sb) throw new Error('Supabase não configurado. Verifique as variáveis de ambiente.');
       const { data, error } = await sb.rpc('login_client_portal', { p_cpf: cpf.replace(/\D/g, ''), p_pin: pin });
       if (error || !data || !data.id) throw new Error('CPF ou PIN inválidos.');
       setClient(data);
@@ -83,14 +50,13 @@ export function ClientPortalPage() {
   async function loadDashboard(clientId: string) {
     setLoading(true);
     try {
-      const sb = (await import('@/lib/supabaseClient')).supabaseClient;
-      const [{ data: casesData }, { data: docsData }, { data: txData }, { data: msgData }] = await Promise.all([
-        sb.from('cases').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
+      const sb = supabase;
+      if (!sb) throw new Error('Supabase não configurado. Verifique as variáveis de ambiente.');
+      const [{ data: docsData }, { data: txData }, { data: msgData }] = await Promise.all([
         sb.from('documents').select('*').eq('client_id', clientId).eq('is_public', true).order('created_at', { ascending: false }),
         sb.from('finance_transactions').select('*').eq('client_id', clientId).order('due_date', { ascending: false }),
         sb.from('client_messages').select('*').eq('client_id', clientId).order('created_at', { ascending: true }),
       ]);
-      setCases(casesData || []);
       setDocuments(docsData || []);
       setTransactions(txData || []);
       setMessages(msgData || []);
@@ -131,7 +97,8 @@ export function ClientPortalPage() {
     if (!msgInput.trim() || !client) return;
     setSendingMsg(true);
     try {
-      const sb = (await import('@/lib/supabaseClient')).supabaseClient;
+      const sb = supabase;
+      if (!sb) throw new Error('Supabase não configurado. Verifique as variáveis de ambiente.');
       await sb.from('client_messages').insert({ client_id: client.id, message: msgInput.trim(), sender: 'client' });
       setMsgInput('');
       await loadDashboard(client.id);

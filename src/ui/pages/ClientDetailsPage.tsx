@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-
 import { Card } from '@/ui/widgets/Card';
 import { DocumentsSection } from '@/ui/widgets/DocumentsSection';
 import { ClientLinksSection } from '@/ui/widgets/ClientLinksSection';
 import { TimelineSection } from '@/ui/widgets/TimelineSection';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 import { sendWhatsAppText } from '@/lib/evolutionApi';
-import { brlToCents, centsToBRL, loadClientTransactions, type FinanceTx } from '@/lib/finance';
+import { centsToBRL, loadClientTransactions, type FinanceTx } from '@/lib/finance';
 
 function extractSourceFromNotes(notes: string | null) {
   if (!notes) return null;
   const m = notes.match(/\[#origem:([^\]]+)\]/i);
   return m?.[1]?.trim()?.toLowerCase() || null;
 }
+
 
 function cleanNotes(notes: string | null) {
   if (!notes) return null;
@@ -40,111 +40,12 @@ type CaseLite = {
   created_at: string;
 };
 
-type InstallmentCount =
-  | 1
-  | 2
-  | 3
-  | 4
-  | 5
-  | 6
-  | 7
-  | 8
-  | 9
-  | 10
-  | 11
-  | 12;
 
-function todayStr() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
-function addMonthsIso(dateIso: string, monthsToAdd: number): string {
-  const [y, m, d] = dateIso.split('-').map(Number);
-  const baseDate = new Date(Date.UTC(y, (m || 1) - 1, d || 1));
-  const originalDay = baseDate.getUTCDate();
 
-  const firstOfTargetMonth = new Date(Date.UTC(baseDate.getUTCFullYear(), baseDate.getUTCMonth() + monthsToAdd, 1));
-  const lastDayOfTargetMonth = new Date(
-    Date.UTC(firstOfTargetMonth.getUTCFullYear(), firstOfTargetMonth.getUTCMonth() + 1, 0),
-  ).getUTCDate();
-  firstOfTargetMonth.setUTCDate(Math.min(originalDay, lastDayOfTargetMonth));
-
-  const yy = firstOfTargetMonth.getUTCFullYear();
-  const mm = String(firstOfTargetMonth.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(firstOfTargetMonth.getUTCDate()).padStart(2, '0');
-  return `${yy}-${mm}-${dd}`;
-}
 
 export function ClientDetailsPage() {
-    // Mural
-    const [muralText, setMuralText] = useState('');
-    const [muralSaving, setMuralSaving] = useState(false);
-    useEffect(() => {
-      setMuralText(row?.notes || '');
-    }, [row]);
-
-    async function onSaveMural() {
-      if (!clientId) return;
-      setMuralSaving(true);
-      try {
-        const sb = requireSupabase();
-        await sb.from('clients').update({ notes: muralText }).eq('id', clientId);
-        setRow(prev => prev ? { ...prev, notes: muralText } : prev);
-      } finally {
-        setMuralSaving(false);
-      }
-    }
-
-    // Chat do Portal
-    const [chatMessages, setChatMessages] = useState<any[]>([]);
-    const [chatInput, setChatInput] = useState('');
-    const [chatLoading, setChatLoading] = useState(false);
-    const [chatSending, setChatSending] = useState(false);
-    useEffect(() => {
-      async function loadMsgs() {
-        if (!clientId) return;
-        setChatLoading(true);
-        try {
-          const sb = requireSupabase();
-          const { data } = await sb
-            .from('client_messages')
-            .select('id,created_at,message,sender')
-            .eq('client_id', clientId)
-            .order('created_at', { ascending: true });
-          setChatMessages(data || []);
-        } finally {
-          setChatLoading(false);
-        }
-      }
-      loadMsgs();
-    }, [clientId]);
-
-    async function sendChatMessage() {
-      if (!clientId || !chatInput.trim()) return;
-      setChatSending(true);
-      try {
-        const sb = requireSupabase();
-        await sb.from('client_messages').insert({
-          client_id: clientId,
-          message: chatInput.trim(),
-          sender: 'office',
-        });
-        setChatInput('');
-        // reload
-        const { data } = await sb
-          .from('client_messages')
-          .select('id,created_at,message,sender')
-          .eq('client_id', clientId)
-          .order('created_at', { ascending: true });
-        setChatMessages(data || []);
-      } finally {
-        setChatSending(false);
-      }
-    }
+  // Hooks e estados principais (ordem correta)
   const { clientId } = useParams();
   const [row, setRow] = useState<ClientRow | null>(null);
   const [cases, setCases] = useState<CaseLite[]>([]);
@@ -152,7 +53,6 @@ export function ClientDetailsPage() {
   const [createdByLabel, setCreatedByLabel] = useState<string>('—');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
@@ -160,16 +60,79 @@ export function ClientDetailsPage() {
   const [whatsapp, setWhatsapp] = useState('');
   const [email, setEmail] = useState('');
   const [notes, setNotes] = useState('');
-
+  const [muralText, setMuralText] = useState('');
+  const [muralSaving, setMuralSaving] = useState(false);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatSending, setChatSending] = useState(false);
   const [billingOpen, setBillingOpen] = useState(false);
-  const [billingSaving, setBillingSaving] = useState(false);
-  const [billingError, setBillingError] = useState<string | null>(null);
-  const [billingProgress, setBillingProgress] = useState<string | null>(null);
-
+  // Billing states necessários para feedback do usuário
+  // const [billingSaving, setBillingSaving] = useState(false);
+  // const [billingError, setBillingError] = useState<string | null>(null);
+  // const [billingProgress, setBillingProgress] = useState<string | null>(null);
   const [billingDescription, setBillingDescription] = useState('');
-  const [billingTotalAmount, setBillingTotalAmount] = useState('');
-  const [billingInstallments, setBillingInstallments] = useState<InstallmentCount>(1);
-  const [billingFirstDueDate, setBillingFirstDueDate] = useState(() => todayStr());
+  // const [billingTotalAmount, setBillingTotalAmount] = useState('');
+  // const [billingInstallments, setBillingInstallments] = useState<InstallmentCount>(1);
+  // const [billingFirstDueDate, setBillingFirstDueDate] = useState(() => todayStr());
+  // Efeitos e funções (após hooks)
+  useEffect(() => {
+    setMuralText(row?.notes || '');
+  }, [row]);
+
+  async function onSaveMural() {
+    if (!clientId) return;
+    setMuralSaving(true);
+    try {
+      const sb = requireSupabase();
+      await sb.from('clients').update({ notes: muralText }).eq('id', clientId);
+      setRow(prev => prev ? { ...prev, notes: muralText } : prev);
+    } finally {
+      setMuralSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    async function loadMsgs() {
+      if (!clientId) return;
+      setChatLoading(true);
+      try {
+        const sb = requireSupabase();
+        const { data } = await sb
+          .from('client_messages')
+          .select('id,created_at,message,sender')
+          .eq('client_id', clientId)
+          .order('created_at', { ascending: true });
+        setChatMessages(data || []);
+      } finally {
+        setChatLoading(false);
+      }
+    }
+    loadMsgs();
+  }, [clientId]);
+
+  async function sendChatMessage() {
+    if (!clientId || !chatInput.trim()) return;
+    setChatSending(true);
+    try {
+      const sb = requireSupabase();
+      await sb.from('client_messages').insert({
+        client_id: clientId,
+        message: chatInput.trim(),
+        sender: 'office',
+      });
+      setChatInput('');
+      // reload
+      const { data } = await sb
+        .from('client_messages')
+        .select('id,created_at,message,sender')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: true });
+      setChatMessages(data || []);
+    } finally {
+      setChatSending(false);
+    }
+  }
 
   useEffect(() => {
     let alive = true;
@@ -275,84 +238,14 @@ export function ClientDetailsPage() {
     }
   }
 
-  async function reloadClientTransactions() {
-    if (!clientId) return;
-    const tx = await loadClientTransactions(clientId);
-    setTransactions(tx);
-  }
 
-  async function onCreateInstallments() {
-    if (!clientId) return;
-    const description = billingDescription.trim();
-    if (!description) {
-      setBillingError('Informe a descrição.');
-      return;
-    }
-
-    const totalCents = brlToCents(billingTotalAmount);
-    if (totalCents === null || totalCents <= 0) {
-      setBillingError('Valor total inválido. Ex: 2500,00');
-      return;
-    }
-
-    if (!billingFirstDueDate) {
-      setBillingError('Informe a data do primeiro vencimento.');
-      return;
-    }
-
-    const installments = Number(billingInstallments);
-    const baseInstallment = Math.floor(totalCents / installments);
-    const remainder = totalCents % installments;
-
-    setBillingSaving(true);
-    setBillingError(null);
-    setBillingProgress('Gerando parcelas...');
-
-    try {
-      const sb = requireSupabase();
-      await getAuthedUser();
-
-      for (let index = 0; index < installments; index += 1) {
-        const parcela = index + 1;
-        const extra = parcela <= remainder ? 1 : 0;
-        const amountCents = baseInstallment + extra;
-        const dueDate = addMonthsIso(billingFirstDueDate, index);
-        setBillingProgress(`Gerando parcelas... ${parcela}/${installments}`);
-
-        const { error: insertErr } = await sb.from('finance_transactions').insert({
-          client_id: clientId,
-          type: 'income',
-          status: 'planned',
-          occurred_on: todayStr(),
-          due_date: dueDate,
-          description: installments > 1 ? `${description} (${parcela}/${installments})` : description,
-          amount_cents: amountCents,
-        } as any);
-
-        if (insertErr) throw new Error(insertErr.message);
-      }
-
-      setBillingOpen(false);
-      setBillingDescription('');
-      setBillingTotalAmount('');
-      setBillingInstallments(1);
-      setBillingFirstDueDate(todayStr());
-      setBillingProgress(null);
-      await reloadClientTransactions();
-    } catch (e: any) {
-      setBillingError(e?.message || 'Erro ao lançar honorários.');
-      setBillingProgress(null);
-    } finally {
-      setBillingSaving(false);
-    }
-  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Cliente</h1>
-          <p className="text-sm text-white/60">Detalhes (Supabase).</p>
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-white">Cliente</h1>
+            <p className="text-sm text-white/60">Detalhes (Supabase).</p>
         </div>
         <Link to="/app/clientes" className="btn-ghost">
           Voltar
@@ -399,7 +292,6 @@ export function ClientDetailsPage() {
           </div>
         </div>
       </Card>
-      </div>
 
       <Card>
         {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
@@ -618,53 +510,6 @@ export function ClientDetailsPage() {
                   placeholder="Ex: Honorários Processo X"
                 />
               </label>
-
-              <label className="text-sm text-white/80">
-                Valor Total (R$)
-                <input
-                  className="input"
-                  value={billingTotalAmount}
-                  onChange={(e) => setBillingTotalAmount(e.target.value)}
-                  placeholder="3000,00"
-                />
-              </label>
-
-              <label className="text-sm text-white/80">
-                Número de Parcelas
-                <select
-                  className="select"
-                  value={billingInstallments}
-                  onChange={(e) => setBillingInstallments(Number(e.target.value) as InstallmentCount)}
-                >
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>
-                      {n}x
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="text-sm text-white/80">
-                Data do Primeiro Vencimento
-                <input
-                  type="date"
-                  className="input"
-                  value={billingFirstDueDate}
-                  onChange={(e) => setBillingFirstDueDate(e.target.value)}
-                />
-              </label>
-            </div>
-
-            {billingError ? <div className="mt-3 text-sm text-red-200">{billingError}</div> : null}
-            {billingProgress ? <div className="mt-3 text-sm text-amber-200">{billingProgress}</div> : null}
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button className="btn-primary" disabled={billingSaving} onClick={() => void onCreateInstallments()}>
-                {billingSaving ? 'Salvando...' : 'Salvar'}
-              </button>
-              <button className="btn-ghost" disabled={billingSaving} onClick={() => setBillingOpen(false)}>
-                Cancelar
-              </button>
             </div>
           </div>
         </div>
