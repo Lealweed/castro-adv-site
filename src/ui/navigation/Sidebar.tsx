@@ -12,6 +12,7 @@ import {
   Sparkles,
   Users,
   HardDrive,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/ui/utils/cn';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
@@ -25,6 +26,7 @@ const items = [
   { to: '/app/financeiro', label: 'Financeiro', icon: Coins },
   { to: '/app/drive', label: 'Smart Drive', icon: HardDrive },
   { to: '/app/relatorios-ia', label: 'Relatórios com IA', icon: Sparkles },
+  { to: '/app/produtividade', label: 'Produtividade', icon: TrendingUp },
   { to: '/app/portal', label: 'Portal do Cliente', icon: Building2 },
   { to: '/app/configuracoes', label: 'Configurações', icon: Cog },
 ];

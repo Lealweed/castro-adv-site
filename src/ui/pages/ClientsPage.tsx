@@ -39,6 +39,7 @@ export function ClientsPage() {
   const [newPhone, setNewPhone] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [newSourceChannel, setNewSourceChannel] = useState<'advogado' | 'recepcao' | 'web' | 'indicacao' | 'outro'>('recepcao');
+  const [newPortalPin, setNewPortalPin] = useState('');
 
   // novos campos pessoais
   const [newRg, setNewRg] = useState('');
@@ -159,6 +160,7 @@ export function ClientsPage() {
 
     setAvatarFile(null);
     setAvatarPreview(null);
+    setNewPortalPin('');
   }
 
   async function onCreate() {
@@ -233,6 +235,7 @@ export function ClientsPage() {
         address_neighborhood: neighborhood.trim() || null,
         address_city: city.trim() || null,
         address_state: stateUf.trim() || null,
+        portal_pin: newPortalPin.trim() || null,
       };
 
       if (personType === 'pf') {
@@ -446,6 +449,18 @@ export function ClientsPage() {
               <label className="text-sm text-white/80 md:col-span-2">
                 Observações
                 <textarea className="input min-h-[84px]" value={newNotes} onChange={(e) => setNewNotes(e.target.value)} />
+              </label>
+
+              <label className="text-sm text-white/80">
+                Senha do Portal (PIN)
+                <input
+                  className="input"
+                  value={newPortalPin}
+                  onChange={(e) => setNewPortalPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="PIN numérico (até 6 dígitos)"
+                  inputMode="numeric"
+                  maxLength={6}
+                />
               </label>
 
               <div className="md:col-span-2">

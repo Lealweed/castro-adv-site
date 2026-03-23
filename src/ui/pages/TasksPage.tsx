@@ -709,6 +709,13 @@ export function TasksPage() {
                         <Link to={`/app/tarefas/${t.id}`} className="text-sm font-semibold text-white hover:underline">
                           {t.title}
                         </Link>
+                        <Link
+                          to={`/app/tarefas/${t.id}/editar`}
+                          className="ml-2 text-xs text-blue-300 hover:underline flex items-center gap-1"
+                          title="Editar tarefa"
+                        >
+                          <span role="img" aria-label="Editar">✏️</span> Editar
+                        </Link>
                         {isAdmin && t.task_group_id ? (
                           <Link
                             to={`/app/tarefas/lote/${t.task_group_id}`}

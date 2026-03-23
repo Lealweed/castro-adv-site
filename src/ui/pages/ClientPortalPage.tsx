@@ -34,242 +34,268 @@ export function ClientPortalPage() {
       const sb = requireSupabase();
       const user = await getAuthedUser();
 
-      // Find client record bound to this auth user
-      const { data: client, error: cErr } = await sb
-        .from('clients')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+import { useEffect, useState, useRef } from 'react';
+import { Card } from '@/ui/widgets/Card';
+import { getDocumentDownloadUrl, uploadClientDocument, type DocumentRow } from '@/lib/documents';
+import { Download, Upload, FileText, CheckCircle, Clock, Eye, EyeOff, LogOut, Folder, MessageCircle, Home, DollarSign } from 'lucide-react';
 
-      if (cErr) throw new Error(cErr.message);
-      
-      if (!client) {
-        setClientProfile(null);
-        setLoading(false);
-        return;
-      }
-      
-      setClientProfile(client);
+export function ClientPortalPage() {
+  // Login state
+  const [step, setStep] = useState<'login'|'dashboard'>('login');
+  const [cpf, setCpf] = useState('');
+  const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [loginError, setLoginError] = useState<string|null>(null);
+  const [loggingIn, setLoggingIn] = useState(false);
 
-      // Fetch cases
-      const { data: caseData } = await sb
-        .from('cases')
-        .select('id, title, status, process_number, area, court, datajud_last_movement_text, datajud_last_movement_at, responsible_user_id')
-        .eq('client_id', client.id)
-        .order('created_at', { ascending: false });
-        
-      setCases((caseData || []) as ClientCase[]);
+  // Dashboard state
+  const [client, setClient] = useState<any>(null);
+  const [tab, setTab] = useState<'home'|'files'|'finance'|'messages'>('home');
+  const [loading, setLoading] = useState(false);
+  const [cases, setCases] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<DocumentRow[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [msgInput, setMsgInput] = useState('');
+  const [sendingMsg, setSendingMsg] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
-      // Fetch public documents only
-      const { data: docData } = await sb
-        .from('documents')
-        .select('*')
-        .eq('client_id', client.id)
-        .eq('is_public', true)
-        .order('created_at', { ascending: false });
-
-      setDocuments((docData || []) as DocumentRow[]);
-      
-      setLoading(false);
+  // Login handler
+  async function handleLogin(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    setLoggingIn(true);
+    setLoginError(null);
+    try {
+      const sb = (await import('@/lib/supabaseClient')).supabaseClient;
+      const { data, error } = await sb.rpc('login_client_portal', { p_cpf: cpf.replace(/\D/g, ''), p_pin: pin });
+      if (error || !data || !data.id) throw new Error('CPF ou PIN inválidos.');
+      setClient(data);
+      setStep('dashboard');
+      await loadDashboard(data.id);
     } catch (err: any) {
-      setError(err?.message || 'Falha ao carregar portal do cliente.');
+      setLoginError(err.message || 'Falha no login.');
+    } finally {
+      setLoggingIn(false);
+    }
+  }
+
+  async function loadDashboard(clientId: string) {
+    setLoading(true);
+    try {
+      const sb = (await import('@/lib/supabaseClient')).supabaseClient;
+      const [{ data: casesData }, { data: docsData }, { data: txData }, { data: msgData }] = await Promise.all([
+        sb.from('cases').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
+        sb.from('documents').select('*').eq('client_id', clientId).eq('is_public', true).order('created_at', { ascending: false }),
+        sb.from('finance_transactions').select('*').eq('client_id', clientId).order('due_date', { ascending: false }),
+        sb.from('client_messages').select('*').eq('client_id', clientId).order('created_at', { ascending: true }),
+      ]);
+      setCases(casesData || []);
+      setDocuments(docsData || []);
+      setTransactions(txData || []);
+      setMessages(msgData || []);
+    } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function handleDownload(doc: DocumentRow) {
-    try {
-      const url = await getDocumentDownloadUrl(doc.file_path);
-      window.open(url, '_blank', 'noopener,noreferrer');
-    } catch (err: any) {
-      alert('Falha ao gerar link de download: ' + err.message);
-    }
+  function handleLogout() {
+    setStep('login');
+    setClient(null);
+    setCpf('');
+    setPin('');
+    setTab('home');
+    setLoginError(null);
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !clientProfile) return;
-
+    if (!file || !client) return;
     setUploading(true);
     try {
-      // Documentos enviados pelo cliente ficam públicos por padrão (para ele mesmo ver)
       await uploadClientDocument({
-        clientId: clientProfile.id,
+        clientId: client.id,
         kind: 'personal',
         title: `Enviado pelo cliente: ${file.name}`,
         file,
-        isPublic: true, 
+        isPublic: true,
       });
-      
-      alert('Documento enviado com sucesso para seu advogado!');
       if (fileInputRef.current) fileInputRef.current.value = '';
-      await load();
-    } catch (err: any) {
-      alert('Erro ao enviar: ' + err.message);
+      await loadDashboard(client.id);
     } finally {
       setUploading(false);
     }
   }
 
-  if (loading) {
-    return <div className="p-10 text-center text-white/50 animate-pulse">Carregando sua área exclusiva...</div>;
+  async function sendMessage() {
+    if (!msgInput.trim() || !client) return;
+    setSendingMsg(true);
+    try {
+      const sb = (await import('@/lib/supabaseClient')).supabaseClient;
+      await sb.from('client_messages').insert({ client_id: client.id, message: msgInput.trim(), sender: 'client' });
+      setMsgInput('');
+      await loadDashboard(client.id);
+    } finally {
+      setSendingMsg(false);
+    }
   }
 
-  if (error) {
-    return <div className="p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-200">{error}</div>;
-  }
-
-  if (!clientProfile) {
+  // UI
+  if (step === 'login') {
     return (
-      <div className="flex flex-col items-center justify-center p-16 text-center space-y-4">
-        <FileText className="w-16 h-16 text-amber-500/50" />
-        <h2 className="text-2xl font-bold text-white">Bem-vindo ao Portal</h2>
-        <p className="text-white/60 max-w-md">
-          Seu e-mail ainda não foi vinculado a uma ficha de cliente pelo escritório. 
-          Entre em contato com seu advogado para liberar o acesso aos seus processos e documentos.
-        </p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-950 to-neutral-950 p-4">
+        <Card className="max-w-xs w-full p-6 space-y-6 bg-white/5 border-white/10">
+          <h2 className="text-xl font-bold text-white mb-2 text-center">Acesso ao Portal do Cliente</h2>
+          <form className="space-y-4" onSubmit={handleLogin} autoComplete="off">
+            <div>
+              <label className="block text-xs text-white/70 mb-1">CPF</label>
+              <input
+                className="input w-full text-lg tracking-widest"
+                value={cpf}
+                onChange={e => setCpf(e.target.value.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4').slice(0,14))}
+                placeholder="000.000.000-00"
+                inputMode="numeric"
+                maxLength={14}
+                required
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-white/70 mb-1">PIN de Acesso</label>
+              <div className="relative flex items-center">
+                <input
+                  className="input w-full text-lg tracking-widest pr-10"
+                  type={showPin ? 'text' : 'password'}
+                  value={pin}
+                  onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0,6))}
+                  placeholder="PIN numérico"
+                  inputMode="numeric"
+                  maxLength={6}
+                  required
+                />
+                <button type="button" className="absolute right-2 text-white/60" tabIndex={-1} onClick={() => setShowPin(v => !v)}>
+                  {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+            {loginError ? <div className="text-xs text-red-300 text-center">{loginError}</div> : null}
+            <button type="submit" className="btn-primary w-full mt-2" disabled={loggingIn}>{loggingIn ? 'Entrando...' : 'Entrar'}</button>
+          </form>
+        </Card>
       </div>
     );
   }
 
+  // Dashboard
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Olá, {clientProfile.name.split(' ')[0]}</h1>
-        <p className="text-sm text-white/60">Acompanhe o andamento dos seus processos e gerencie seus documentos de forma segura.</p>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Lado Esquerdo: Processos e Casos */}
-        <div className="lg:col-span-2 space-y-6">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-emerald-400" />
-            Seus Processos Ativos
-          </h2>
-
-          {cases.length === 0 ? (
-            <Card className="p-8 text-center border-dashed">
-              <p className="text-white/50">Você ainda não possui processos registrados no sistema.</p>
-            </Card>
-          ) : (
-            cases.map(kase => (
-              <Card key={kase.id} className="overflow-hidden p-0 border-white/10 hover:border-white/20 transition-colors">
-                <div className="p-5 border-b border-white/5 bg-white/[0.02]">
-                  <div className="flex justify-between items-start gap-4">
-                    <div>
-                      <h3 className="font-bold text-lg text-white">{kase.title}</h3>
-                      <p className="text-sm text-amber-200 font-mono mt-1">
-                        CNJ: {kase.process_number || 'Aguardando distribuição'}
-                      </p>
-                    </div>
-                    <span className="badge border-blue-500/30 bg-blue-500/10 text-blue-300 px-3 py-1">
-                      {kase.status}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="p-5 grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <div className="text-xs text-white/40 uppercase tracking-wider font-semibold mb-1">Vara / Tribunal</div>
-                    <div className="text-sm text-white/80">{kase.court || 'Não informado'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-white/40 uppercase tracking-wider font-semibold mb-1">Área</div>
-                    <div className="text-sm text-white/80">{kase.area || 'Não informada'}</div>
-                  </div>
-                </div>
-
-                {/* Movimentação DataJud (se houver) */}
-                {kase.datajud_last_movement_text && (
-                  <div className="bg-black/40 p-5 border-t border-white/5">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="w-4 h-4 text-white/40" />
-                      <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">Última Movimentação Oficial</span>
-                    </div>
-                    <p className="text-sm text-white/80 leading-relaxed border-l-2 border-amber-500/50 pl-3">
-                      {kase.datajud_last_movement_text}
-                    </p>
-                    <p className="text-[11px] text-white/40 mt-2">
-                      Data do movimento: {kase.datajud_last_movement_at ? new Date(kase.datajud_last_movement_at).toLocaleDateString() : '—'}
-                    </p>
-                  </div>
-                )}
-              </Card>
-            ))
-          )}
+    <div className="min-h-screen bg-gradient-to-br from-blue-950 to-neutral-950 flex flex-col">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/30">
+        <div className="flex items-center gap-2">
+          <span className="text-white font-bold text-lg">Portal do Cliente</span>
         </div>
-
-        {/* Lado Direito: Documentos Seguros */}
-        <div className="space-y-6">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-400" />
-            Seus Documentos
-          </h2>
-
-          <Card className="bg-blue-950/10 border-blue-500/20">
-            <div className="text-sm font-semibold text-white mb-2">Enviar para o Advogado</div>
-            <p className="text-xs text-white/60 mb-4">
-              Faça upload de fotos de RG, comprovantes de endereço ou provas (PDF, JPG, PNG).
-            </p>
-            
-            <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-blue-500/30 rounded-xl hover:bg-blue-500/5 hover:border-blue-500/50 transition-colors cursor-pointer relative">
-              {uploading ? (
-                <span className="text-sm text-blue-300 font-semibold animate-pulse">Enviando cofre...</span>
-              ) : (
-                <>
-                  <Upload className="w-6 h-6 text-blue-400 mb-2" />
-                  <span className="text-xs font-semibold text-blue-200">Toque para selecionar</span>
-                </>
-              )}
-              <input 
-                ref={fileInputRef}
-                type="file" 
-                className="hidden" 
-                onChange={handleUpload}
-                disabled={uploading}
-                accept="image/*,application/pdf"
-              />
-            </label>
+        <button onClick={handleLogout} className="btn-ghost flex items-center gap-1 text-xs"><LogOut className="w-4 h-4" /> Sair</button>
+      </header>
+      <nav className="flex justify-around border-b border-white/10 bg-black/20">
+        <button className={`flex-1 py-3 flex flex-col items-center gap-1 ${tab==='home'?'text-blue-400 font-bold':'text-white/60'}`} onClick={()=>setTab('home')}><Home className="w-5 h-5" />Início</button>
+        <button className={`flex-1 py-3 flex flex-col items-center gap-1 ${tab==='files'?'text-blue-400 font-bold':'text-white/60'}`} onClick={()=>setTab('files')}><Folder className="w-5 h-5" />Arquivos</button>
+        <button className={`flex-1 py-3 flex flex-col items-center gap-1 ${tab==='finance'?'text-blue-400 font-bold':'text-white/60'}`} onClick={()=>setTab('finance')}><DollarSign className="w-5 h-5" />Financeiro</button>
+        <button className={`flex-1 py-3 flex flex-col items-center gap-1 ${tab==='messages'?'text-blue-400 font-bold':'text-white/60'}`} onClick={()=>setTab('messages')}><MessageCircle className="w-5 h-5" />Mensagens</button>
+      </nav>
+      <main className="flex-1 p-4 max-w-2xl w-full mx-auto">
+        {loading ? <div className="text-center text-white/50 animate-pulse">Carregando...</div> : null}
+        {!loading && tab==='home' && (
+          <Card className="mb-4">
+            <div className="text-lg font-bold text-white mb-2">Bem-vindo, {client?.name?.split(' ')[0]}</div>
+            <div className="text-sm text-white/80 whitespace-pre-wrap">{client?.notes || 'Nenhuma anotação disponível.'}</div>
           </Card>
-
-          <Card className="p-0 overflow-hidden">
-            <div className="p-4 border-b border-white/5 font-semibold text-sm">
-              Disponibilizados pelo Escritório
-            </div>
-            
-            {documents.length === 0 ? (
-              <div className="p-6 text-center text-xs text-white/50">
-                Nenhum documento compartilhado com você no momento.
-              </div>
-            ) : (
-              <div className="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
-                {documents.map((doc) => (
-                  <div key={doc.id} className="p-4 hover:bg-white/[0.02] transition-colors flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-white truncate" title={doc.title}>{doc.title}</p>
-                      <p className="text-[10px] text-white/40 mt-1">
-                        {new Date(doc.created_at).toLocaleDateString()} 
-                        {doc.size_bytes ? ` • ${(doc.size_bytes / 1024 / 1024).toFixed(2)}MB` : ''}
-                      </p>
+        )}
+        {!loading && tab==='files' && (
+          <>
+            <Card className="mb-4">
+              <div className="text-sm font-semibold text-white mb-2">Enviar documento</div>
+              <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-blue-500/30 rounded-xl hover:bg-blue-500/5 hover:border-blue-500/50 transition-colors cursor-pointer relative">
+                {uploading ? (
+                  <span className="text-sm text-blue-300 font-semibold animate-pulse">Enviando...</span>
+                ) : (
+                  <>
+                    <Upload className="w-6 h-6 text-blue-400 mb-2" />
+                    <span className="text-xs font-semibold text-blue-200">Toque para selecionar</span>
+                  </>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleUpload}
+                  disabled={uploading}
+                  accept="image/*,application/pdf"
+                />
+              </label>
+            </Card>
+            <Card className="p-0 overflow-hidden">
+              <div className="p-4 border-b border-white/5 font-semibold text-sm">Seus Arquivos</div>
+              {documents.length === 0 ? (
+                <div className="p-6 text-center text-xs text-white/50">Nenhum documento enviado.</div>
+              ) : (
+                <div className="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
+                  {documents.map((doc) => (
+                    <div key={doc.id} className="p-4 hover:bg-white/[0.02] transition-colors flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white truncate" title={doc.title}>{doc.title}</p>
+                        <p className="text-[10px] text-white/40 mt-1">{new Date(doc.created_at).toLocaleDateString()} {doc.size_bytes ? ` • ${(doc.size_bytes / 1024 / 1024).toFixed(2)}MB` : ''}</p>
+                      </div>
+                      <button onClick={async()=>{
+                        const url = await getDocumentDownloadUrl(doc.file_path);
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                      }} className="shrink-0 w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-amber-400 hover:text-black transition-colors" title="Baixar arquivo">
+                        <Download className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button 
-                      onClick={() => handleDownload(doc)}
-                      className="shrink-0 w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-amber-400 hover:text-black transition-colors"
-                      title="Baixar arquivo"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </>
+        )}
+        {!loading && tab==='finance' && (
+          <Card>
+            <div className="text-lg font-bold text-white mb-2">Financeiro</div>
+            {transactions.length === 0 ? (
+              <div className="text-sm text-white/60">Nenhuma movimentação financeira encontrada.</div>
+            ) : (
+              <div className="divide-y divide-white/10">
+                {transactions.map((tx:any) => (
+                  <div key={tx.id} className="py-3 flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-white text-sm">{tx.description}</div>
+                      <div className="text-xs text-white/50">Vencimento: {tx.due_date ? new Date(tx.due_date).toLocaleDateString() : '—'}</div>
+                    </div>
+                    <div className={`text-right font-bold ${tx.type==='income'?'text-emerald-400':'text-red-300'}`}>{(tx.amount_cents/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
                   </div>
                 ))}
               </div>
             )}
           </Card>
-        </div>
-      </div>
+        )}
+        {!loading && tab==='messages' && (
+          <Card>
+            <div className="text-lg font-bold text-white mb-2">Mensagens</div>
+            <div className="flex flex-col gap-2 max-h-64 overflow-y-auto mb-2">
+              {messages.length === 0 ? <div className="text-xs text-white/40">Nenhuma mensagem.</div> : null}
+              {messages.map((msg:any) => (
+                <div key={msg.id} className={`text-xs px-2 py-1 rounded ${msg.sender==='client'?'bg-blue-900/40 text-blue-200 self-end':'bg-white/10 text-white/80 self-start'}`}>
+                  <span className="font-semibold">{msg.sender==='client'?'Você':'Escritório'}:</span> {msg.message}
+                  <span className="ml-2 text-[10px] text-white/40">{new Date(msg.created_at).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-2">
+              <input className="input flex-1" value={msgInput} onChange={e=>setMsgInput(e.target.value)} placeholder="Mensagem..." />
+              <button onClick={sendMessage} disabled={sendingMsg || !msgInput.trim()} className="btn-primary !px-3 !py-1.5 text-xs">{sendingMsg ? 'Enviando...' : 'Enviar'}</button>
+            </div>
+          </Card>
+        )}
+      </main>
     </div>
   );
 }

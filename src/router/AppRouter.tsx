@@ -1,3 +1,4 @@
+const ProductivityPage = lazy(() => import('@/ui/pages/ProductivityPage').then((m) => ({ default: m.ProductivityPage })));
 import { Suspense, lazy } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
@@ -81,6 +82,7 @@ export function AppRouter() {
               <Route path="/app/financeiro/:txId" element={<FinanceTxDetailsPage />} />
 
               <Route path="/app/relatorios-ia" element={<AiReportsPage />} />
+              <Route path="/app/produtividade" element={<ProductivityPage />} />
               <Route path="/app/drive" element={<DrivePage />} />
               <Route path="/app/publicacoes" element={<PublicationsPage />} />
               <Route path="/app/portal" element={<ClientPortalPage />} />

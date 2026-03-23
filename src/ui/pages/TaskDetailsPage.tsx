@@ -51,6 +51,12 @@ function fmtDT(iso: string | null) {
 }
 
 export function TaskDetailsPage() {
+    const [editMode, setEditMode] = useState(false);
+    const [editTitle, setEditTitle] = useState('');
+    const [editDescription, setEditDescription] = useState('');
+    const [editPriority, setEditPriority] = useState('medium');
+    const [editDueAt, setEditDueAt] = useState('');
+    const [savingEdit, setSavingEdit] = useState(false);
   const { taskId } = useParams();
   const [sp] = useSearchParams();
   const [row, setRow] = useState<TaskRow | null>(null);
@@ -256,6 +262,15 @@ export function TaskDetailsPage() {
   }, [taskId]);
 
   useEffect(() => {
+    if (row && editMode) {
+      setEditTitle(row.title || '');
+      setEditDescription(row.description || '');
+      setEditPriority(row.priority || 'medium');
+      setEditDueAt(row.due_at ? new Date(row.due_at).toISOString().slice(0, 16) : '');
+    }
+  }, [row, editMode]);
+
+  useEffect(() => {
     if (sp.get('delegate') === '1') setDelegateOpen(true);
   }, [sp]);
 
@@ -269,27 +284,114 @@ export function TaskDetailsPage() {
         <Link to="/app/tarefas" className="btn-ghost">
           Voltar
         </Link>
+        {!loading && row ? (
+          <button
+            className="btn-ghost ml-2"
+            onClick={() => setEditMode((v) => !v)}
+          >
+            {editMode ? 'Cancelar Edição' : '✏️ Editar'}
+          </button>
+        ) : null}
       </div>
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
 
       <Card>
         {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
-
-        {!loading && row ? (
+        {!loading && row && editMode ? (
+          <form
+            className="grid gap-4"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setSavingEdit(true);
+              setError(null);
+              try {
+                const sb = requireSupabase();
+                await getAuthedUser();
+                await sb
+                  .from('tasks')
+                  .update({
+                    title: editTitle,
+                    description: editDescription,
+                    priority: editPriority,
+                    due_at: editDueAt ? new Date(editDueAt).toISOString() : null,
+                  })
+                  .eq('id', row.id);
+                setEditMode(false);
+                setSavingEdit(false);
+                await load();
+              } catch (e: any) {
+                setError(e?.message || 'Falha ao salvar alterações.');
+                setSavingEdit(false);
+              }
+            }}
+          >
+            <div>
+              <div className="text-xs text-white/50">Título</div>
+              <input
+                className="input w-full"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <div className="text-xs text-white/50">Descrição</div>
+              <textarea
+                className="input w-full min-h-[60px]"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <div>
+                <div className="text-xs text-white/50">Status</div>
+                <div className="text-sm text-white/80">{row.status_v2 || '—'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-white/50">Prioridade</div>
+                <select
+                  className="select"
+                  value={editPriority}
+                  onChange={(e) => setEditPriority(e.target.value)}
+                >
+                  <option value="low">Baixa</option>
+                  <option value="medium">Média</option>
+                  <option value="high">Alta</option>
+                </select>
+              </div>
+              <div>
+                <div className="text-xs text-white/50">Prazo</div>
+                <input
+                  type="datetime-local"
+                  className="input"
+                  value={editDueAt}
+                  onChange={(e) => setEditDueAt(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3 mt-2">
+              <button type="submit" className="btn-primary" disabled={savingEdit}>
+                {savingEdit ? 'Salvando…' : 'Salvar Alterações'}
+              </button>
+              <button type="button" className="btn-ghost" onClick={() => setEditMode(false)} disabled={savingEdit}>
+                Cancelar
+              </button>
+            </div>
+          </form>
+        ) : null}
+        {!loading && row && !editMode ? (
           <div className="grid gap-4">
             <div>
               <div className="text-xs text-white/50">Título</div>
               <div className="text-lg font-semibold text-white">{row.title}</div>
             </div>
-
             {row.description ? (
               <div>
                 <div className="text-xs text-white/50">Descrição</div>
                 <div className="text-sm text-white/80">{row.description}</div>
               </div>
             ) : null}
-
             <div className="grid gap-3 md:grid-cols-3">
               <div>
                 <div className="text-xs text-white/50">Status</div>
@@ -304,7 +406,6 @@ export function TaskDetailsPage() {
                 <div className="text-sm text-white/80">{fmtDT(row.due_at)}</div>
               </div>
             </div>
-
             <div className="grid gap-3 md:grid-cols-2">
               <div>
                 <div className="text-xs text-white/50">Cliente</div>
@@ -327,9 +428,7 @@ export function TaskDetailsPage() {
                 )}
               </div>
             </div>
-
             <div className="text-xs text-white/40">Criada em: {fmtDT(row.created_at)}</div>
-
             {isAdmin ? (
               <div className="flex flex-wrap items-center gap-2">
                 <button className="btn-ghost" onClick={() => setDelegateOpen((v) => !v)}>
@@ -337,12 +436,10 @@ export function TaskDetailsPage() {
                 </button>
               </div>
             ) : null}
-
             {isAdmin && delegateOpen ? (
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="text-sm font-semibold text-white">Delegar tarefa</div>
                 <div className="mt-1 text-xs text-white/60">Atribui a tarefa para outro membro e registra na caixa de saída.</div>
-
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                   <label className="text-sm text-white/80">
                     Delegar para
@@ -356,7 +453,6 @@ export function TaskDetailsPage() {
                     </select>
                   </label>
                 </div>
-
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button className="btn-primary" disabled={delegating} onClick={() => void onDelegate()}>
                     {delegating ? 'Delegando…' : 'Confirmar delegação'}

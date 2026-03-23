@@ -9,6 +9,7 @@ export type FinanceCategory = {
 export type FinanceTx = {
   id: string;
   user_id: string;
+  client_id: string | null;
   type: 'income' | 'expense' | string;
   status: 'planned' | 'paid' | 'cancelled' | string;
   occurred_on: string;
@@ -43,11 +44,28 @@ export async function listFinanceTx(limit = 50): Promise<FinanceTx[]> {
   const { data, error } = await sb
     .from('finance_transactions')
     .select(
-      'id,user_id,type,status,occurred_on,due_date,description,amount_cents,payment_method,notes,reminder_1d_sent_at,category_id,category:finance_categories(name),created_at',
+      'id,user_id,client_id,type,status,occurred_on,due_date,description,amount_cents,payment_method,notes,reminder_1d_sent_at,category_id,category:finance_categories(name),created_at',
     )
     .order('occurred_on', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(limit);
+  if (error) throw new Error(error.message);
+  return (data || []) as FinanceTx[];
+}
+
+export async function loadClientTransactions(clientId: string): Promise<FinanceTx[]> {
+  const sb = requireSupabase();
+  await getAuthedUser();
+
+  const { data, error } = await sb
+    .from('finance_transactions')
+    .select(
+      'id,user_id,client_id,type,status,occurred_on,due_date,description,amount_cents,payment_method,notes,reminder_1d_sent_at,category_id,category:finance_categories(name),created_at',
+    )
+    .eq('client_id', clientId)
+    .order('due_date', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: true });
+
   if (error) throw new Error(error.message);
   return (data || []) as FinanceTx[];
 }
