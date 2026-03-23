@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 import { ShimmerButton } from '@/ui/primitives/ShimmerButton';
 
@@ -117,14 +118,23 @@ export function LandingPage() {
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row items-center">
               <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="w-full sm:w-auto">
-                <ShimmerButton className="w-full sm:w-auto !px-8 !py-3.5 !text-base shadow-xl shadow-gold/20 hover:scale-105 transition-transform duration-300">Falar no WhatsApp</ShimmerButton>
+                <ShimmerButton className="w-full sm:w-auto !px-8 !py-3.5 !text-base shadow-xl shadow-gold/20 hover:scale-105 transition-transform duration-300">Fale com a Equipe</ShimmerButton>
               </a>
               <Link
-                to="/app"
-                className="group inline-flex w-full items-center justify-center gap-2 rounded-full border border-neutral-200 bg-white px-8 py-3.5 text-sm font-medium text-neutral-800 transition-all hover:border-gold hover:bg-neutral-50 sm:w-auto shadow-sm"
+                to="/portal"
+                className="group w-full sm:w-auto"
               >
-                Acesso Restrito
-                <span className="text-gold transition-transform group-hover:translate-x-1">→</span>
+                <ShimmerButton className="w-full sm:w-auto !px-8 !py-3.5 !text-base bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-700 text-white border-neutral-800 hover:from-gold hover:to-gold/80 hover:text-neutral-900 transition-all duration-300 shadow-xl shadow-gold/10">
+                  Acessar Portal
+                </ShimmerButton>
+              </Link>
+              <Link
+                to="/app"
+                className="group w-full sm:w-auto"
+              >
+                <ShimmerButton className="w-full sm:w-auto !px-8 !py-3.5 !text-base bg-white text-neutral-900 border-neutral-200 hover:bg-gold hover:text-white transition-all duration-300 shadow-sm">
+                  Acesso Restrito
+                </ShimmerButton>
               </Link>
             </div>
 
@@ -181,20 +191,24 @@ export function LandingPage() {
       </section>
 
       {/* ÁREAS */}
-      <section className="mx-auto max-w-7xl px-4 py-20 md:py-32" id="areas">
+      <motion.section
+        className="mx-auto max-w-7xl px-4 py-20 md:py-32"
+        id="areas"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+      >
         <SectionTitle
           kicker="ESPECIALIDADES"
           title="Atuação Jurídica Estratégica"
           desc="Assessoramos nossos clientes com clareza, transparência e alta capacidade técnica, visando sempre a melhor condução do cenário apresentado."
         />
-
         <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {areas.map((a) => (
             <div key={a.title} className="group relative overflow-hidden rounded-3xl border border-neutral-100 bg-white p-8 transition-all hover:border-gold/30 hover:shadow-[0_20px_40px_-15px_rgba(212,175,55,0.1)]">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-gold/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              
               <div className="text-xl font-serif text-neutral-900">{a.title}</div>
-              
               <div className="mt-6 space-y-3">
                 {a.items.map((it) => (
                   <div key={it} className="flex items-start gap-3">
@@ -206,10 +220,17 @@ export function LandingPage() {
             </div>
           ))}
         </div>
-      </section>
+      </motion.section>
 
       {/* ESCRITÓRIO */}
-      <section className="bg-neutral-50 border-y border-neutral-200/60" id="escritorio">
+      <motion.section
+        className="bg-neutral-50 border-y border-neutral-200/60"
+        id="escritorio"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+      >
         <div className="mx-auto max-w-7xl px-4 py-20 md:py-32">
           <div className="grid gap-16 md:grid-cols-2 md:items-center">
             <div>
@@ -256,16 +277,22 @@ export function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* EQUIPE */}
-      <section className="mx-auto max-w-7xl px-4 py-20 md:py-32" id="equipe">
+      <motion.section
+        className="mx-auto max-w-7xl px-4 py-20 md:py-32"
+        id="equipe"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+      >
         <SectionTitle
           kicker="Nossa Equipe"
           title="Profissionais Dedicados"
           desc="Uma estrutura coesa e organizada para garantir que a estratégia e o andamento do seu caso fluam com perfeição."
         />
-
         <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {team.map((m) => {
             const initials = m.name
@@ -274,7 +301,6 @@ export function LandingPage() {
               .slice(0, 2)
               .map((s) => s[0]!.toUpperCase())
               .join('');
-
             return (
               <div key={m.name} className="group rounded-3xl border border-neutral-100 bg-white p-6 transition-all hover:border-gold/20 hover:shadow-lg hover:shadow-neutral-900/5">
                 <div className="flex items-center gap-4 mb-5">
@@ -292,7 +318,7 @@ export function LandingPage() {
             );
           })}
         </div>
-      </section>
+      </motion.section>
 
       {/* TESTIMONIALS */}
       <section className="mx-auto max-w-7xl px-4 pb-20 md:pb-32" id="avaliacoes">
@@ -341,7 +367,14 @@ export function LandingPage() {
       </section>
 
       {/* CONTATO */}
-      <section className="bg-neutral-950 text-white" id="contato">
+      <motion.section
+        className="bg-neutral-950 text-white"
+        id="contato"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+      >
         <div className="mx-auto max-w-7xl px-4 py-20 md:py-32">
           <div className="grid gap-12 md:grid-cols-2 lg:gap-24">
             <div>
@@ -398,7 +431,7 @@ export function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
     </div>
   );
 }
