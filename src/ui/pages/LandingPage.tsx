@@ -163,8 +163,8 @@ export function LandingPage() {
                   CO
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-serif text-neutral-900">Portal do Cliente</div>
-                  <div className="text-xs tracking-widest uppercase text-gold mt-1">Ambiente Seguro</div>
+                  <div className="text-lg font-serif text-white">Portal do Cliente</div>
+                  <div className="text-xs tracking-widest uppercase text-amber-300 mt-1">Ambiente Seguro</div>
                 </div>
               </div>
 
@@ -178,8 +178,8 @@ export function LandingPage() {
                     <div className="flex items-center gap-3">
                       <div className="size-2 rounded-full bg-gold/50 group-hover:bg-gold transition-colors" />
                       <div>
-                        <div className="text-sm font-medium text-neutral-900">{item.title}</div>
-                        <div className="text-xs text-neutral-500 mt-0.5">{item.desc}</div>
+                        <div className="text-sm font-medium text-amber-400">{item.title}</div>
+                        <div className="text-xs text-slate-400 mt-0.5">{item.desc}</div>
                       </div>
                     </div>
                   </div>
@@ -251,8 +251,8 @@ export function LandingPage() {
                   { title: 'Tecnologia', desc: 'Prazos e dados seguros.' },
                 ].map((v) => (
                   <div key={v.title} className="rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-sm">
-                    <div className="text-sm font-semibold text-neutral-900 uppercase tracking-wide">{v.title}</div>
-                    <div className="mt-2 text-sm text-neutral-500">{v.desc}</div>
+                    <div className="text-sm font-semibold text-amber-400 uppercase tracking-wide">{v.title}</div>
+                    <div className="mt-2 text-sm text-slate-400">{v.desc}</div>
                   </div>
                 ))}
               </div>
@@ -261,7 +261,7 @@ export function LandingPage() {
             <div className="relative lg:ml-auto w-full max-w-md">
               <div className="absolute -inset-8 rounded-[40px] bg-[radial-gradient(circle_at_50%_50%,rgba(212,175,55,0.15),transparent_60%)] blur-2xl" />
               <div className="relative overflow-hidden rounded-[32px] border border-neutral-800 bg-neutral-950 p-10 text-white shadow-2xl">
-                <div className="text-xs font-bold tracking-[0.3em] text-gold uppercase">Diretriz Interna</div>
+                <div className="text-xs font-bold tracking-[0.3em] text-amber-300 uppercase">Diretriz Interna</div>
                 <div className="mt-6 text-2xl font-serif font-light leading-snug">
                   "Atendimento voltado à orientação responsável, técnica apurada e absoluto respeito aos limites legais e factuais do caso concreto."
                 </div>
@@ -269,8 +269,8 @@ export function LandingPage() {
                 <div className="mt-10 h-px bg-white/10" />
                 <div className="mt-6">
                   <div className="text-xs text-white/50 uppercase tracking-widest font-semibold mb-2">Central de Atendimento</div>
-                  <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-lg text-white hover:text-gold transition-colors">
-                    {whatsappDisplay} <span className="text-gold">↗</span>
+                  <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-lg text-white hover:text-amber-400 transition-colors">
+                    {whatsappDisplay} <span className="text-amber-400">↗</span>
                   </a>
                 </div>
               </div>
@@ -358,7 +358,7 @@ export function LandingPage() {
           </div>
           
           <div className="mt-8 text-center">
-            <a href="https://g.page/r/YOUR_GOOGLE_MAPS_LINK_HERE/review" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-gold hover:text-gold/80 transition-colors">
+            <a href="https://g.page/r/YOUR_GOOGLE_MAPS_LINK_HERE/review" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-400 hover:text-amber-300 transition-colors">
               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"></path><polygon points="9 9 9 14 14 9 9 9"></polygon></svg>
               Avaliar no Google
             </a>
@@ -378,7 +378,7 @@ export function LandingPage() {
         <div className="mx-auto max-w-7xl px-4 py-20 md:py-32">
           <div className="grid gap-12 md:grid-cols-2 lg:gap-24">
             <div>
-              <div className="text-xs font-bold tracking-[0.3em] uppercase text-gold">Agende uma Consulta</div>
+              <div className="text-xs font-bold tracking-[0.3em] uppercase text-amber-300">Agende uma Consulta</div>
               <h2 className="mt-4 text-4xl font-light tracking-tight md:text-5xl font-serif text-white">Fale com nossa<br/>equipe jurídica</h2>
               <p className="mt-6 text-lg text-slate-300 font-light max-w-md">
                 Envie uma mensagem descrevendo brevemente seu cenário. Retornaremos com agilidade para analisar a viabilidade do atendimento.
@@ -386,20 +386,20 @@ export function LandingPage() {
 
               <div className="mt-10 space-y-6">
                 <div className="flex items-start gap-4">
-                  <div className="mt-1 text-gold">✦</div>
+                  <div className="mt-1 text-amber-400">✦</div>
                   <div>
                     <div className="font-semibold text-white">WhatsApp Direto</div>
-                    <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="text-[#D4AF37] hover:text-amber-200 transition-colors block mt-1">
+                    <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="text-amber-400 hover:text-amber-200 transition-colors block mt-1">
                       {whatsappDisplay}
                     </a>
                   </div>
                 </div>
                 
                 <div className="flex items-start gap-4">
-                  <div className="mt-1 text-gold">✦</div>
+                  <div className="mt-1 text-amber-400">✦</div>
                   <div>
                     <div className="font-semibold text-white">Endereço Presencial</div>
-                    <a href={mapsUrl} target="_blank" rel="noreferrer" className="text-[#D4AF37] hover:text-amber-200 transition-colors block mt-1 leading-relaxed">
+                    <a href={mapsUrl} target="_blank" rel="noreferrer" className="text-amber-400 hover:text-amber-200 transition-colors block mt-1 leading-relaxed">
                       {address.line1}<br/>{address.line2}
                     </a>
                   </div>
