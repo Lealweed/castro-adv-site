@@ -274,19 +274,6 @@ export function LandingPage() {
         <div className="pointer-events-none absolute bottom-0 left-0 h-[500px] w-[500px] bg-[radial-gradient(ellipse_at_bottom_left,rgba(201,169,110,0.04),transparent_65%)]" />
 
         <div className="mx-auto w-full max-w-7xl">
-          {/* Kicker */}
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.1 }}
-            className="mb-14 flex items-center gap-4"
-          >
-            <div className="h-px w-10 bg-gold-400/60" />
-            <span className="font-body text-[10px] font-semibold uppercase tracking-[0.38em] text-gold-400">
-              Boutique Jurídica de Alto Padrão
-            </span>
-          </motion.div>
-
           <div className="grid gap-16 lg:grid-cols-[1fr_400px] lg:items-center xl:grid-cols-[1fr_460px]">
             {/* ---- Left: Headline + CTA ---- */}
             <div>
