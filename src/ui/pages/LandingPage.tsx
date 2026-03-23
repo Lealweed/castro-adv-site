@@ -79,7 +79,6 @@ const mapsUrl =
 
 const whatsappE164 = '5591983485747';
 const whatsappDisplay = '(91) 98348-5747';
-const cityDisplay = 'Parauapebas — Pará';
 
 const testimonials = [
   { name: 'Ricardo P.', initials: 'RP', text: 'Profissionalismo impecável. Conduziram meu caso com total transparência e resolveram em tempo recorde. Recomendo de olhos fechados.', rating: 5 },
@@ -94,37 +93,38 @@ export function LandingPage() {
   return (
     <div className="bg-slate-950">
       {/* HERO */}
-      <section className="relative mx-auto max-w-7xl px-4 pb-16 pt-20 md:pb-32 md:pt-32">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,#D4AF37_0%,transparent_60%)]" />
-        
-        <div className="grid gap-16 md:grid-cols-2 md:items-center">
+      <section className="relative mx-auto max-w-7xl px-4 pb-20 pt-24 md:pb-36 md:pt-40">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,#D4AF37_0%,transparent_70%)]" />
+        <div className="grid gap-24 md:grid-cols-2 md:items-center">
           <div className="relative z-10">
-            <div className="inline-flex items-center gap-3 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-1.5 text-xs font-medium text-white shadow-sm backdrop-blur-sm">
+            <div className="inline-flex items-center gap-3 rounded-full border border-amber-300/40 bg-amber-300/10 px-5 py-2 text-sm font-bold text-amber-200 shadow-lg backdrop-blur-md tracking-widest">
               <span className="relative flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gold opacity-50"></span>
-                <span className="relative inline-flex size-2 rounded-full bg-gold"></span>
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-40"></span>
+                <span className="relative inline-flex size-2 rounded-full bg-amber-400"></span>
               </span>
-              {cityDisplay}
+              Escritório 100% gerido por mulheres
             </div>
 
-            <h1 className="mt-8 text-5xl font-light leading-[1.1] tracking-tight text-white md:text-7xl font-serif">
+            <h1 className="mt-10 text-6xl md:text-8xl font-serif font-bold leading-[1.05] tracking-tight text-white drop-shadow-[0_2px_16px_rgba(212,175,55,0.10)]">
               Castro e Oliveira
-              <span className="block mt-2 font-medium text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] to-amber-200">Advocacia</span>
+              <span className="block mt-3 font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-white drop-shadow-[0_2px_16px_rgba(212,175,55,0.20)]">Advocacia</span>
             </h1>
 
-            <p className="mt-6 max-w-lg text-lg font-light leading-relaxed text-slate-300">
-              Atendimento jurídico com padrão premium. Unimos o rigor técnico da advocacia à tecnologia para garantir clareza, organização e excelência.
+            <p className="mt-8 max-w-xl text-2xl md:text-3xl font-sans font-light leading-snug text-slate-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.30)]">
+              Excelência, acolhimento e transparência. <span className="text-amber-300 font-semibold">Gestão feminina, experiência e empoderamento</span> para proteger o que é mais importante para você.
             </p>
 
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row items-center">
+            <div className="mt-12 flex flex-col gap-4 sm:flex-row items-center">
               <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="w-full sm:w-auto">
-                <ShimmerButton className="w-full sm:w-auto !px-8 !py-3.5 !text-base shadow-xl shadow-gold/20 hover:scale-105 transition-transform duration-300">Fale com a Equipe</ShimmerButton>
+                <ShimmerButton className="w-full sm:w-auto !px-10 !py-4 !text-lg font-bold bg-gradient-to-r from-amber-400 via-amber-300 to-white text-slate-950 border-amber-200 shadow-2xl shadow-amber-400/30 hover:scale-105 hover:from-white hover:to-amber-400 transition-all duration-300">
+                  Fale com a Equipe
+                </ShimmerButton>
               </a>
               <Link
                 to="/portal"
                 className="group w-full sm:w-auto"
               >
-                <ShimmerButton className="w-full sm:w-auto !px-8 !py-3.5 !text-base bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-700 text-white border-neutral-800 hover:from-gold hover:to-gold/80 hover:text-neutral-900 transition-all duration-300 shadow-xl shadow-gold/10">
+                <ShimmerButton className="w-full sm:w-auto !px-10 !py-4 !text-lg font-semibold bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white border-slate-700 hover:from-amber-400 hover:to-amber-200 hover:text-slate-950 transition-all duration-300 shadow-xl shadow-amber-400/10">
                   Acessar Portal
                 </ShimmerButton>
               </Link>
@@ -132,24 +132,24 @@ export function LandingPage() {
                 to="/app"
                 className="group w-full sm:w-auto"
               >
-                <ShimmerButton className="w-full sm:w-auto !px-8 !py-3.5 !text-base bg-white text-neutral-900 border-neutral-200 hover:bg-gold hover:text-white transition-all duration-300 shadow-sm">
+                <ShimmerButton className="w-full sm:w-auto !px-10 !py-4 !text-lg font-semibold bg-white text-slate-950 border-slate-200 hover:bg-amber-400 hover:text-white transition-all duration-300 shadow-md">
                   Acesso Restrito
                 </ShimmerButton>
               </Link>
             </div>
 
-            <div className="mt-14 grid grid-cols-3 gap-6 border-t border-neutral-200/60 pt-8">
-              <div>
-                <div className="text-xl font-light text-neutral-900 font-serif">100%</div>
-                <div className="mt-1 text-xs text-neutral-500 uppercase tracking-widest">Sigilo Absoluto</div>
+            <div className="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-8 border-t border-amber-300/20 pt-10">
+              <div className="text-center">
+                <div className="text-3xl md:text-4xl font-extrabold text-amber-400 font-serif drop-shadow-[0_2px_8px_rgba(212,175,55,0.20)]">100%</div>
+                <div className="mt-2 text-base text-amber-200 uppercase tracking-widest font-bold">Sigilo Absoluto</div>
               </div>
-              <div>
-                <div className="text-xl font-light text-neutral-900 font-serif">24/7</div>
-                <div className="mt-1 text-xs text-neutral-500 uppercase tracking-widest">Portal Exclusivo</div>
+              <div className="text-center">
+                <div className="text-3xl md:text-4xl font-extrabold text-amber-400 font-serif drop-shadow-[0_2px_8px_rgba(212,175,55,0.20)]">24/7</div>
+                <div className="mt-2 text-base text-amber-200 uppercase tracking-widest font-bold">Portal Exclusivo</div>
               </div>
-              <div>
-                <div className="text-xl font-light text-neutral-900 font-serif">Ágil</div>
-                <div className="mt-1 text-xs text-neutral-500 uppercase tracking-widest">Gestão de Prazos</div>
+              <div className="text-center">
+                <div className="text-3xl md:text-4xl font-extrabold text-amber-400 font-serif drop-shadow-[0_2px_8px_rgba(212,175,55,0.20)]">Ágil</div>
+                <div className="mt-2 text-base text-amber-200 uppercase tracking-widest font-bold">Gestão de Prazos</div>
               </div>
             </div>
           </div>
@@ -335,19 +335,19 @@ export function LandingPage() {
                 testimonials.map((t, i) => (
                   <div key={`${setIndex}-${i}`} className="w-[350px] shrink-0 rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-[0_20px_40px_-15px_rgba(212,175,55,0.05)] transition-transform hover:-translate-y-1">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="grid size-12 place-items-center rounded-full bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/5 text-[#D4AF37] font-serif font-semibold border border-[#D4AF37]/20">
+                      <div className="grid size-12 place-items-center rounded-full bg-gradient-to-br from-amber-300/20 to-amber-100/5 text-amber-400 font-serif font-bold border border-amber-300/20">
                         {t.initials}
                       </div>
                       <div>
-                        <div className="text-sm font-semibold text-white">{t.name}</div>
-                        <div className="text-xs text-[#D4AF37] flex gap-0.5 mt-0.5">
+                        <div className="text-base font-bold text-white">{t.name}</div>
+                        <div className="text-base text-amber-400 flex gap-0.5 mt-0.5">
                           {[...Array(t.rating)].map((_, r) => (
                             <span key={r}>★</span>
                           ))}
                         </div>
                       </div>
                     </div>
-                    <p className="text-sm text-slate-300 leading-relaxed italic">"{t.text}"</p>
+                    <p className="text-lg text-slate-200 leading-relaxed italic font-light">"{t.text}"</p>
                   </div>
                 )),
               )}
@@ -418,7 +418,7 @@ export function LandingPage() {
 
                 <Link
                   to="/app"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#D4AF37] px-8 py-4 text-sm font-bold text-slate-950 transition-all hover:bg-amber-200 hover:text-slate-950 group"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-400 via-amber-200 to-white px-10 py-4 text-lg font-bold text-slate-950 shadow-2xl shadow-amber-400/30 transition-all hover:bg-amber-200 hover:text-slate-950 group"
                 >
                   Entrar no Portal
                   <span className="transition-transform group-hover:translate-x-1">→</span>
