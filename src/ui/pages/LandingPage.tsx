@@ -6,10 +6,10 @@ import { ShimmerButton } from '@/ui/primitives/ShimmerButton';
 function SectionTitle({ kicker, title, desc }: { kicker: string; title: string; desc: string }) {
   return (
     <div className="mx-auto max-w-3xl text-center">
-      <div className="text-xs font-bold uppercase tracking-[0.3em] text-gold">{kicker}</div>
-      <div className="mx-auto mt-4 h-px w-12 bg-gradient-to-r from-transparent via-gold to-transparent opacity-50" />
-      <h2 className="mt-6 text-3xl font-light tracking-tight text-neutral-900 md:text-5xl font-serif">{title}</h2>
-      <p className="mt-4 text-sm leading-relaxed text-neutral-600 md:text-lg">{desc}</p>
+      <div className="text-xs font-light uppercase tracking-[0.25em] text-amber-200/80">{kicker}</div>
+      <div className="mx-auto mt-3 h-px w-16 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-70" />
+      <h2 className="mt-8 text-4xl md:text-6xl font-serif font-light tracking-wide text-white drop-shadow-[0_2px_12px_rgba(233,207,167,0.10)]">{title}</h2>
+      <p className="mt-6 text-lg leading-relaxed text-slate-300/90 font-light">{desc}</p>
     </div>
   );
 }
@@ -93,30 +93,30 @@ export function LandingPage() {
   return (
     <div className="bg-slate-950">
       {/* HERO */}
-      <section className="relative mx-auto max-w-7xl px-4 pb-20 pt-24 md:pb-36 md:pt-40">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,#D4AF37_0%,transparent_70%)]" />
-        <div className="grid gap-24 md:grid-cols-2 md:items-center">
+      <section className="relative mx-auto max-w-7xl px-4 pb-28 pt-32 md:pb-44 md:pt-52">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,#E9CFA7_0%,transparent_80%)]" />
+        <div className="grid gap-32 md:grid-cols-2 md:items-center">
           <div className="relative z-10">
-            <div className="inline-flex items-center gap-3 rounded-full border border-amber-300/40 bg-amber-300/10 px-5 py-2 text-sm font-bold text-amber-200 shadow-lg backdrop-blur-md tracking-widest">
+            <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-6 py-2 text-base font-light text-amber-200/80 shadow backdrop-blur-md tracking-widest">
               <span className="relative flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-40"></span>
-                <span className="relative inline-flex size-2 rounded-full bg-amber-400"></span>
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-200/80 opacity-30"></span>
+                <span className="relative inline-flex size-2 rounded-full bg-amber-200/80"></span>
               </span>
-              Escritório 100% gerido por mulheres
+              Boutique Jurídica de Alto Padrão
             </div>
 
-            <h1 className="mt-10 text-6xl md:text-8xl font-serif font-bold leading-[1.05] tracking-tight text-white drop-shadow-[0_2px_16px_rgba(212,175,55,0.10)]">
-              Castro e Oliveira
-              <span className="block mt-3 font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-white drop-shadow-[0_2px_16px_rgba(212,175,55,0.20)]">Advocacia</span>
+            <h1 className="mt-12 text-6xl md:text-8xl font-serif font-light leading-[1.08] tracking-wide text-white drop-shadow-[0_2px_16px_rgba(233,207,167,0.10)]">
+              Castro e Oliveira <span className="hidden md:inline">|</span>
+              <span className="block md:inline font-serif font-light text-amber-200/80 tracking-wide"> Advocacia Estratégica</span>
             </h1>
 
-            <p className="mt-8 max-w-xl text-2xl md:text-3xl font-sans font-light leading-snug text-slate-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.30)]">
-              Excelência, acolhimento e transparência. <span className="text-amber-300 font-semibold">Gestão feminina, experiência e empoderamento</span> para proteger o que é mais importante para você.
+            <p className="mt-10 max-w-2xl text-2xl md:text-3xl font-sans font-light leading-snug text-slate-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.20)]">
+              Atenção meticulosa aos detalhes. Assessoria jurídica de alta complexidade com foco absoluto em resultados e exclusividade.
             </p>
 
-            <div className="mt-12 flex flex-col gap-4 sm:flex-row items-center">
+            <div className="mt-16 flex flex-col gap-5 sm:flex-row items-center">
               <a href={`https://wa.me/${whatsappE164}`} target="_blank" rel="noreferrer" className="w-full sm:w-auto">
-                <ShimmerButton className="w-full sm:w-auto !px-10 !py-4 !text-lg font-bold bg-gradient-to-r from-amber-400 via-amber-300 to-white text-slate-950 border-amber-200 shadow-2xl shadow-amber-400/30 hover:scale-105 hover:from-white hover:to-amber-400 transition-all duration-300">
+                <ShimmerButton className="w-full sm:w-auto !px-12 !py-5 !text-lg font-light bg-gradient-to-r from-amber-200/80 via-white/60 to-white/10 text-slate-950 border-white/10 shadow-xl shadow-amber-200/10 hover:scale-105 hover:from-white hover:to-amber-200/80 transition-all duration-300">
                   Fale com a Equipe
                 </ShimmerButton>
               </a>
@@ -124,7 +124,7 @@ export function LandingPage() {
                 to="/portal"
                 className="group w-full sm:w-auto"
               >
-                <ShimmerButton className="w-full sm:w-auto !px-10 !py-4 !text-lg font-semibold bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white border-slate-700 hover:from-amber-400 hover:to-amber-200 hover:text-slate-950 transition-all duration-300 shadow-xl shadow-amber-400/10">
+                <ShimmerButton className="w-full sm:w-auto !px-12 !py-5 !text-lg font-light bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white border-white/10 hover:from-amber-200/80 hover:to-white/80 hover:text-slate-950 transition-all duration-300 shadow-xl shadow-amber-200/10">
                   Acessar Portal
                 </ShimmerButton>
               </Link>
@@ -132,24 +132,24 @@ export function LandingPage() {
                 to="/app"
                 className="group w-full sm:w-auto"
               >
-                <ShimmerButton className="w-full sm:w-auto !px-10 !py-4 !text-lg font-semibold bg-white text-slate-950 border-slate-200 hover:bg-amber-400 hover:text-white transition-all duration-300 shadow-md">
+                <ShimmerButton className="w-full sm:w-auto !px-12 !py-5 !text-lg font-light bg-white text-slate-950 border-white/10 hover:bg-amber-200/80 hover:text-white transition-all duration-300 shadow-md">
                   Acesso Restrito
                 </ShimmerButton>
               </Link>
             </div>
 
-            <div className="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-8 border-t border-amber-300/20 pt-10">
+            <div className="mt-24 grid grid-cols-1 sm:grid-cols-3 gap-12 border-t border-white/5 pt-12">
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-extrabold text-amber-400 font-serif drop-shadow-[0_2px_8px_rgba(212,175,55,0.20)]">100%</div>
-                <div className="mt-2 text-base text-amber-200 uppercase tracking-widest font-bold">Sigilo Absoluto</div>
+                <div className="text-4xl md:text-5xl font-light text-amber-200/80 font-serif drop-shadow-[0_2px_8px_rgba(233,207,167,0.18)]">100%</div>
+                <div className="mt-3 text-base text-slate-200/80 uppercase tracking-widest font-light">Sigilo Absoluto</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-extrabold text-amber-400 font-serif drop-shadow-[0_2px_8px_rgba(212,175,55,0.20)]">24/7</div>
-                <div className="mt-2 text-base text-amber-200 uppercase tracking-widest font-bold">Portal Exclusivo</div>
+                <div className="text-4xl md:text-5xl font-light text-amber-200/80 font-serif drop-shadow-[0_2px_8px_rgba(233,207,167,0.18)]">24/7</div>
+                <div className="mt-3 text-base text-slate-200/80 uppercase tracking-widest font-light">Portal Exclusivo</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl md:text-4xl font-extrabold text-amber-400 font-serif drop-shadow-[0_2px_8px_rgba(212,175,55,0.20)]">Ágil</div>
-                <div className="mt-2 text-base text-amber-200 uppercase tracking-widest font-bold">Gestão de Prazos</div>
+                <div className="text-4xl md:text-5xl font-light text-amber-200/80 font-serif drop-shadow-[0_2px_8px_rgba(233,207,167,0.18)]">Ágil</div>
+                <div className="mt-3 text-base text-slate-200/80 uppercase tracking-widest font-light">Gestão de Prazos</div>
               </div>
             </div>
           </div>
