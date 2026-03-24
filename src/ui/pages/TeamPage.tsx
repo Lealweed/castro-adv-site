@@ -53,7 +53,7 @@ export function TeamPage() {
       // Garantir que userIds está correto
       const userIds = (data || []).map((m: any) => m.user_id).filter(Boolean);
       // Se não houver userIds, não tente buscar perfis
-      let profilesData = [];
+      let profilesData: any[] = [];
       let profilesError = null;
       if (userIds.length > 0) {
         const { data: pd, error: pe } = await sb
