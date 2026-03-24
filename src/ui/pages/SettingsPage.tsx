@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
 import { acceptOfficeInvite, createOfficeInvite, listMyOfficeInvites } from '@/lib/offices';
@@ -69,6 +70,8 @@ export function SettingsPage() {
   const [inviteRole, setInviteRole] = useState<'member' | 'admin' | 'finance' | 'staff'>('member');
 
   const [saving, setSaving] = useState(false);
+  const [myWhatsapp, setMyWhatsapp] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
 
   const myMember = useMemo(() => members.find((m) => m.user_id === meId) || null, [members, meId]);
   const isAdmin = myMember?.role === 'admin';
@@ -84,8 +87,16 @@ export function SettingsPage() {
       setMeId(user.id);
 
       // load invites even when office query fails
-      const myInvites = await listMyOfficeInvites().catch(() => [] as any);
-      setInvites((myInvites || []) as any);
+      const myInvites = await listMyOfficeInvites().catch(() => [] as OfficeInviteRow[]);
+      setInvites((myInvites || []) as OfficeInviteRow[]);
+
+      // Carrega WhatsApp do próprio perfil
+      const { data: selfProfile } = await sb
+        .from('user_profiles')
+        .select('whatsapp')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      setMyWhatsapp((selfProfile as any)?.whatsapp || '');
 
       // Find my office by membership
       const { data: myMembership, error: memErr } = await sb
@@ -106,7 +117,7 @@ export function SettingsPage() {
         }
         throw new Error(memErr.message);
       }
-      const officeId = (myMembership as any)?.office_id as string | undefined;
+      const officeId = myMembership?.office_id as string | undefined;
 
       if (!officeId) {
         setOffice(null);
@@ -124,7 +135,7 @@ export function SettingsPage() {
       if (msErr) {
         if (isOfficeMembersPolicyError(msErr.message || '')) {
           setPolicyBlocked(true);
-          setOffice((officeRow || null) as any);
+          setOffice((officeRow || null) as Office | null);
           setMembers([]);
           setLoading(false);
           return;
@@ -132,7 +143,7 @@ export function SettingsPage() {
         throw new Error(msErr.message);
       }
 
-      const members = (ms || []) as any[];
+      const members = (ms || []) as OfficeMemberRow[];
       const userIds = Array.from(new Set(members.map((m) => m.user_id).filter(Boolean)));
 
       // Avoid PostgREST relationship cache errors by fetching profiles separately.
@@ -142,12 +153,12 @@ export function SettingsPage() {
         profMap = new Map((profs || []).map((p: any) => [p.user_id, p]));
       }
 
-      setOffice((officeRow || null) as any);
+      setOffice((officeRow || null) as Office | null);
       setMembers(
         members.map((m) => ({
           ...m,
           profile: m.user_id && profMap.get(m.user_id) ? profMap.get(m.user_id) : null,
-        })) as any,
+        })) as OfficeMemberRow[],
       );
       setLoading(false);
     } catch (e: any) {
@@ -182,10 +193,10 @@ export function SettingsPage() {
         .maybeSingle();
 
       if (pErr) throw new Error(pErr.message);
-      const userId = (prof as any)?.user_id as string | undefined;
+      const userId = prof?.user_id as string | undefined;
       if (!userId) throw new Error('Usuário não encontrado.');
 
-      const { error: iErr } = await sb.from('office_members').insert({ office_id: office.id, user_id: userId, role: addRole } as any);
+      const { error: iErr } = await sb.from('office_members').insert({ office_id: office.id, user_id: userId, role: addRole });
       if (iErr) throw new Error(iErr.message);
 
       setAddEmail('');
@@ -230,6 +241,24 @@ export function SettingsPage() {
     }
   }
 
+  async function saveMyWhatsapp() {
+    if (!meId) return;
+    setSavingProfile(true);
+    setError(null);
+    try {
+      const sb = requireSupabase();
+      const { error: uErr } = await sb
+        .from('user_profiles')
+        .update({ whatsapp: myWhatsapp.trim() || null })
+        .eq('user_id', meId);
+      if (uErr) throw new Error(uErr.message);
+    } catch (e: any) {
+      setError(e?.message || String(e));
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
   // (revogar convite) será adicionado quando listarmos convites do escritório para admin
 
   async function setRole(memberId: string, role: string) {
@@ -241,7 +270,7 @@ export function SettingsPage() {
     try {
       const sb = requireSupabase();
       await getAuthedUser();
-      const { error: uErr } = await sb.from('office_members').update({ role } as any).eq('id', memberId);
+      const { error: uErr } = await sb.from('office_members').update({ role }).eq('id', memberId);
       if (uErr) throw new Error(uErr.message);
       await load();
     } catch (e: any) {
@@ -288,6 +317,30 @@ export function SettingsPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
+          <div className="text-sm font-semibold text-white">Meu Perfil</div>
+          <div className="mt-3 grid gap-3">
+            <label className="text-sm text-white/80">
+              WhatsApp (para notificações n8n)
+              <input
+                className="input"
+                inputMode="tel"
+                value={myWhatsapp}
+                onChange={(e) => setMyWhatsapp(e.target.value)}
+                placeholder="Ex: 5511999999999"
+              />
+            </label>
+            <p className="text-xs text-white/50">Formato internacional sem espaços ou hífen. Usado pelo n8n para cobrança de tarefas.</p>
+            <button
+              className="btn-primary !text-sm"
+              disabled={savingProfile}
+              onClick={() => void saveMyWhatsapp()}
+            >
+              {savingProfile ? 'Salvando…' : 'Salvar WhatsApp'}
+            </button>
+          </div>
+        </Card>
+
+        <Card>
           <div className="text-sm font-semibold text-white">Escritório</div>
           {loading ? <div className="mt-3 text-sm text-white/60">Carregando…</div> : null}
 
@@ -302,12 +355,15 @@ export function SettingsPage() {
               <Field label="Nome" value={office.name} />
               <Field label="Seu papel" value={roleLabel(myMember?.role || 'member')} />
               <Field label="Membros" value={String(members.length)} />
+              
               {isAdmin ? (
-                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs text-white/60">Auditoria</div>
-                  <a className="mt-1 block text-sm font-semibold text-amber-200 hover:underline" href="/app/configuracoes/auditoria">
-                    Abrir logs
-                  </a>
+                <div className="grid gap-2">
+                  <Link className="block w-full rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm font-semibold text-white transition-colors hover:bg-white/10" to="/app/configuracoes/equipe">
+                    👥 Gerenciar Equipe
+                  </Link>
+                  <Link className="block w-full rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm font-semibold text-amber-200 transition-colors hover:bg-white/10" to="/app/configuracoes/auditoria">
+                    🛡️ Auditoria e Logs
+                  </Link>
                 </div>
               ) : null}
             </div>
@@ -315,7 +371,7 @@ export function SettingsPage() {
         </Card>
 
         <Card>
-          <div className="text-sm font-semibold text-white">Membros & Convites</div>
+          <div className="text-sm font-semibold text-white">Seus Convites</div>
 
           {invites.length ? (
             <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
@@ -355,7 +411,7 @@ export function SettingsPage() {
 
                   <label className="text-sm text-white/80">
                     Papel
-                    <select className="select" value={inviteRole} onChange={(e) => setInviteRole(e.target.value as any)}>
+                    <select className="select" value={inviteRole} onChange={(e) => setInviteRole(e.target.value as 'member' | 'admin' | 'finance' | 'staff')}>
                       <option value="member">Membro</option>
                       <option value="staff">Operacional</option>
                       <option value="finance">Financeiro</option>
@@ -383,7 +439,7 @@ export function SettingsPage() {
 
                   <label className="text-sm text-white/80">
                     Papel
-                    <select className="select" value={addRole} onChange={(e) => setAddRole(e.target.value as any)}>
+                    <select className="select" value={addRole} onChange={(e) => setAddRole(e.target.value as 'member' | 'admin' | 'finance' | 'staff')}>
                       <option value="member">Membro</option>
                       <option value="staff">Operacional</option>
                       <option value="finance">Financeiro</option>
