@@ -48,24 +48,45 @@ export function TeamPage() {
       const { data, error } = await sb
         .from('office_members')
         .select('id, user_id, role, created_at');
-        
       if (error) throw error;
 
-      const userIds = data.map((m: any) => m.user_id);
-      const { data: profilesData } = await sb
-        .from('user_profiles')
-        .select('user_id, display_name, email, oab_number, oab_uf, phone, whatsapp')
-        .in('user_id', userIds);
-
+      // Garantir que userIds está correto
+      const userIds = (data || []).map((m: any) => m.user_id).filter(Boolean);
+      // Se não houver userIds, não tente buscar perfis
+      let profilesData = [];
+      let profilesError = null;
+      if (userIds.length > 0) {
+        const { data: pd, error: pe } = await sb
+          .from('user_profiles')
+          .select('user_id, display_name, email, oab_number, oab_uf, phone, whatsapp')
+          .in('user_id', userIds);
+        profilesData = pd || [];
+        profilesError = pe;
+        if (profilesError) console.error('Erro ao buscar user_profiles:', profilesError);
+        console.log('Profiles carregados:', profilesData);
+        // Se vier vazio, pode ser bug do .in()
+        if ((!profilesData || profilesData.length === 0) && !profilesError) {
+          // Busca todos e cruza no frontend
+          const { data: allProfiles, error: allProfilesError } = await sb
+            .from('user_profiles')
+            .select('user_id, display_name, email, oab_number, oab_uf, phone, whatsapp');
+          if (allProfilesError) {
+            console.error('Erro ao buscar todos user_profiles:', allProfilesError);
+          } else {
+            profilesData = (allProfiles || []).filter((p: any) => userIds.includes(p.user_id));
+            console.log('Profiles carregados (fallback):', profilesData);
+          }
+        }
+      }
       const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p]));
 
-      // Mock user details since we can't join auth.users directly
-      const enriched = data.map((m: any) => {
+      // Exibir dados reais, blindado contra falhas
+      const enriched = (data || []).map((m: any) => {
         const p = profilesMap.get(m.user_id);
         return {
           ...m,
-          email: p?.email || `usuario-${m.user_id.slice(0, 4)}@exemplo.com`, 
-          full_name: p?.display_name || p?.email?.split('@')[0] || 'Dr(a). Associado',
+          email: p?.email || '',
+          full_name: p?.display_name || p?.email?.split('@')[0] || '',
           oab_number: p?.oab_number || '',
           oab_uf: p?.oab_uf || '',
           phone: p?.phone || '',
