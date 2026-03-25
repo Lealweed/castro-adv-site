@@ -7,9 +7,10 @@ import { DocumentsSection } from '@/ui/widgets/DocumentsSection';
 import { ClientLinksSection } from '@/ui/widgets/ClientLinksSection';
 import { TimelineSection } from '@/ui/widgets/TimelineSection';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
+import { hashPortalPin } from '@/lib/crypto';
 import { generateClientDossier } from '@/lib/pdfGenerator';
 import { generateProcuracaoDocx, buildProcuracaoData } from '@/lib/docGenerator';
-import { sendWhatsAppText } from '@/lib/evolutionApi';
+
 import { brlToCents, centsToBRL, loadClientTransactions, type FinanceTx } from '@/lib/finance';
 
 function extractSourceFromNotes(notes: string | null) {
@@ -223,6 +224,31 @@ export function ClientDetailsPage() {
       alert(`❌ Erro: ${message}`);
     }
   }
+    async function handleSendWhatsApp() {
+      if (!row?.whatsapp || !row?.office_id || !row?.id) return;
+      const msg = prompt('Mensagem para enviar via WhatsApp:');
+      if (!msg) return;
+      try {
+        const res = await fetch('/api/messages/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            officeId: row.office_id,
+            clientId: row.id,
+            channel: 'whatsapp',
+            text: msg,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error || 'Falha ao enviar WhatsApp.');
+        }
+        alert('✅ Mensagem enviada com sucesso!');
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Falha ao enviar WhatsApp.';
+        alert(`❌ Erro: ${message}`);
+      }
+    }
 
   async function onSave() {
     if (!clientId) return;
@@ -231,6 +257,12 @@ export function ClientDetailsPage() {
     try {
       const sb = requireSupabase();
       const notesWithNationality = buildClientNotes(row?.notes || null, notes, nationality);
+      let portalPinToSave = portalPin.trim() || null;
+      if (portalPinToSave && (!row?.portal_pin || portalPinToSave !== row.portal_pin)) {
+        portalPinToSave = hashPortalPin(portalPinToSave);
+      } else if (!portalPinToSave) {
+        portalPinToSave = null;
+      }
       const { error: updateErr } = await sb
         .from('clients')
         .update({
@@ -244,7 +276,7 @@ export function ClientDetailsPage() {
           rg: rg.trim() || null,
           civil_status: civilStatus.trim() || null,
           profession: profession.trim() || null,
-          portal_pin: portalPin.trim() || null,
+          portal_pin: portalPinToSave,
         })
         .eq('id', clientId);
       if (updateErr) throw new Error(updateErr.message);

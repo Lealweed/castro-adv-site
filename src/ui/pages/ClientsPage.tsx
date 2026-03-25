@@ -7,6 +7,7 @@ import { formatCpf, isValidCpf, onlyDigits } from '@/lib/cpf';
 import { formatCnpj, isValidCnpj } from '@/lib/cnpj';
 import { formatBrPhone } from '@/lib/phone';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
+import { hashPortalPin } from '@/lib/crypto';
 
 type ClientRow = {
   id: string;
@@ -235,7 +236,7 @@ export function ClientsPage() {
         address_neighborhood: neighborhood.trim() || null,
         address_city: city.trim() || null,
         address_state: stateUf.trim() || null,
-        portal_pin: newPortalPin.trim() || null,
+        portal_pin: newPortalPin.trim() ? hashPortalPin(newPortalPin.trim()) : null,
       };
 
       if (personType === 'pf') {
