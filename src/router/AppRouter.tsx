@@ -1,6 +1,4 @@
 import { Suspense, lazy } from 'react';
-
-const ProductivityPage = lazy(() => import('@/ui/pages/ProductivityPage').then((m) => ({ default: m.ProductivityPage })));
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { RequireAuth } from '@/auth/RequireAuth';
@@ -8,12 +6,14 @@ import { RequireRole } from '@/auth/RequireRole';
 import { AuthLayout } from '@/ui/layouts/AuthLayout';
 import { AppLayout } from '@/ui/layouts/AppLayout';
 import { PublicLayout } from '@/ui/layouts/PublicLayout';
+import { ErrorBoundary } from '@/ui/primitives/ErrorBoundary';
 
 const LandingPage = lazy(() => import('@/ui/pages/LandingPage').then((m) => ({ default: m.LandingPage })));
 const HelixDemoPage = lazy(() => import('@/ui/pages/HelixDemoPage').then((m) => ({ default: m.HelixDemoPage })));
 const LoginPage = lazy(() => import('@/ui/pages/LoginPage').then((m) => ({ default: m.LoginPage })));
 
 const DashboardPage = lazy(() => import('@/ui/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
+const ProductivityPage = lazy(() => import('@/ui/pages/ProductivityPage').then((m) => ({ default: m.ProductivityPage })));
 const ClientsPage = lazy(() => import('@/ui/pages/ClientsPage').then((m) => ({ default: m.ClientsPage })));
 const ClientDetailsPage = lazy(() => import('@/ui/pages/ClientDetailsPage').then((m) => ({ default: m.ClientDetailsPage })));
 const CasesPage = lazy(() => import('@/ui/pages/CasesPage').then((m) => ({ default: m.CasesPage })));
@@ -32,6 +32,7 @@ const PartnersPage = lazy(() => import('@/ui/pages/finance/PartnersPage').then((
 const PayablesPage = lazy(() => import('@/ui/pages/finance/PayablesPage').then((m) => ({ default: m.PayablesPage })));
 const AiReportsPage = lazy(() => import('@/ui/pages/AiReportsPage').then((m) => ({ default: m.AiReportsPage })));
 const ClientPortalPage = lazy(() => import('@/ui/pages/ClientPortalPage').then((m) => ({ default: m.ClientPortalPage })));
+const NotificationsPage = lazy(() => import('@/ui/pages/NotificationsPage').then((m) => ({ default: m.NotificationsPage })));
 const PublicationsPage = lazy(() => import('@/ui/pages/PublicationsPage').then((m) => ({ default: m.PublicationsPage })));
 const DrivePage = lazy(() => import('@/ui/pages/DrivePage').then((m) => ({ default: m.DrivePage })));
 const SettingsPage = lazy(() => import('@/ui/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
@@ -40,6 +41,7 @@ const AuditPage = lazy(() => import('@/ui/pages/AuditPage').then((m) => ({ defau
 
 export function AppRouter() {
   return (
+    <ErrorBoundary>
     <BrowserRouter>
       <Suspense
         fallback={
@@ -65,6 +67,7 @@ export function AppRouter() {
           <Route element={<AppLayout />}>
             <Route element={<RequireAuth />}>
               <Route path="/app" element={<DashboardPage />} />
+              <Route path="/app/produtividade" element={<ProductivityPage />} />
               <Route path="/app/clientes" element={<ClientsPage />} />
               <Route path="/app/clientes/:clientId" element={<ClientDetailsPage />} />
               <Route path="/app/casos" element={<CasesPage />} />
@@ -84,9 +87,10 @@ export function AppRouter() {
               <Route path="/app/financeiro/parceiros" element={<PartnersPage />} />
               <Route path="/app/financeiro/a-pagar" element={<PayablesPage />} />
               <Route path="/app/financeiro/:txId" element={<FinanceTxDetailsPage />} />
+              <Route path="/app/portal" element={<Navigate to="/portal" replace />} />
 
               <Route path="/app/relatorios-ia" element={<AiReportsPage />} />
-              <Route path="/app/produtividade" element={<ProductivityPage />} />
+              <Route path="/app/notificacoes" element={<NotificationsPage />} />
               <Route path="/app/drive" element={<DrivePage />} />
               <Route path="/app/publicacoes" element={<PublicationsPage />} />
               <Route path="/app/configuracoes" element={<SettingsPage />} />
@@ -102,5 +106,6 @@ export function AppRouter() {
         </Routes>
       </Suspense>
     </BrowserRouter>
+    </ErrorBoundary>
   );
 }

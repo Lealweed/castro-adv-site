@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   BarChart3,
+  Bell,
   Briefcase,
   Building2,
   Calendar,
@@ -10,24 +11,27 @@ import {
   Coins,
   LayoutDashboard,
   Sparkles,
+  TrendingUp,
   Users,
   HardDrive,
-  TrendingUp,
+  BellRing,
 } from 'lucide-react';
 import { cn } from '@/ui/utils/cn';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 const items = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/app/produtividade', label: 'Produtividade', icon: TrendingUp },
   { to: '/app/clientes', label: 'Clientes', icon: Users },
   { to: '/app/casos', label: 'Casos', icon: Briefcase },
+  { to: '/app/notificacoes', label: 'Notificacoes', icon: Bell },
+  { to: '/app/publicacoes', label: 'PJe / Intimações', icon: BellRing },
   { to: '/app/agenda', label: 'Agenda', icon: Calendar },
   { to: '/app/tarefas', label: 'Tarefas', icon: CheckSquare },
   { to: '/app/financeiro', label: 'Financeiro', icon: Coins },
   { to: '/app/drive', label: 'Smart Drive', icon: HardDrive },
   { to: '/app/relatorios-ia', label: 'Relatórios com IA', icon: Sparkles },
-  { to: '/app/produtividade', label: 'Produtividade', icon: TrendingUp },
-  { to: '/app/portal', label: 'Portal do Cliente', icon: Building2 },
+  { to: '/portal', label: 'Portal do Cliente', icon: Building2 },
   { to: '/app/configuracoes', label: 'Configurações', icon: Cog },
 ];
 
@@ -91,7 +95,7 @@ export function Sidebar() {
         <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
           <div className="text-xs font-semibold text-white">Usuário Logado</div>
           <div className="mt-1 text-sm text-white/80">{userName}</div>
-          <div className="mt-2 text-[10px] uppercase font-bold text-amber-200/70 tracking-wider">Castro de Oliveira Adv</div>
+          <div className="mt-2 text-[10px] uppercase font-bold text-amber-200/70 tracking-wider">Lima, Lopes & Diógenes</div>
         </div>
       </div>
     </aside>
