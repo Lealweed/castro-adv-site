@@ -434,9 +434,6 @@ export function ClientDetailsPage() {
   const agendaQuickLink = clientId
     ? `/app/agenda?new=1&clientId=${clientId}${row?.name ? `&clientName=${encodeURIComponent(row.name)}` : ''}`
     : '/app/agenda';
-  const financeQuickLink = clientId
-    ? `/app/financeiro?new=1&clientId=${clientId}${row?.name ? `&clientName=${encodeURIComponent(row.name)}` : ''}`
-    : '/app/financeiro';
 
   return (
     <div className="space-y-6">
