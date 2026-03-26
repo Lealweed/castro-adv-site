@@ -499,7 +499,7 @@ export function DashboardPage() {
         <div className="absolute inset-0 bg-[radial-gradient(600px_200px_at_0%_0%,rgba(251,191,36,0.15),transparent_60%)]" />
         <div className="relative flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200/90">Lima, Lopes &amp; Diógenes</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200/90">Castro & Oliveira Advocacia</p>
             <h1 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">Dashboard executivo</h1>
             <p className="mt-1 text-sm text-white/60">Visão geral de clientes, casos, agenda e tarefas em tempo real.</p>
           </div>

@@ -275,7 +275,7 @@ export function ClientPortalPage() {
       <div className="min-h-screen bg-[#08090b] flex flex-col items-center px-4 py-8">
         <img
           src="/brand/logo.jpg"
-          alt="Lima, Lopes & Diógenes"
+          alt="Castro & Oliveira Advocacia"
           className="h-16 w-auto rounded-xl shadow-lg"
         />
         <div className="mt-8 w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-6">
@@ -363,7 +363,7 @@ export function ClientPortalPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0c10] via-[#10131a] to-[#181c24] flex flex-col items-center px-0 py-0">
       <div className="mt-10 mb-4 flex w-full max-w-xl items-center justify-between gap-4 px-4">
-        <img src="/brand/logo.jpg" alt="Lima, Lopes & Diógenes" className="h-20 w-auto rounded-2xl border-2 border-white/10 shadow-2xl" />
+        <img src="/brand/logo.jpg" alt="Castro & Oliveira Advocacia" className="h-20 w-auto rounded-2xl border-2 border-white/10 shadow-2xl" />
         <button
           type="button"
           onClick={handlePortalExit}
@@ -567,7 +567,7 @@ export function ClientPortalPage() {
         </div>
       </div>
       <p className="mt-12 text-[11px] text-white/30 mb-24 md:mb-0">
-        Lima, Lopes &amp; Diógenes Advogados &bull; Portal do Cliente
+        Castro & Oliveira Advocacia &bull; Portal do Cliente
       </p>
     </div>
   );

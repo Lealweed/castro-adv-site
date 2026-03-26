@@ -73,7 +73,7 @@ export function generateClientDossier(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
   doc.setTextColor(200, 175, 120);
-  doc.text('Lima, Lopes & Diógenes', PAGE_WIDTH / 2, 25, { align: 'center' });
+  doc.text('Castro & Oliveira Advocacia', PAGE_WIDTH / 2, 25, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
@@ -240,7 +240,7 @@ export function generateClientDossier(
     doc.setFontSize(7);
     doc.setTextColor(140, 140, 140);
     doc.text(
-      'Lima, Lopes & Diógenes Advogados Associados · Belém — PA · Documento confidencial',
+      'Castro & Oliveira Advocacia · Belém — PA · Documento confidencial',
       PAGE_WIDTH / 2,
       293,
       { align: 'center' },
