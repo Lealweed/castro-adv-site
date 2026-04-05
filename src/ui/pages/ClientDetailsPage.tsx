@@ -44,6 +44,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 type ClientRow = {
   id: string;
+  office_id: string | null;
   name: string;
   birth_date: string | null;
   phone: string | null;
@@ -143,7 +144,7 @@ export function ClientDetailsPage() {
         await getAuthedUser();
 
         const [c1, c2, tx, messagesRes] = await Promise.all([
-          sb.from('clients').select('id,name,birth_date,phone,whatsapp,email,notes,user_id,created_at,cpf,rg,profession,civil_status,address_street,address_number,address_complement,address_neighborhood,address_city,address_state,address_cep,portal_pin').eq('id', clientId).maybeSingle(),
+          sb.from('clients').select('id,office_id,name,birth_date,phone,whatsapp,email,notes,user_id,created_at,cpf,rg,profession,civil_status,address_street,address_number,address_complement,address_neighborhood,address_city,address_state,address_cep,portal_pin').eq('id', clientId).maybeSingle(),
           sb
             .from('cases')
             .select('id,title,status,process_number,area,created_at')
@@ -213,42 +214,29 @@ export function ClientDetailsPage() {
   }, [clientId]);
 
   async function handleSendWhatsApp() {
-    if (!row?.whatsapp) return;
-    const msg = prompt('Mensagem para enviar via WhatsApp:');
-    if (!msg) return;
+    if (!row?.whatsapp || !row?.office_id || !row?.id) return;
+
+    const msg = window.prompt('Mensagem para enviar via WhatsApp:');
+    if (!msg?.trim()) return;
+
     try {
-      await sendWhatsAppText(row.whatsapp, msg);
-      alert('✅ Mensagem enviada com sucesso!');
+      const sb = requireSupabase();
+      const { error: invokeError } = await sb.functions.invoke('messages-send', {
+        body: {
+          office_id: row.office_id,
+          to_number: row.whatsapp,
+          message: msg.trim(),
+          idempotencyKey: globalThis.crypto?.randomUUID?.(),
+        },
+      });
+
+      if (invokeError) throw invokeError;
+      window.alert('✅ Mensagem enviada com sucesso!');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Falha ao enviar WhatsApp.';
-      alert(`❌ Erro: ${message}`);
+      window.alert(`❌ Erro: ${message}`);
     }
   }
-    async function handleSendWhatsApp() {
-      if (!row?.whatsapp || !row?.office_id || !row?.id) return;
-      const msg = prompt('Mensagem para enviar via WhatsApp:');
-      if (!msg) return;
-      try {
-        const res = await fetch('/api/messages/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            officeId: row.office_id,
-            clientId: row.id,
-            channel: 'whatsapp',
-            text: msg,
-          }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err?.error || 'Falha ao enviar WhatsApp.');
-        }
-        alert('✅ Mensagem enviada com sucesso!');
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Falha ao enviar WhatsApp.';
-        alert(`❌ Erro: ${message}`);
-      }
-    }
 
   async function onSave() {
     if (!clientId) return;
@@ -259,7 +247,7 @@ export function ClientDetailsPage() {
       const notesWithNationality = buildClientNotes(row?.notes || null, notes, nationality);
       let portalPinToSave = portalPin.trim() || null;
       if (portalPinToSave && (!row?.portal_pin || portalPinToSave !== row.portal_pin)) {
-        portalPinToSave = hashPortalPin(portalPinToSave);
+        portalPinToSave = await hashPortalPin(portalPinToSave);
       } else if (!portalPinToSave) {
         portalPinToSave = null;
       }

@@ -236,7 +236,7 @@ export function ClientsPage() {
         address_neighborhood: neighborhood.trim() || null,
         address_city: city.trim() || null,
         address_state: stateUf.trim() || null,
-        portal_pin: newPortalPin.trim() ? hashPortalPin(newPortalPin.trim()) : null,
+        portal_pin: newPortalPin.trim() ? await hashPortalPin(newPortalPin.trim()) : null,
       };
 
       if (personType === 'pf') {

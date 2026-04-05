@@ -22,6 +22,16 @@ type Member = {
   };
 };
 
+type UserProfileRow = {
+  user_id: string;
+  display_name: string | null;
+  email: string | null;
+  oab_number: string | null;
+  oab_uf: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+};
+
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   admin: ['Acesso total', 'Financeiro', 'Excluir casos', 'Gerenciar equipe'],
   lawyer: ['Criar/Editar casos', 'Gerenciar tarefas', 'Ver clientes', 'Adicionar andamentos'],
@@ -53,14 +63,14 @@ export function TeamPage() {
       // Garantir que userIds está correto
       const userIds = (data || []).map((m: any) => m.user_id).filter(Boolean);
       // Se não houver userIds, não tente buscar perfis
-      let profilesData: any[] = [];
-      let profilesError = null;
+      let profilesData: UserProfileRow[] = [];
+      let profilesError: unknown = null;
       if (userIds.length > 0) {
         const { data: pd, error: pe } = await sb
           .from('user_profiles')
           .select('user_id, display_name, email, oab_number, oab_uf, phone, whatsapp')
           .in('user_id', userIds);
-        profilesData = pd || [];
+        profilesData = (pd || []) as UserProfileRow[];
         profilesError = pe;
         if (profilesError) console.error('Erro ao buscar user_profiles:', profilesError);
         console.log('Profiles carregados:', profilesData);
@@ -73,12 +83,12 @@ export function TeamPage() {
           if (allProfilesError) {
             console.error('Erro ao buscar todos user_profiles:', allProfilesError);
           } else {
-            profilesData = (allProfiles || []).filter((p: any) => userIds.includes(p.user_id));
+            profilesData = ((allProfiles || []) as UserProfileRow[]).filter((p) => userIds.includes(p.user_id));
             console.log('Profiles carregados (fallback):', profilesData);
           }
         }
       }
-      const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p]));
+      const profilesMap = new Map<string, UserProfileRow>(profilesData.map((p) => [p.user_id, p]));
 
       // Exibir dados reais, blindado contra falhas
       const enriched = (data || []).map((m: any) => {
