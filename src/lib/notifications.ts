@@ -1,7 +1,9 @@
+import { getMyOfficeId } from '@/lib/officeContext';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 export type SystemNotification = {
   id: string;
+  office_id: string;
   user_id: string | null;
   title: string;
   message: string;
@@ -11,8 +13,9 @@ export type SystemNotification = {
 };
 
 export const notificationKeys = {
-  all: ['system_notifications'] as const,
+  all: ['notifications'] as const,
   list: () => [...notificationKeys.all, 'list'] as const,
+  recent: () => [...notificationKeys.all, 'recent'] as const,
   unreadCount: () => [...notificationKeys.all, 'unread-count'] as const,
 };
 
@@ -32,10 +35,15 @@ function capitalize(text: string) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+function buildRecipientFilter(userId: string) {
+  return `user_id.is.null,user_id.eq.${userId}`;
+}
+
 async function getNotificationContext() {
   const sb = requireSupabase();
   const user = await getAuthedUser();
-  return { sb, userId: user.id };
+  const officeId = await getMyOfficeId().catch(() => null);
+  return { sb, userId: user.id, officeId };
 }
 
 export function formatNotificationRelativeTime(iso: string) {
@@ -67,9 +75,19 @@ export function formatNotificationDateTime(iso: string) {
 }
 
 export function getNotificationTypeMeta(type: string | null | undefined) {
-  const normalized = (type || 'info').trim().toLowerCase();
+  const normalized = (type || 'system').trim().toLowerCase();
 
   switch (normalized) {
+    case 'birthday':
+      return {
+        label: 'Aniversario',
+        className: 'border-pink-400/25 bg-pink-500/10 text-pink-200',
+      };
+    case 'task':
+      return {
+        label: 'Tarefa',
+        className: 'border-red-400/25 bg-red-500/10 text-red-200',
+      };
     case 'email':
       return {
         label: 'Email',
@@ -81,25 +99,28 @@ export function getNotificationTypeMeta(type: string | null | undefined) {
         className: 'border-emerald-400/25 bg-emerald-500/10 text-emerald-200',
       };
     case 'alert':
+    case 'system':
       return {
-        label: 'Alert',
-        className: 'border-red-400/25 bg-red-500/10 text-red-200',
+        label: normalized === 'alert' ? 'Alerta' : 'Sistema',
+        className: 'border-amber-400/25 bg-amber-500/10 text-amber-200',
       };
     default:
       return {
         label: capitalize(normalized),
-        className: 'border-amber-400/25 bg-amber-500/10 text-amber-200',
+        className: 'border-white/15 bg-white/5 text-white/80',
       };
   }
 }
 
 export async function listSystemNotifications(limit = 100): Promise<SystemNotification[]> {
-  const { sb, userId } = await getNotificationContext();
+  const { sb, userId, officeId } = await getNotificationContext();
+  if (!officeId) return [];
 
   const { data, error } = await sb
-    .from('system_notifications')
-    .select('id,user_id,title,message,type,is_read,created_at')
-    .eq('user_id', userId)
+    .from('notifications')
+    .select('id,office_id,user_id,title,message,type,is_read,created_at')
+    .eq('office_id', officeId)
+    .or(buildRecipientFilter(userId))
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -108,26 +129,44 @@ export async function listSystemNotifications(limit = 100): Promise<SystemNotifi
 }
 
 export async function countUnreadNotifications(): Promise<number> {
-  const { sb, userId } = await getNotificationContext();
+  const { sb, userId, officeId } = await getNotificationContext();
+  if (!officeId) return 0;
 
   const { count, error } = await sb
-    .from('system_notifications')
+    .from('notifications')
     .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
+    .eq('office_id', officeId)
+    .or(buildRecipientFilter(userId))
     .eq('is_read', false);
 
   if (error) throw new Error(error.message);
   return count || 0;
 }
 
-export async function markAllNotificationsAsRead() {
-  const { sb, userId } = await getNotificationContext();
+export async function markNotificationAsRead(notificationId: string) {
+  const { sb, userId, officeId } = await getNotificationContext();
+  if (!officeId) return;
 
   const { error } = await sb
-    .from('system_notifications')
+    .from('notifications')
     .update({ is_read: true })
-    .eq('user_id', userId)
-    .eq('is_read', false);
+    .eq('id', notificationId)
+    .eq('office_id', officeId)
+    .or(buildRecipientFilter(userId));
+
+  if (error) throw new Error(error.message);
+}
+
+export async function markAllNotificationsAsRead() {
+  const { sb, userId, officeId } = await getNotificationContext();
+  if (!officeId) return;
+
+  const { error } = await sb
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('office_id', officeId)
+    .eq('is_read', false)
+    .or(buildRecipientFilter(userId));
 
   if (error) throw new Error(error.message);
 }
