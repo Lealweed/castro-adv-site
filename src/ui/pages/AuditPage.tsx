@@ -71,6 +71,7 @@ function getBrowserLabel(userAgent: string | null): string | null {
   if (ua.includes('opera') || ua.includes('opr')) return 'Opera';
   return null;
 }
+function escapeCsvCell(value: string): string {
   if (value.includes(',') || value.includes('"') || value.includes('\n')) {
     return `"${value.replace(/"/g, '""')}"`;
   }
