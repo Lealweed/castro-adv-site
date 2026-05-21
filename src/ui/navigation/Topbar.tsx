@@ -5,6 +5,8 @@ import {
   Building2,
   Calendar,
   CheckSquare,
+  ChevronsLeft,
+  ChevronsRight,
   Coins,
   Cog,
   HardDrive,
@@ -42,10 +44,16 @@ const mobileItems = [
   { to: '/app/configuracoes', label: 'Configuracoes', icon: Cog },
 ];
 
-export function Topbar() {
+type TopbarProps = {
+  sidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
+};
+
+export function Topbar({ sidebarCollapsed = false, onToggleSidebar }: TopbarProps) {
   const auth = useAuth();
   const [theme, setThemeState] = useState<AppTheme>(() => getStoredTheme());
   const [menuOpen, setMenuOpen] = useState(false);
+
   function onToggleTheme() {
     const next: AppTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
@@ -64,6 +72,16 @@ export function Topbar() {
             >
               <Menu className="h-5 w-5" />
             </button>
+            {onToggleSidebar ? (
+              <button
+                onClick={onToggleSidebar}
+                className="hidden rounded-xl border border-white/10 bg-white/5 p-2 text-white/80 transition hover:bg-white/10 md:inline-flex"
+                aria-label={sidebarCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
+                title={sidebarCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
+              >
+                {sidebarCollapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+              </button>
+            ) : null}
             <div className="min-w-0">
               <div className="text-sm font-semibold text-white">Bem-vindo de volta</div>
               <div className="text-xs text-white/60">Visao geral do escritorio</div>

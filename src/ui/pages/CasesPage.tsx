@@ -7,6 +7,8 @@ import { getMyOfficeId, listOfficeMemberProfiles, type OfficeMemberProfile } fro
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 import { loadClientsLite } from '@/lib/loadClientsLite';
 import type { ClientLite } from '@/lib/types';
+import { applyChecklistTemplate } from '@/lib/checklist';
+import { CHECKLIST_TEMPLATES } from '@/lib/checklistTemplates';
 
 type CaseRow = {
   id: string;
@@ -50,6 +52,11 @@ export function CasesPage() {
   const [newProcessNumber, setNewProcessNumber] = useState('');
   const [newArea, setNewArea] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Checklist prompt after case creation
+  const [checklistModalCaseId, setChecklistModalCaseId] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState('usucapiao');
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
 
   const ordered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -169,14 +176,83 @@ export function CasesPage() {
       setNewArea('');
       setSaving(false);
       await load();
+
+      // Prompt to apply a checklist template
+      setChecklistModalCaseId(createdCase.id);
     } catch (err: any) {
       setError(err?.message || 'Falha ao criar caso.');
       setSaving(false);
     }
   }
 
+  async function onApplyTemplate() {
+    if (!checklistModalCaseId) return;
+    setApplyingTemplate(true);
+    try {
+      await applyChecklistTemplate(checklistModalCaseId, selectedTemplate);
+    } catch {
+      // template apply failure is non-blocking — case was already created
+    }
+    setApplyingTemplate(false);
+    setChecklistModalCaseId(null);
+  }
+
   return (
     <div className="space-y-6">
+      {/* Checklist template prompt modal */}
+      {checklistModalCaseId && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-[#1a1a2e] shadow-2xl p-6 space-y-4 animate-fadeIn">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-lg">📋</div>
+              <div>
+                <div className="text-sm font-bold text-white">Deseja gerar um Checklist?</div>
+                <div className="text-xs text-white/50">Aplique um modelo de documentos para este caso.</div>
+              </div>
+            </div>
+
+            <label className="text-sm text-white/80 block">
+              Modelo de Checklist
+              <select
+                className="select mt-1"
+                value={selectedTemplate}
+                onChange={(e) => setSelectedTemplate(e.target.value)}
+              >
+                {Object.entries(CHECKLIST_TEMPLATES).map(([key, tpl]) => (
+                  <option key={key} value={key}>{tpl.name}</option>
+                ))}
+              </select>
+            </label>
+
+            <div className="bg-white/5 rounded-xl border border-white/5 p-3 max-h-40 overflow-y-auto space-y-1">
+              {CHECKLIST_TEMPLATES[selectedTemplate]?.items.map((item, i) => (
+                <div key={i} className="text-xs text-white/60 flex items-start gap-2">
+                  <span className="text-amber-400 mt-0.5 shrink-0">•</span>
+                  <span>{item.title}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                disabled={applyingTemplate}
+                onClick={() => void onApplyTemplate()}
+                className="btn-primary"
+              >
+                {applyingTemplate ? 'Aplicando...' : 'Gerar Checklist'}
+              </button>
+              <button
+                disabled={applyingTemplate}
+                onClick={() => setChecklistModalCaseId(null)}
+                className="btn-ghost"
+              >
+                Pular por agora
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-white">Casos</h1>

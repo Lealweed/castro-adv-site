@@ -1,4 +1,5 @@
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
+import { getMyOfficeRole } from '@/lib/roles';
 
 export type DocumentRow = {
   id: string;
@@ -13,6 +14,17 @@ export type DocumentRow = {
   size_bytes: number | null;
   created_at: string;
   is_public?: boolean;
+  
+  // Extended fields
+  category?: string | null;
+  status?: 'received' | 'under_analysis' | 'approved' | 'rejected' | string | null;
+  rejection_reason?: string | null;
+  internal_comments?: string | null;
+  parent_id?: string | null;
+  version_number?: number;
+  replacement_reason?: string | null;
+  is_active?: boolean;
+  checklist_item_id?: string | null;
 };
 
 export async function listClientDocuments(clientId: string) {
@@ -21,9 +33,23 @@ export async function listClientDocuments(clientId: string) {
 
   const { data, error } = await sb
     .from('documents')
-    .select('id,user_id,client_id,case_id,task_id,kind,title,file_path,mime_type,size_bytes,created_at,is_public')
+    .select('id,user_id,client_id,case_id,task_id,kind,title,file_path,mime_type,size_bytes,created_at,is_public,category,status,rejection_reason,internal_comments,parent_id,version_number,replacement_reason,is_active,checklist_item_id')
     .eq('client_id', clientId)
     .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data || []) as DocumentRow[];
+}
+
+export async function listDocumentVersions(parentId: string) {
+  const sb = requireSupabase();
+  await getAuthedUser();
+
+  const { data, error } = await sb
+    .from('documents')
+    .select('id,user_id,client_id,case_id,task_id,kind,title,file_path,mime_type,size_bytes,created_at,is_public,category,status,rejection_reason,internal_comments,parent_id,version_number,replacement_reason,is_active,checklist_item_id')
+    .eq('parent_id', parentId)
+    .order('version_number', { ascending: false });
 
   if (error) throw new Error(error.message);
   return (data || []) as DocumentRow[];
@@ -37,6 +63,12 @@ export async function uploadClientDocument(args: {
   fileName?: string;
   caseId?: string | null;
   isPublic?: boolean;
+  category?: string | null;
+  status?: string | null;
+  checklistItemId?: string | null;
+  parentId?: string | null;
+  versionNumber?: number;
+  replacementReason?: string | null;
 }) {
   const sb = requireSupabase();
   const user = await getAuthedUser();
@@ -55,6 +87,17 @@ export async function uploadClientDocument(args: {
   });
   if (upErr) throw new Error(upErr.message);
 
+  // If uploading a new version, deactivate the previous version
+  if (args.parentId) {
+    await sb
+      .from('documents')
+      .update({ is_active: false } as any)
+      .eq('id', args.parentId);
+  }
+
+  // Lawyers default uploads to 'approved'. Client portal uploads default to 'under_analysis'
+  const finalStatus = args.status || (args.kind === 'personal' && !args.checklistItemId ? 'received' : 'approved');
+
   const { error: insErr } = await sb.from('documents').insert({
     id: docId,
     user_id: user.id,
@@ -66,6 +109,13 @@ export async function uploadClientDocument(args: {
     mime_type: args.file.type || null,
     size_bytes: args.file.size || null,
     is_public: args.isPublic || false,
+    category: args.category || null,
+    status: finalStatus,
+    checklist_item_id: args.checklistItemId || null,
+    parent_id: args.parentId || null,
+    version_number: args.versionNumber || 1,
+    replacement_reason: args.replacementReason || null,
+    is_active: true,
   } as any);
 
   if (insErr) {
@@ -75,6 +125,27 @@ export async function uploadClientDocument(args: {
   }
 
   return { id: docId, file_path: path };
+}
+
+export async function updateDocumentStatus(
+  docId: string,
+  status: string,
+  rejectionReason: string | null = null,
+  internalComments: string | null = null
+) {
+  const sb = requireSupabase();
+  await getAuthedUser();
+
+  const { error } = await sb
+    .from('documents')
+    .update({
+      status,
+      rejection_reason: rejectionReason,
+      internal_comments: internalComments,
+    } as any)
+    .eq('id', docId);
+
+  if (error) throw new Error(error.message);
 }
 
 export async function toggleDocumentVisibility(docId: string, isPublic: boolean) {
@@ -89,9 +160,20 @@ export async function toggleDocumentVisibility(docId: string, isPublic: boolean)
   if (error) throw new Error(error.message);
 }
 
-export async function getDocumentDownloadUrl(filePath: string) {
+export async function getDocumentDownloadUrl(filePath: string, documentId?: string) {
   const sb = requireSupabase();
   await getAuthedUser();
+
+  if (documentId) {
+    // Audit download in security logs (non-blocking, best-effort)
+    try {
+      const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : null;
+      await sb.rpc('log_document_download', { p_document_id: documentId, p_user_agent: userAgent });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('Failed to audit document download:', err);
+    }
+  }
 
   const { data, error } = await sb.storage.from('documents').createSignedUrl(filePath, 60 * 10);
   if (error) throw new Error(error.message);
@@ -104,7 +186,7 @@ export async function listTaskDocuments(taskId: string) {
 
   const { data, error } = await sb
     .from('documents')
-    .select('id,user_id,client_id,case_id,task_id,kind,title,file_path,mime_type,size_bytes,created_at')
+    .select('id,user_id,client_id,case_id,task_id,kind,title,file_path,mime_type,size_bytes,created_at,category,status,rejection_reason,parent_id,version_number,is_active')
     .eq('task_id', taskId)
     .order('created_at', { ascending: false });
 
@@ -145,6 +227,8 @@ export async function uploadTaskDocument(args: {
     file_path: path,
     mime_type: args.file.type || null,
     size_bytes: args.file.size || null,
+    status: 'approved',
+    is_active: true,
   } as any);
 
   if (insErr) {
@@ -158,6 +242,11 @@ export async function uploadTaskDocument(args: {
 export async function deleteDocument(doc: { id: string; file_path: string }) {
   const sb = requireSupabase();
   await getAuthedUser();
+
+  const role = await getMyOfficeRole();
+  if (role !== 'admin') {
+    throw new Error('Apenas administradores podem excluir documentos.');
+  }
 
   const { error: delDbErr } = await sb.from('documents').delete().eq('id', doc.id);
   if (delDbErr) throw new Error(delDbErr.message);

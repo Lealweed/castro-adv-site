@@ -115,17 +115,27 @@ export function CaseDetailsPage() {
       const sb = requireSupabase();
       await getAuthedUser();
 
+      // Fetch the case and its primary client (explicit FK hint to avoid ambiguity)
       const { data, error: qErr } = await sb
         .from('cases')
         .select(
-          'id,office_id,title,status,description,created_at,client_id, client:clients!cases_client_id_fkey(id,name), case_clients(client:clients(id,name)), process_number, area,court,district,counterparty_name,counterparty_doc,counterparty_whatsapp,claim_value,distributed_at,responsible_user_id, datajud_last_movement_text, datajud_last_movement_at, datajud_last_checked_at',
+          'id,office_id,title,status,description,created_at,client_id, client:clients!cases_client_id_fkey(id,name), process_number, area,court,district,counterparty_name,counterparty_doc,counterparty_whatsapp,claim_value,distributed_at,responsible_user_id, datajud_last_movement_text, datajud_last_movement_at, datajud_last_checked_at',
         )
         .eq('id', caseId)
         .maybeSingle();
 
       if (qErr) throw new Error(qErr.message);
       const r = (data as any) || null;
-      setRow(r);
+
+      // Fetch additional linked clients separately to avoid FK ambiguity
+      const { data: caseClientsData } = await sb
+        .from('case_clients')
+        .select('client_id, client:clients(id,name)')
+        .eq('case_id', caseId);
+
+      // Merge case_clients into the row object
+      const rowWithClients = r ? { ...r, case_clients: caseClientsData || [] } : null;
+      setRow(rowWithClients);
 
       setTitle(r?.title || '');
       setStatus(r?.status || '');

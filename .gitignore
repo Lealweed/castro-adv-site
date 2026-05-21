@@ -25,3 +25,5 @@ dist-ssr
 
 # OpenClaw
 .clawhub
+.vercel
+.env*.local

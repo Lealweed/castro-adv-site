@@ -31,6 +31,8 @@ function actionLabel(action: string) {
       return 'atualizado';
     case 'delete':
       return 'excluído';
+    case 'download':
+      return 'baixado/visualizado';
     default:
       return action;
   }

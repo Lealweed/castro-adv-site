@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, ShieldAlert, FileSearch, Trash2, Edit3, PlusCircle } from 'lucide-react';
+import { Activity, ShieldAlert, FileSearch, Trash2, Edit3, PlusCircle, Download } from 'lucide-react';
+import { saveAs } from 'file-saver';
 
 import type { AuditLogRow } from '@/lib/audit';
 import { listAuditLogs } from '@/lib/audit';
@@ -47,6 +48,84 @@ function getSeverityBg(action: string, tableName: string) {
     return 'bg-rose-500/5 border-rose-500/10'; // Alerta médio
     
   return 'bg-white/5 border-white/10'; // Normal
+}
+
+function getDeviceLabel(userAgent: string | null): string | null {
+  if (!userAgent) return null;
+  const ua = userAgent.toLowerCase();
+  if (ua.includes('iphone') || ua.includes('ipad')) return '📱 iOS';
+  if (ua.includes('android')) return '📱 Android';
+  if (ua.includes('mac')) return '🖥️ Mac';
+  if (ua.includes('windows')) return '🖥️ Windows';
+  if (ua.includes('linux')) return '🖥️ Linux';
+  return '🌐 Navegador';
+}
+
+function getBrowserLabel(userAgent: string | null): string | null {
+  if (!userAgent) return null;
+  const ua = userAgent.toLowerCase();
+  if (ua.includes('chrome') && !ua.includes('edg')) return 'Chrome';
+  if (ua.includes('firefox')) return 'Firefox';
+  if (ua.includes('safari') && !ua.includes('chrome')) return 'Safari';
+  if (ua.includes('edg')) return 'Edge';
+  if (ua.includes('opera') || ua.includes('opr')) return 'Opera';
+  return null;
+}
+  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function exportToCsv(rows: AuditLogRow[]) {
+  const headers = ['Data/Hora', 'Usuário', 'E-mail', 'Ação', 'Módulo', 'Descrição', 'ID Registro', 'ID Cliente', 'ID Caso', 'ID Tarefa', 'Dispositivo', 'Navegador'];
+
+  const actionMap: Record<string, string> = {
+    insert: 'Criação',
+    update: 'Atualização',
+    delete: 'Exclusão',
+  };
+
+  const tableMap: Record<string, string> = {
+    clients: 'Clientes',
+    cases: 'Casos',
+    tasks: 'Tarefas',
+    documents: 'Documentos',
+    finance_transactions: 'Financeiro',
+    office_members: 'Equipe',
+  };
+
+  const csvRows = rows.map((it) => {
+    const p = it.profile?.[0];
+    const h = humanizeAudit(it);
+    const date = new Date(it.created_at).toLocaleString('pt-BR');
+    const user = p?.display_name || p?.email || (it.user_id ? it.user_id.slice(0, 8) : 'Sistema');
+    const email = p?.email || '';
+    const actionLabel = actionMap[it.action] || it.action;
+    const tableLabel = tableMap[it.table_name] || it.table_name;
+    const description = [h.title, ...(h.changes || [])].join(' | ');
+
+    return [
+      date,
+      user,
+      email,
+      actionLabel,
+      tableLabel,
+      description,
+      it.record_id || '',
+      it.client_id || '',
+      it.case_id || '',
+      it.task_id || '',
+      getDeviceLabel(it.user_agent) || '',
+      getBrowserLabel(it.user_agent) || '',
+    ].map(escapeCsvCell).join(',');
+  });
+
+  const bom = '\uFEFF'; // UTF-8 BOM para Excel abrir corretamente
+  const csv = bom + [headers.join(','), ...csvRows].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const date = new Date().toISOString().slice(0, 10);
+  saveAs(blob, `auditoria_${date}.csv`);
 }
 
 export function AuditPage() {
@@ -125,9 +204,20 @@ export function AuditPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Smart Audit & Segurança</h1>
-        <p className="text-sm text-white/60">Linha do tempo inteligente de rastreio. Veja quem fez o que, quando e onde no sistema.</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Smart Audit & Segurança</h1>
+          <p className="text-sm text-white/60">Linha do tempo inteligente de rastreio. Veja quem fez o que, quando e onde no sistema.</p>
+        </div>
+        <button
+          onClick={() => exportToCsv(filtered)}
+          disabled={filtered.length === 0}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          title="Exportar registros filtrados como CSV"
+        >
+          <Download className="w-4 h-4" />
+          Exportar CSV ({filtered.length})
+        </button>
       </div>
 
       {error ? <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/20 p-4 rounded-xl">{error}</div> : null}
@@ -244,6 +334,11 @@ export function AuditPage() {
                       <div className="mt-3 flex items-center gap-3 text-[10px] uppercase font-bold tracking-wider text-white/30">
                         <span className="bg-white/5 px-2 py-0.5 rounded">{it.table_name}</span>
                         <span>REF: {it.record_id ? it.record_id.slice(0, 8) : '—'}</span>
+                        {it.user_agent && (
+                          <span className="text-white/20 normal-case font-normal" title={it.user_agent}>
+                            {getDeviceLabel(it.user_agent)}{getBrowserLabel(it.user_agent) ? ` · ${getBrowserLabel(it.user_agent)}` : ''}
+                          </span>
+                        )}
                       </div>
                     </div>
 

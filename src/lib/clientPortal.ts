@@ -35,6 +35,32 @@ export type PortalContext = {
   nextMeeting: PortalMeeting | null;
 };
 
+export type PortalCase = {
+  id: string;
+  title: string;
+  status: string;
+  description?: string | null;
+  process_number?: string | null;
+  area?: string | null;
+  created_at: string;
+};
+
+export type PortalChecklistItem = {
+  id: string;
+  case_id: string;
+  title: string;
+  description: string | null;
+  status: 'pending' | 'under_analysis' | 'approved' | 'rejected' | string;
+  rejection_reason: string | null;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+  document_id: string | null;
+  document_title: string | null;
+  document_file_path: string | null;
+  document_status: string | null;
+};
+
 type PortalLoginRpcResponse = {
   session_token: string;
   client: PortalClient;
@@ -140,6 +166,71 @@ export async function listPortalClientTransactions(sessionToken: string): Promis
 
   if (error) throw new Error(error.message);
   return (data || []) as FinanceTx[];
+}
+
+export async function listPortalClientCases(sessionToken: string): Promise<PortalCase[]> {
+  const sb = requirePortalSupabase();
+  const { data, error } = await sb.rpc('portal_list_client_cases', {
+    p_session_token: sessionToken,
+  });
+
+  if (error) throw new Error(error.message);
+  return (data || []) as PortalCase[];
+}
+
+export async function listPortalCaseChecklists(sessionToken: string, caseId: string): Promise<PortalChecklistItem[]> {
+  const sb = requirePortalSupabase();
+  const { data, error } = await sb.rpc('portal_list_case_checklists', {
+    p_session_token: sessionToken,
+    p_case_id: caseId,
+  });
+
+  if (error) throw new Error(error.message);
+  return (data || []) as PortalChecklistItem[];
+}
+
+export async function portalUploadChecklistDocument(args: {
+  sessionToken: string;
+  clientId: string;
+  caseId: string;
+  checklistItemId: string;
+  title: string;
+  file: File | Blob;
+  fileName?: string;
+}) {
+  const sb = requirePortalSupabase();
+
+  const docId = crypto.randomUUID();
+  const originalName = args.fileName || (args.file instanceof File ? args.file.name : 'documento.pdf');
+  const safeName = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  
+  const path = `clients/${args.clientId}/cases/${args.caseId}/${docId}_${safeName}`;
+
+  // 1) Upload the file to storage
+  const { error: upErr } = await sb.storage.from('documents').upload(path, args.file, {
+    upsert: false,
+    contentType: args.file.type || undefined,
+  });
+  if (upErr) throw new Error(upErr.message);
+
+  // 2) Link via database function
+  const { data: docUuid, error: linkErr } = await sb.rpc('portal_link_uploaded_document', {
+    p_session_token: args.sessionToken,
+    p_case_id: args.caseId,
+    p_checklist_item_id: args.checklistItemId,
+    p_title: args.title.trim() || originalName,
+    p_file_path: path,
+    p_mime_type: args.file.type || null,
+    p_size_bytes: args.file.size || null,
+  });
+
+  if (linkErr) {
+    // clean up
+    await sb.storage.from('documents').remove([path]).catch(() => null);
+    throw new Error(linkErr.message);
+  }
+
+  return { id: docUuid, file_path: path };
 }
 
 export function getPortalRpcError(error: unknown, fallback: string) {

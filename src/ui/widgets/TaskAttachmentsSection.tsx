@@ -72,7 +72,7 @@ export function TaskAttachmentsSection({
 
   async function onDownload(doc: DocumentRow) {
     try {
-      const url = await getDocumentDownloadUrl(doc.file_path);
+      const url = await getDocumentDownloadUrl(doc.file_path, doc.id);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (e: any) {
       setError(e?.message || 'Falha ao gerar link de download.');
