@@ -16,7 +16,10 @@ import {
   TrendingUp,
   ClipboardList,
   Users,
+  Calculator,
+  Cpu,
 } from 'lucide-react';
+
 
 import { cn } from '@/ui/utils/cn';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
@@ -29,14 +32,17 @@ const items = [
   { to: '/app/casos', label: 'Casos', shortLabel: 'Cas', icon: Briefcase },
   { to: '/app/notificacoes', label: 'Notificacoes', shortLabel: 'Not', icon: Bell },
   { to: '/app/publicacoes', label: 'PJe / Intimações', shortLabel: 'PJe', icon: BellRing },
+  { to: '/app/calculadora', label: 'Calculadora CPC', shortLabel: 'CPC', icon: Calculator },
   { to: '/app/agenda', label: 'Agenda', shortLabel: 'Age', icon: Calendar },
   { to: '/app/tarefas', label: 'Tarefas', shortLabel: 'Tar', icon: CheckSquare },
   { to: '/app/financeiro', label: 'Financeiro', shortLabel: 'Fin', icon: Coins },
   { to: '/app/drive', label: 'Smart Drive', shortLabel: 'Drv', icon: HardDrive },
   { to: '/app/relatorios-ia', label: 'Relatórios com IA', shortLabel: 'IA', icon: Sparkles },
+  { to: '/app/integracoes', label: 'Integrações & API', shortLabel: 'API', icon: Cpu },
   { to: '/portal', label: 'Portal do Cliente', shortLabel: 'Portal', icon: Building2 },
   { to: '/app/configuracoes', label: 'Configurações', shortLabel: 'Cfg', icon: Cog },
 ];
+
 
 type SidebarProps = {
   collapsed?: boolean;
@@ -95,7 +101,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
             </div>
             <div className="leading-tight">
               <div className="text-sm font-semibold text-white">CRM Jurídico</div>
-              <div className="text-xs text-white/60">SaaS multi-tenant</div>
+              <div className="text-xs text-white/60">Castro & Oliveira</div>
             </div>
           </>
         )}

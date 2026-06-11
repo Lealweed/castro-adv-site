@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
 import { loadCasesLite, type CaseLite } from '@/lib/loadCasesLite';
@@ -118,6 +118,7 @@ function areSubtasksComplete(subtasks: TaskSubtask[] | null | undefined) {
 }
 
 export function TasksPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [rows, setRows] = useState<TaskRow[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
 
@@ -239,6 +240,29 @@ export function TasksPage() {
     (async () => {
       await ensureMyProfile();
       await load();
+
+      const newParam = searchParams.get('new');
+      if (newParam === '1' || newParam === 'true') {
+        const titleParam = searchParams.get('title') || '';
+        const caseIdParam = searchParams.get('caseId') || '';
+        const clientIdParam = searchParams.get('clientId') || '';
+        const dueAtParam = searchParams.get('dueAt') || '';
+
+        setTitle(titleParam);
+        setCaseId(caseIdParam);
+        setClientId(clientIdParam);
+        
+        if (dueAtParam) {
+          if (dueAtParam.includes('T')) {
+            setDueAtLocal(dueAtParam);
+          } else {
+            setDueAtLocal(`${dueAtParam}T12:00`);
+          }
+        }
+        
+        setCreateOpen(true);
+        setSearchParams({}, { replace: true });
+      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

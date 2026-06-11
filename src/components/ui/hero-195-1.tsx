@@ -37,7 +37,7 @@ export function Hero1951() {
 
         <div className="grid gap-3">
           <div className="rounded-2xl border border-white/10 bg-neutral-950/40 p-4">
-            <div className="text-xs font-semibold text-white/60">Ponto seco (exemplo)</div>
+            <div className="text-xs font-semibold text-white/60">Gargalos Operacionais</div>
             <div className="mt-1 text-sm font-semibold text-white">Tarefas pausadas acumulando</div>
             <div className="mt-2 text-xs text-white/60">Use o gráfico de risco para agir antes do prazo estourar.</div>
           </div>

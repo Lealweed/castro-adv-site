@@ -4,7 +4,11 @@ function resolveApiBaseUrl() {
   const configured = import.meta.env.VITE_API_BASE_URL as string | undefined;
   if (configured) return configured;
 
-  if (host === 'www.castrodeoliveiraadv.org' || host === 'castrodeoliveiraadv.org') {
+  if (
+    host === 'www.castrodeoliveiraadv.org' || 
+    host === 'castrodeoliveiraadv.org' ||
+    host.endsWith('.vercel.app')
+  ) {
     return 'https://api.castrodeoliveiraadv.org';
   }
 

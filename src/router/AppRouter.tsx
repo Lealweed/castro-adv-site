@@ -39,6 +39,9 @@ const DrivePage = lazy(() => import('@/ui/pages/DrivePage').then((m) => ({ defau
 const SettingsPage = lazy(() => import('@/ui/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const TeamPage = lazy(() => import('@/ui/pages/TeamPage').then((m) => ({ default: m.TeamPage })));
 const AuditPage = lazy(() => import('@/ui/pages/AuditPage').then((m) => ({ default: m.AuditPage })));
+const CalculadoraPrazosPage = lazy(() => import('@/ui/pages/CalculadoraPrazosPage').then((m) => ({ default: m.CalculadoraPrazosPage })));
+const IntegrationsPage = lazy(() => import('@/ui/pages/IntegrationsPage').then((m) => ({ default: m.IntegrationsPage })));
+
 
 export function AppRouter() {
   return (
@@ -95,7 +98,10 @@ export function AppRouter() {
               <Route path="/app/notificacoes" element={<NotificationsPage />} />
               <Route path="/app/drive" element={<DrivePage />} />
               <Route path="/app/publicacoes" element={<PublicationsPage />} />
+              <Route path="/app/calculadora" element={<CalculadoraPrazosPage />} />
+              <Route path="/app/integracoes" element={<IntegrationsPage />} />
               <Route path="/app/configuracoes" element={<SettingsPage />} />
+
 
               <Route element={<RequireRole allowed={["admin"]} />}>
                 <Route path="/app/configuracoes/equipe" element={<TeamPage />} />
