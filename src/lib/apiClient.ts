@@ -1,5 +1,6 @@
 import { env } from '@/env';
 import { storageGet, storageRemove, storageSet } from '@/lib/storage';
+import { supabase } from '@/lib/supabaseClient';
 
 const ACCESS_KEY = 'castrocrm.accessToken';
 const REFRESH_KEY = 'castrocrm.refreshToken';
@@ -77,14 +78,19 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
   const orgId = getOrgId();
   if (orgId) headers.set('X-Org-Id', orgId);
 
-  const token = getAccessToken();
+  let token = getAccessToken();
+  const usingBackendToken = Boolean(token);
+  if (!token && supabase) {
+    const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+    token = data.session?.access_token ?? null;
+  }
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
   const doFetch = () => fetch(url, { ...init, headers });
 
   let res = await doFetch();
 
-  if (res.status === 401) {
+  if (res.status === 401 && usingBackendToken) {
     const newAccess = await refreshAccessToken();
     if (newAccess) {
       headers.set('Authorization', `Bearer ${newAccess}`);

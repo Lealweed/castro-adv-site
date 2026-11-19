@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { requireSupabase } from '@/lib/supabaseDb';
+import { getMyOfficeId } from '@/lib/officeContext';
+import { createOfficeInvite } from '@/lib/offices';
 import { Card } from '@/ui/widgets/Card';
-import { Activity, Briefcase, CheckCircle, Clock, Users } from 'lucide-react';
+import { PageHeader } from '@/ui/widgets/PageHeader';
+import { Activity, Briefcase, CheckCircle, Clock, Users, UsersRound } from 'lucide-react';
 
 type Member = {
   id: string;
@@ -90,6 +93,43 @@ export function TeamPage() {
       }
       const profilesMap = new Map<string, UserProfileRow>(profilesData.map((p) => [p.user_id, p]));
 
+      // Busca contagens reais de casos e tarefas por membro
+      const now = Date.now();
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const monthStartMs = monthStart.getTime();
+
+      const [{ data: casesData }, { data: tasksData }] = await Promise.all([
+        sb.from('cases').select('id,responsible_user_id,status').limit(2000),
+        sb.from('tasks').select('id,assigned_to_user_id,status_v2,due_at,done_at').limit(3000),
+      ]);
+
+      const activeCasesByUser = new Map<string, number>();
+      for (const c of (casesData || []) as any[]) {
+        const uid = c.responsible_user_id;
+        if (!uid) continue;
+        const st = String(c.status || '').toLowerCase();
+        if (['arquivado', 'encerrado', 'closed'].includes(st)) continue;
+        activeCasesByUser.set(uid, (activeCasesByUser.get(uid) || 0) + 1);
+      }
+
+      const tasksDoneByUser = new Map<string, number>();
+      const tasksOverdueByUser = new Map<string, number>();
+      for (const t of (tasksData || []) as any[]) {
+        const uid = t.assigned_to_user_id;
+        if (!uid) continue;
+        const st = String(t.status_v2 || '').toLowerCase();
+        if (st === 'done') {
+          const doneMs = t.done_at ? new Date(t.done_at).getTime() : monthStartMs;
+          if (doneMs >= monthStartMs) {
+            tasksDoneByUser.set(uid, (tasksDoneByUser.get(uid) || 0) + 1);
+          }
+        } else if (st !== 'cancelled' && t.due_at && new Date(t.due_at).getTime() < now) {
+          tasksOverdueByUser.set(uid, (tasksOverdueByUser.get(uid) || 0) + 1);
+        }
+      }
+
       // Exibir dados reais, blindado contra falhas
       const enriched = (data || []).map((m: any) => {
         const p = profilesMap.get(m.user_id);
@@ -102,10 +142,10 @@ export function TeamPage() {
           phone: p?.phone || '',
           whatsapp: p?.whatsapp || '',
           stats: {
-            activeCases: Math.floor(Math.random() * 20) + 2,
-            tasksDone: Math.floor(Math.random() * 50) + 10,
-            tasksOverdue: Math.floor(Math.random() * 5)
-          }
+            activeCases: activeCasesByUser.get(m.user_id) || 0,
+            tasksDone: tasksDoneByUser.get(m.user_id) || 0,
+            tasksOverdue: tasksOverdueByUser.get(m.user_id) || 0,
+          },
         };
       });
 
@@ -125,13 +165,26 @@ export function TeamPage() {
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
-    if (!inviteEmail) return;
-    
+    if (!inviteEmail.trim()) return;
+
     setInviting(true);
-    await new Promise(r => setTimeout(r, 1000));
-    alert('Convite enviado (simulado)! Na versão final, isso enviará um e-mail com link seguro.');
-    setInviting(false);
-    setInviteEmail('');
+    try {
+      const officeId = await getMyOfficeId();
+      if (!officeId) throw new Error('Escritório não identificado para gerar o convite.');
+      const normalizedRole =
+        inviteRole === 'lawyer' ? 'member' : inviteRole === 'secretary' ? 'staff' : inviteRole;
+      await createOfficeInvite({
+        officeId,
+        email: inviteEmail.trim(),
+        role: normalizedRole,
+      });
+      alert(`Convite registrado com sucesso para ${inviteEmail.trim()}! O colaborador já pode aceitar ao acessar o painel.`);
+      setInviteEmail('');
+    } catch (err: any) {
+      alert('Erro ao criar convite: ' + (err?.message || 'Falha inesperada.'));
+    } finally {
+      setInviting(false);
+    }
   }
 
   async function updateRole(memberId: string, newRole: string) {
@@ -182,10 +235,12 @@ export function TeamPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Gestão de Equipe & Desempenho</h1>
-        <p className="text-sm text-white/60">Controle de acessos (RBAC) e produtividade dos colaboradores.</p>
-      </div>
+      <PageHeader
+        icon={UsersRound}
+        eyebrow="Sistema"
+        title="Gestão de Equipe & Desempenho"
+        subtitle="Controle de acessos (RBAC), OABs, WhatsApp de alertas e produtividade dos colaboradores."
+      />
 
       <div className="grid gap-6 xl:grid-cols-3">
         {/* Coluna Esquerda: Lista e Convite */}

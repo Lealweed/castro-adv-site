@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Eye, EyeOff, FileText, Upload, Download, Trash2, Check, X, History, Folder, Calendar, AlertCircle, Plus, FileUp } from 'lucide-react';
+import { Eye, EyeOff, FileText, Upload, Download, Trash2, Check, X, History, Folder, Calendar, AlertCircle, Plus, FileUp, Home, HeartHandshake, Briefcase, Baby, Send, FolderCheck, Zap, RefreshCw, Sparkles } from 'lucide-react';
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
 import { saveAs } from 'file-saver';
 
 import type { DocumentRow } from '@/lib/documents';
-import { deleteDocument, getDocumentDownloadUrl, listClientDocuments, uploadClientDocument, toggleDocumentVisibility } from '@/lib/documents';
+import { deleteDocument, getDocumentDownloadUrl, listClientDocuments, uploadClientDocument, toggleDocumentVisibility, restoreDocumentVersion } from '@/lib/documents';
 import { requireSupabase, getAuthedUser } from '@/lib/supabaseDb';
 import { getMyOfficeRole } from '@/lib/roles';
 import { listCaseChecklistItems, createChecklistItem, applyChecklistTemplate, deleteChecklistItem, updateChecklistItem, reviewChecklistItem } from '@/lib/checklist';
@@ -43,6 +43,8 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadChecklistItemId, setUploadChecklistItemId] = useState<string | null>(null);
+  const [uploadParentId, setUploadParentId] = useState<string | null>(null);
+  const [uploadRootId, setUploadRootId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [titleEdited, setTitleEdited] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -161,20 +163,32 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
     setBulkDone(0);
     setError(null);
     try {
-      const kind = tab === 'template' ? 'template' : (caseId ? 'case' : 'personal');
-      const isBulk = files.length > 1 && !uploadChecklistItemId;
+      let kind: 'personal' | 'case' | 'template' = tab === 'template' ? 'template' : (caseId ? 'case' : 'personal');
+      let finalCaseId = caseId || null;
+      let finalIsPublic = isPublic;
+
+      if (uploadParentId) {
+        const parentDoc = rows.find(r => r.id === uploadParentId);
+        if (parentDoc) {
+          kind = parentDoc.kind as 'personal' | 'case' | 'template';
+          finalCaseId = parentDoc.case_id || null;
+          finalIsPublic = parentDoc.is_public || false;
+        }
+      }
+
+      const isBulk = files.length > 1 && !uploadChecklistItemId && !uploadParentId;
 
       for (let i = 0; i < files.length; i++) {
         const f = files[i];
 
-        let versionNum = 1;
-        let parentId: string | null = null;
+        let parentId: string | null = uploadParentId;
+        let rootId: string | null = uploadRootId;
 
         if (uploadChecklistItemId) {
           const activeDoc = rows.find(r => r.checklist_item_id === uploadChecklistItemId && r.is_active);
           if (activeDoc) {
-            parentId = activeDoc.parent_id || activeDoc.id;
-            versionNum = (activeDoc.version_number || 1) + 1;
+            parentId = activeDoc.id;
+            rootId = activeDoc.root_id || activeDoc.id;
           }
         }
 
@@ -187,12 +201,12 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
           kind,
           title: docTitle,
           file: f,
-          caseId: caseId || null,
-          isPublic: kind === 'template' ? false : isPublic,
+          caseId: finalCaseId,
+          isPublic: kind === 'template' ? false : finalIsPublic,
           category: docCategory,
           checklistItemId: uploadChecklistItemId || null,
           parentId,
-          versionNumber: versionNum,
+          rootId,
           replacementReason: parentId ? 'Atualização de documento pelo escritório' : null,
         });
 
@@ -206,6 +220,8 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
 
       setUploadOpen(false);
       setUploadChecklistItemId(null);
+      setUploadParentId(null);
+      setUploadRootId(null);
       setTitle('');
       setTitleEdited(false);
       setFiles([]);
@@ -286,19 +302,60 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
     try {
       const sb = requireSupabase();
       const parentId = doc.parent_id || doc.id;
-      // Get all documents with this parentId or the parent document itself
+      const rootId = doc.root_id || doc.id;
+      // Get all documents with this parentId or the parent document itself or the root_id
       const { data, error } = await sb
         .from('documents')
         .select('*')
-        .or(`parent_id.eq.${parentId},id.eq.${parentId}`)
+        .or(`parent_id.eq.${parentId},id.eq.${parentId},root_id.eq.${rootId},id.eq.${rootId}`)
         .order('version_number', { ascending: false });
       
       if (error) throw new Error(error.message);
-      setVersions((data || []) as DocumentRow[]);
+      
+      const docs = (data || []) as DocumentRow[];
+      
+      // Fetch uploader user profile details separately to show uploader's name
+      const userIds = Array.from(new Set(docs.map(d => d.user_id).filter(Boolean) as string[]));
+      const profilesMap: Record<string, { display_name: string | null; email: string | null }> = {};
+      
+      if (userIds.length > 0) {
+        const { data: profs } = await sb
+          .from('user_profiles')
+          .select('user_id,email,display_name')
+          .in('user_id', userIds);
+          
+        if (profs) {
+          profs.forEach(p => {
+            profilesMap[p.user_id] = { display_name: p.display_name, email: p.email };
+          });
+        }
+      }
+      
+      const docsWithProfiles = docs.map(d => ({
+        ...d,
+        uploader_name: d.user_id ? (profilesMap[d.user_id]?.display_name || profilesMap[d.user_id]?.email || d.user_id.slice(0, 8)) : 'Portal/Cliente'
+      }));
+
+      setVersions(docsWithProfiles);
     } catch (err: any) {
       console.error(err);
     } finally {
       setLoadingVersions(false);
+    }
+  }
+
+  async function handleRestoreVersion(ver: DocumentRow) {
+    if (!confirm(`Deseja restaurar a versão ${ver.version_number} como a versão ativa?`)) return;
+    setSaving(true);
+    try {
+      const rootId = ver.root_id || ver.parent_id || ver.id;
+      await restoreDocumentVersion(ver.id, rootId);
+      setHistoryDocId(null);
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao restaurar versão.');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -492,18 +549,22 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
           </div>
 
           {showApplyTemplate && (
-            <div className="bg-black/30 border border-white/5 rounded-2xl p-4 grid grid-cols-2 md:grid-cols-4 gap-2 animate-slideDown">
-              <button onClick={() => handleApplyTemplate('usucapiao')} className="text-left p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-semibold text-white transition-colors">
-                🏠 Usucapião Extrajudicial
+            <div className="bg-slate-950/60 border border-white/[0.08] rounded-2xl p-4 grid grid-cols-2 md:grid-cols-4 gap-2 animate-slideDown">
+              <button onClick={() => handleApplyTemplate('usucapiao')} className="inline-flex items-center gap-2 text-left p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-semibold text-white transition-colors">
+                <Home className="h-4 w-4 text-sky-300 shrink-0" strokeWidth={1.75} />
+                Usucapião Extrajudicial
               </button>
-              <button onClick={() => handleApplyTemplate('divorcio')} className="text-left p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-semibold text-white transition-colors">
-                💔 Divórcio Consensual
+              <button onClick={() => handleApplyTemplate('divorcio')} className="inline-flex items-center gap-2 text-left p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-semibold text-white transition-colors">
+                <HeartHandshake className="h-4 w-4 text-indigo-300 shrink-0" strokeWidth={1.75} />
+                Divórcio Consensual
               </button>
-              <button onClick={() => handleApplyTemplate('trabalhista_empresa')} className="text-left p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-semibold text-white transition-colors">
-                💼 Defesa Trabalhista
+              <button onClick={() => handleApplyTemplate('trabalhista_empresa')} className="inline-flex items-center gap-2 text-left p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-semibold text-white transition-colors">
+                <Briefcase className="h-4 w-4 text-emerald-300 shrink-0" strokeWidth={1.75} />
+                Defesa Trabalhista
               </button>
-              <button onClick={() => handleApplyTemplate('alimentos')} className="text-left p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-semibold text-white transition-colors">
-                👶 Ação de Alimentos
+              <button onClick={() => handleApplyTemplate('alimentos')} className="inline-flex items-center gap-2 text-left p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-semibold text-white transition-colors">
+                <Baby className="h-4 w-4 text-violet-300 shrink-0" strokeWidth={1.75} />
+                Ação de Alimentos
               </button>
             </div>
           )}
@@ -542,7 +603,7 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
                         <span className="text-sm font-semibold text-white">{item.title}</span>
                         {item.due_date && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-white/5 text-white/60 border border-white/10 rounded px-1.5 py-0.5">
-                            <Calendar className="w-3 h-3" /> Limite: {new Date(item.due_date).toLocaleDateString()}
+                            <Calendar className="w-3 h-3" /> Limite: {item.due_date.split('T')[0].split('-').reverse().join('/')}
                           </span>
                         )}
                         
@@ -550,8 +611,18 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
                         {item.status === 'under_analysis' && <span className="badge bg-blue-500/10 text-blue-300 border-blue-500/20">Em Análise</span>}
                         {item.status === 'rejected' && <span className="badge bg-red-500/10 text-red-300 border-red-500/20">Rejeitado</span>}
                         {item.status === 'pending' && <span className="badge bg-zinc-500/10 text-zinc-400 border-white/10">Pendente</span>}
-                        {item.status === 'forwarded' && <span className="badge bg-purple-500/10 text-purple-300 border-purple-500/20">📤 Enc. ao Cartório</span>}
-                        {item.status === 'filed' && <span className="badge bg-teal-500/10 text-teal-300 border-teal-500/20">📁 Protocolado</span>}
+                        {item.status === 'forwarded' && (
+                          <span className="badge bg-purple-500/10 text-purple-300 border-purple-500/20">
+                            <Send className="h-3 w-3" strokeWidth={1.75} />
+                            Enc. ao Cartório
+                          </span>
+                        )}
+                        {item.status === 'filed' && (
+                          <span className="badge bg-teal-500/10 text-teal-300 border-teal-500/20">
+                            <FolderCheck className="h-3 w-3" strokeWidth={1.75} />
+                            Protocolado
+                          </span>
+                        )}
                       </div>
 
                       {item.description && <p className="text-xs text-white/60">{item.description}</p>}
@@ -573,14 +644,12 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
                           </button>
 
                           {/* Version indicator and button */}
-                          {(linkedDoc.version_number && linkedDoc.version_number > 1) ? (
-                            <button 
-                              onClick={() => loadVersions(linkedDoc)}
-                              className="text-white/60 hover:text-white flex items-center gap-1 ml-2 bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-lg transition-colors border border-white/5"
-                            >
-                              <History className="w-3 h-3 text-sky-400" /> v{linkedDoc.version_number}
-                            </button>
-                          ) : null}
+                          <button 
+                            onClick={() => loadVersions(linkedDoc)}
+                            className="text-white/60 hover:text-white flex items-center gap-1 ml-2 bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-lg transition-colors border border-white/5"
+                          >
+                            <History className="w-3 h-3 text-sky-400" /> v{linkedDoc.version_number || 1}
+                          </button>
                         </div>
                       )}
                     </div>
@@ -621,7 +690,8 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
                               className="btn-ghost !border-purple-500/20 !text-purple-300 !text-[10px] !py-1 !px-2"
                               title="Marcar como Encaminhado ao Cartório"
                             >
-                              📤 Enc. Cartório
+                              <Send className="h-3 w-3" strokeWidth={1.75} />
+                              Enc. Cartório
                             </button>
                           )}
                           {(item.status === 'approved' || item.status === 'forwarded') && (
@@ -630,7 +700,8 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
                               className="btn-ghost !border-teal-500/20 !text-teal-300 !text-[10px] !py-1 !px-2"
                               title="Marcar como Protocolado"
                             >
-                              📁 Protocolado
+                              <FolderCheck className="h-3 w-3" strokeWidth={1.75} />
+                              Protocolado
                             </button>
                           )}
                         </div>
@@ -816,14 +887,12 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
                             {d.status === 'filed' && <span className="text-teal-400">● Protocolado</span>}
 
                             {/* Version history loader */}
-                            {(d.version_number && d.version_number > 1) ? (
-                              <button 
-                                onClick={() => loadVersions(d)}
-                                className="inline-flex items-center gap-1 text-sky-400 hover:underline bg-sky-500/5 border border-sky-500/10 rounded px-1.5 py-0.2"
-                              >
-                                <History className="w-3 h-3" /> v{d.version_number} (Histórico)
-                              </button>
-                            ) : null}
+                            <button 
+                              onClick={() => loadVersions(d)}
+                              className="inline-flex items-center gap-1 text-sky-400 hover:underline bg-sky-500/5 border border-sky-500/10 rounded px-1.5 py-0.2"
+                            >
+                              <History className="w-3 h-3" /> v{d.version_number || 1} (Histórico)
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -835,17 +904,36 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
                             disabled={saving}
                             className="btn-primary !rounded-lg !px-3 !py-1.5 !text-xs whitespace-nowrap"
                           >
-                            ⚡ Gerar Doc
+                            <Zap className="h-3.5 w-3.5" strokeWidth={1.75} />
+                            Gerar Doc
                           </button>
                         ) : null}
                       
                         {d.kind !== 'template' ? (
-                          <button 
-                            onClick={() => void onTogglePublic(d)} 
-                            className="btn-ghost !border-white/10 !rounded-lg !px-3 !py-1.5 !text-xs"
-                          >
-                            {d.is_public ? 'Ocultar' : 'Publicar'}
-                          </button>
+                          <>
+                            <button 
+                              onClick={() => void onTogglePublic(d)} 
+                              className="btn-ghost !border-white/10 !rounded-lg !px-3 !py-1.5 !text-xs"
+                            >
+                              {d.is_public ? 'Ocultar' : 'Publicar'}
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setUploadChecklistItemId(null);
+                                setUploadParentId(d.id);
+                                setUploadRootId(d.root_id || d.id);
+                                setTitleEdited(true);
+                                setTitle(d.title);
+                                setDocCategory(d.category || 'other');
+                                setUploadOpen(true);
+                              }}
+                              className="btn-ghost !border-white/10 !rounded-lg !px-3 !py-1.5 !text-xs flex items-center gap-1"
+                              title="Substituir por Nova Versão"
+                            >
+                              <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.75} />
+                              Substituir
+                            </button>
+                          </>
                         ) : null}
                         
                         <button onClick={() => void onDownload(d)} className="btn-ghost !rounded-lg !p-2" title="Baixar">
@@ -872,7 +960,7 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
         <div className="rounded-2xl border border-blue-500/30 bg-blue-500/5 p-5 relative overflow-hidden animate-fadeIn">
           <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
           <h3 className="text-sm font-semibold text-white mb-4">
-            {uploadChecklistItemId ? 'Enviar Documento para Requisito' : 'Adicionar Documento ao Drive'}
+            {uploadChecklistItemId ? 'Enviar Documento para Requisito' : (uploadParentId ? `Substituir por Nova Versão de: ${title}` : 'Adicionar Documento ao Drive')}
           </h3>
           
           <div className="grid gap-4 md:grid-cols-2">
@@ -896,7 +984,10 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
                 placeholder={clientData?.name ? buildAutoTitle(clientData.name, docCategory) : 'Ex: CNH do Cliente'}
               />
               {!titleEdited && clientData?.name && (
-                <span className="text-[10px] text-white/40 mt-1 block">✦ Gerado automaticamente — edite se necessário</span>
+                <span className="text-[10px] text-white/45 mt-1 inline-flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-sky-300" strokeWidth={1.75} />
+                  Gerado automaticamente — edite se necessário
+                </span>
               )}
             </label>
             )}
@@ -992,7 +1083,9 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
                 </h3>
                 <p className="text-xs text-white/50">Visualize e baixe versões anteriores enviadas para este item.</p>
               </div>
-              <button onClick={() => setHistoryDocId(null)} className="text-white/40 hover:text-white text-sm font-semibold">✕</button>
+              <button onClick={() => setHistoryDocId(null)} className="btn-icon !p-1.5 text-white/60 hover:text-white" aria-label="Fechar">
+                <X className="h-4 w-4" strokeWidth={1.75} />
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -1012,8 +1105,14 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
                         </span>
                       </div>
                       
-                      <div className="mt-1 flex items-center gap-3 text-[10px] text-white/50">
+                      <div className="mt-1 flex items-center gap-3 text-[10px] text-white/50 flex-wrap">
                         <span>Enviado em: {new Date(ver.created_at).toLocaleString()}</span>
+                        {ver.uploader_name && (
+                          <span className="text-amber-300">· Por: {ver.uploader_name}</span>
+                        )}
+                        {ver.size_bytes ? (
+                          <span>· {(ver.size_bytes / 1024 / 1024).toFixed(2)} MB</span>
+                        ) : null}
                         {ver.replacement_reason && (
                           <span className="text-sky-300">· Motivo: {ver.replacement_reason}</span>
                         )}
@@ -1024,12 +1123,26 @@ export function DocumentsSection({ clientId, caseId }: { clientId: string; caseI
                       )}
                     </div>
 
-                    <button 
-                      onClick={() => onDownload(ver)}
-                      className="btn-ghost !p-2 !border-white/10 hover:!bg-white/5"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => onDownload(ver)}
+                        className="btn-ghost !p-2 !border-white/10 hover:!bg-white/5"
+                        title="Baixar esta versão"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+                      
+                      {!ver.is_active && (
+                        <button
+                          onClick={() => handleRestoreVersion(ver)}
+                          className="btn-ghost !p-2 !border-white/10 hover:!bg-emerald-500/10 hover:!text-emerald-400"
+                          title="Restaurar esta versão como ativa"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.75} />
+                          Restaurar
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))
               )}

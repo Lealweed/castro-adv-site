@@ -1,7 +1,9 @@
+import { ArrowLeft, Plus, Scale } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { DocumentsSection } from '@/ui/widgets/DocumentsSection';
 import { TimelineSection } from '@/ui/widgets/TimelineSection';
 import { fetchDatajudLastMovement } from '@/lib/datajud';
@@ -254,20 +256,24 @@ export function CaseDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Caso</h1>
-          <p className="text-sm text-white/60">Detalhes (Supabase).</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link to={`/app/tarefas/kanban?new=1&caseId=${caseId || ''}`} className="btn-primary !rounded-lg !px-4 !py-2 !text-sm flex items-center gap-2">
-            <span className="text-lg leading-none">+</span> Nova Tarefa
-          </Link>
-          <Link to="/app/casos" className="btn-ghost">
-            Voltar
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        icon={Scale}
+        eyebrow="Jurídico"
+        title={title || 'Caso'}
+        subtitle="Andamento processual, documentos, checklist e linha do tempo."
+        actions={
+          <>
+            <Link to={`/app/tarefas/kanban?new=1&caseId=${caseId || ''}`} className="btn-primary">
+              <Plus className="h-4 w-4" strokeWidth={2} />
+              Nova Tarefa
+            </Link>
+            <Link to="/app/casos" className="btn-ghost">
+              <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
+              Voltar
+            </Link>
+          </>
+        }
+      />
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
 
@@ -289,7 +295,18 @@ export function CaseDetailsPage() {
             <div className="grid gap-3 md:grid-cols-2">
               <label className="text-sm text-white/80">
                 Status
-                <input className="input mt-1" value={status} onChange={(e) => setStatus(e.target.value)} />
+                <select className="select mt-1 w-full" value={status} onChange={(e) => setStatus(e.target.value)}>
+                  <option value="peticao_inicial">Petição Inicial (Protocolo)</option>
+                  <option value="citacao_defesa">Citação do Réu e Defesa</option>
+                  <option value="instrucao_provas">Instrução e Provas</option>
+                  <option value="julgamento_sentenca">Julgamento (Sentença)</option>
+                  <option value="recurso">Recurso ao Tribunal</option>
+                  <option value="execucao_recebimento">Execução e Recebimento (Final)</option>
+                  <option value="arquivado">Arquivado</option>
+                  {status && !['peticao_inicial', 'citacao_defesa', 'instrucao_provas', 'julgamento_sentenca', 'recurso', 'execucao_recebimento', 'arquivado'].includes(status) && (
+                    <option value={status}>{status}</option>
+                  )}
+                </select>
               </label>
               <div>
                 <div className="flex items-center gap-2">

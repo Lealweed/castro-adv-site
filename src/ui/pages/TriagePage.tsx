@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ClipboardList, Mail, Phone, RefreshCw, UserRound, X } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Briefcase, Inbox, Mail, Phone, RefreshCw, UserRound, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { formatCpf } from '@/lib/cpf';
 import { formatBrPhone } from '@/lib/phone';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 
 type TriageLeadRow = {
   id: string;
@@ -122,7 +123,17 @@ function DataTable({
   );
 }
 
-function LeadDetailsModal({ lead, onClose }: { lead: TriageLeadRow | null; onClose: () => void }) {
+function LeadDetailsModal({
+  lead,
+  onClose,
+  onConvertToCase,
+  converting,
+}: {
+  lead: TriageLeadRow | null;
+  onClose: () => void;
+  onConvertToCase: (lead: TriageLeadRow) => void;
+  converting: boolean;
+}) {
   if (!lead) return null;
 
   return (
@@ -202,9 +213,20 @@ function LeadDetailsModal({ lead, onClose }: { lead: TriageLeadRow | null; onClo
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-2">
             <div className="text-sm text-white/60">Data/Hora do cadastro: {formatDateTime(lead.created_at)}</div>
-            <Link className="btn-ghost" to={`/app/clientes/${lead.id}`} onClick={onClose}>
-              Abrir cadastro completo
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link className="btn-ghost" to={`/app/clientes/${lead.id}`} onClick={onClose}>
+                Abrir cadastro completo
+              </Link>
+              <button
+                type="button"
+                disabled={converting}
+                onClick={() => onConvertToCase(lead)}
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                <Briefcase className="h-4 w-4" />
+                {converting ? 'Criando Caso...' : 'Converter em Caso / Processo'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -213,10 +235,46 @@ function LeadDetailsModal({ lead, onClose }: { lead: TriageLeadRow | null; onClo
 }
 
 export function TriagePage() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<TriageLeadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLead, setSelectedLead] = useState<TriageLeadRow | null>(null);
+  const [converting, setConverting] = useState(false);
+
+  async function handleConvertToCase(lead: TriageLeadRow) {
+    setConverting(true);
+    setError(null);
+    try {
+      const sb = requireSupabase();
+      const user = await getAuthedUser();
+      const caseTitle = `${lead.legal_area ? `${lead.legal_area} — ` : 'Processo — '}${lead.name || 'Cliente'}`;
+
+      const { data: createdCase, error: insErr } = await sb
+        .from('cases')
+        .insert({
+          user_id: user.id,
+          client_id: lead.id,
+          title: caseTitle,
+          status: 'peticao_inicial',
+          area: lead.legal_area || null,
+          description: lead.case_description || null,
+        } as any)
+        .select('id')
+        .single();
+
+      if (insErr) throw new Error(insErr.message);
+
+      await sb.from('case_clients').insert({ case_id: createdCase.id, client_id: lead.id } as any).then(() => null, () => null);
+
+      setSelectedLead(null);
+      navigate(`/app/casos/${createdCase.id}`);
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao converter lead em caso.');
+    } finally {
+      setConverting(false);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -270,26 +328,18 @@ export function TriagePage() {
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden border-white/15 bg-gradient-to-br from-white/10 via-white/5 to-transparent">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-400/20 bg-amber-400/10">
-              <ClipboardList className="h-5 w-5 text-amber-300" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold text-white">Triagem / Leads</h1>
-              <p className="text-sm text-white/60">
-                Painel em formato de planilha para atendimento inicial dos clientes recém-cadastrados.
-              </p>
-            </div>
-          </div>
-
-          <button type="button" onClick={load} disabled={loading} className="btn-ghost inline-flex items-center gap-2 disabled:opacity-60">
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+      <PageHeader
+        icon={Inbox}
+        eyebrow="Jurídico"
+        title="Triagem / Leads"
+        subtitle="Painel em formato de planilha para atendimento inicial dos clientes recém-cadastrados."
+        actions={
+          <button type="button" onClick={load} disabled={loading} className="btn-ghost">
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} strokeWidth={1.75} />
             Atualizar
           </button>
-        </div>
-      </Card>
+        }
+      />
 
       <div className="grid gap-3 md:grid-cols-3">
         <Card className="border-white/10 bg-white/5">
@@ -322,7 +372,12 @@ export function TriagePage() {
         </div>
       </Card>
 
-      <LeadDetailsModal lead={selectedLead} onClose={() => setSelectedLead(null)} />
+      <LeadDetailsModal
+        lead={selectedLead}
+        onClose={() => setSelectedLead(null)}
+        onConvertToCase={(lead) => void handleConvertToCase(lead)}
+        converting={converting}
+      />
     </div>
   );
 }

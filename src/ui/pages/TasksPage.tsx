@@ -1,7 +1,9 @@
+import { KanbanSquare, ListChecks, Pencil, Plus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { loadCasesLite, type CaseLite } from '@/lib/loadCasesLite';
 import { loadClientsLite } from '@/lib/loadClientsLite';
 import type { ClientLite } from '@/lib/types';
@@ -535,20 +537,24 @@ export function TasksPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Tarefas</h1>
-          <p className="text-sm text-white/60">Criada por / Executada por · prazos · pausas/cancelamentos com motivo.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link to="/app/tarefas/kanban" className="btn-ghost">
-            Kanban
-          </Link>
-          <button onClick={() => setCreateOpen(true)} className="btn-primary">
-            Nova tarefa
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        icon={ListChecks}
+        eyebrow="Operação"
+        title="Tarefas"
+        subtitle="Criada por / Executada por · prazos · pausas e cancelamentos auditados."
+        actions={
+          <>
+            <Link to="/app/tarefas/kanban" className="btn-ghost">
+              <KanbanSquare className="h-4 w-4 text-sky-300" strokeWidth={1.75} />
+              Kanban
+            </Link>
+            <button onClick={() => setCreateOpen(true)} className="btn-primary">
+              <Plus className="h-4 w-4" strokeWidth={2} />
+              Nova tarefa
+            </button>
+          </>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         {isAdmin ? (
@@ -946,7 +952,8 @@ export function TasksPage() {
                                               className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs"
                                               title="Editar tarefa"
                                             >
-                                              ✏️ Editar
+                                              <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} />
+                                              Editar
                                             </Link>
                       {t.status_v2 === 'open' ? (
                         <button onClick={() => void startTask(t)} className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs">

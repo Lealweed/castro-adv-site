@@ -68,7 +68,7 @@ type PortalLoginRpcResponse = {
 
 type PortalContextRpcResponse = {
   client: PortalClient;
-  next_meeting: PortalMeeting | null;
+  next_meeting: (PortalMeeting & { start_at?: string }) | null;
 };
 
 function requirePortalSupabase() {
@@ -119,9 +119,18 @@ export async function getPortalClientContext(sessionToken: string): Promise<Port
     throw new Error('Falha ao carregar os dados do portal.');
   }
 
+  const rawMeeting = payload.next_meeting;
+  const nextMeeting: PortalMeeting | null = rawMeeting
+    ? {
+        id: rawMeeting.id,
+        title: rawMeeting.title,
+        starts_at: rawMeeting.starts_at || rawMeeting.start_at || '',
+      }
+    : null;
+
   return {
     client: payload.client,
-    nextMeeting: payload.next_meeting,
+    nextMeeting,
   };
 }
 
@@ -231,6 +240,25 @@ export async function portalUploadChecklistDocument(args: {
   }
 
   return { id: docUuid, file_path: path };
+}
+
+export async function portalUpdateClientAvatar(sessionToken: string, clientId: string, file: File | Blob) {
+  const sb = requirePortalSupabase();
+  const path = `portal_avatars/${clientId}_avatar.png`;
+
+  const { error: upErr } = await sb.storage.from('client_avatars').upload(path, file, {
+    upsert: true,
+    contentType: file.type || undefined,
+  });
+  if (upErr) throw new Error(upErr.message);
+
+  const { error: rpcErr } = await sb.rpc('portal_update_client_avatar', {
+    p_session_token: sessionToken,
+    p_avatar_path: path
+  });
+  if (rpcErr) throw new Error(rpcErr.message);
+
+  return path;
 }
 
 export function getPortalRpcError(error: unknown, fallback: string) {

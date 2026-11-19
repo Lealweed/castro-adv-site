@@ -154,16 +154,17 @@ export function FinanceCharts({ months = 6 }: { months?: number }) {
                 <YAxis stroke="rgba(255,255,255,0.35)" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip
                   contentStyle={{
-                    background: 'rgba(10,10,10,0.9)',
-                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'rgba(5,8,17,0.94)',
+                    border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 12,
+                    color: '#f1f5f9',
                   }}
-                  labelStyle={{ color: 'rgba(255,255,255,0.8)' }}
+                  labelStyle={{ color: 'rgba(241,245,249,0.85)' }}
                   formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR')}`, '']}
                 />
-                <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }} />
-                <Bar name="Receitas pagas" dataKey="incomePaid" fill="rgba(212,175,55,0.85)" radius={[10, 10, 0, 0]} />
-                <Bar name="Despesas pagas" dataKey="expensePaid" fill="rgba(255,255,255,0.18)" radius={[10, 10, 0, 0]} />
+                <Legend wrapperStyle={{ color: 'rgba(241,245,249,0.7)', fontSize: 12 }} />
+                <Bar name="Receitas pagas" dataKey="incomePaid" fill="#38bdf8" radius={[8, 8, 0, 0]} />
+                <Bar name="Despesas pagas" dataKey="expensePaid" fill="rgba(148,163,184,0.3)" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -175,21 +176,21 @@ export function FinanceCharts({ months = 6 }: { months?: number }) {
         <div className="text-xs text-white/60">Receitas previstas por faixa</div>
 
         <div className="mt-4 grid gap-3">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-3">
             <div className="text-xs text-white/60">Vence hoje/atrasado</div>
-            <div className="mt-1 text-lg font-semibold text-white">{centsToBRL(buckets.dueToday)}</div>
+            <div className="mt-1 text-lg font-semibold text-white tabular-nums">{centsToBRL(buckets.dueToday)}</div>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-3">
             <div className="text-xs text-white/60">Próximos 7 dias</div>
-            <div className="mt-1 text-lg font-semibold text-white">{centsToBRL(buckets.due7)}</div>
+            <div className="mt-1 text-lg font-semibold text-white tabular-nums">{centsToBRL(buckets.due7)}</div>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-3">
             <div className="text-xs text-white/60">Próximos 30 dias</div>
-            <div className="mt-1 text-lg font-semibold text-white">{centsToBRL(buckets.due30)}</div>
+            <div className="mt-1 text-lg font-semibold text-white tabular-nums">{centsToBRL(buckets.due30)}</div>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-3">
             <div className="text-xs text-white/60">Total previsto</div>
-            <div className="mt-1 text-lg font-semibold text-white">{centsToBRL(buckets.plannedTotal)}</div>
+            <div className="mt-1 text-lg font-semibold text-sky-300 tabular-nums">{centsToBRL(buckets.plannedTotal)}</div>
           </div>
         </div>
       </Card>
@@ -207,19 +208,20 @@ export function FinanceCharts({ months = 6 }: { months?: number }) {
           <div className="mt-4 h-[240px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={topCategories} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.08)" horizontal={false} />
-                <XAxis type="number" stroke="rgba(255,255,255,0.35)" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="name" stroke="rgba(255,255,255,0.55)" fontSize={12} tickLine={false} axisLine={false} width={120} />
+                <CartesianGrid stroke="rgba(148,163,184,0.12)" horizontal={false} />
+                <XAxis type="number" stroke="rgba(148,163,184,0.45)" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="name" stroke="rgba(148,163,184,0.75)" fontSize={12} tickLine={false} axisLine={false} width={120} />
                 <Tooltip
                   contentStyle={{
-                    background: 'rgba(10,10,10,0.9)',
-                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'rgba(5,8,17,0.94)',
+                    border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 12,
+                    color: '#f1f5f9',
                   }}
-                  labelStyle={{ color: 'rgba(255,255,255,0.8)' }}
+                  labelStyle={{ color: 'rgba(241,245,249,0.85)' }}
                   formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR')}`, 'Total']}
                 />
-                <Bar dataKey="totalPaid" fill="rgba(212,175,55,0.85)" radius={[10, 10, 10, 10]} />
+                <Bar dataKey="totalPaid" fill="#38bdf8" radius={[0, 8, 8, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -66,8 +66,10 @@ function readFirstMovimentacao(processo: AnyNode): EscavadorMovimentacao {
 }
 
 export async function fetchProcessoEscavador(numeroCnj: string): Promise<EscavadorProcessoBasico> {
-  const token = import.meta.env.VITE_ESCAVADOR_API_TOKEN as string | undefined;
-  if (!token) throw new Error('VITE_ESCAVADOR_API_TOKEN não configurada.');
+  const token =
+    (import.meta.env.VITE_ESCAVADOR_API_TOKEN as string | undefined) ||
+    (import.meta.env.VITE_ESCAVADOR_API_KEY as string | undefined);
+  if (!token) throw new Error('VITE_ESCAVADOR_API_KEY não configurada.');
 
   const cnj = (numeroCnj || '').trim();
   if (!cnj) throw new Error('Informe o número CNJ do processo.');

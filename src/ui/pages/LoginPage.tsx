@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, KeyRound, Lock, Mail } from 'lucide-react';
 
 import { useAuth } from '@/auth/authStore';
 import { signInWithPassword } from '@/auth/supabaseAuth';
@@ -154,16 +154,25 @@ export function LoginPage() {
   if (isRecoveryMode) {
     return (
       <div className="mx-auto w-full max-w-md">
-        <div className="rounded-2xl border border-white/10 bg-neutral-950/50 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] backdrop-blur">
-          <div className="text-xl font-semibold text-white">Criar Nova Senha</div>
-          <div className="mt-1 text-sm text-white/60">Digite a senha que você deseja usar para acessar o sistema.</div>
+        <div className="relative overflow-hidden rounded-2xl border border-white/[0.1] bg-slate-950/75 p-7 shadow-[0_24px_64px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/50 to-transparent" />
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-400/10 text-sky-300">
+              <KeyRound className="h-5 w-5" strokeWidth={1.75} />
+            </div>
+            <div>
+              <div className="text-lg font-semibold text-white">Criar Nova Senha</div>
+              <div className="text-xs text-white/60">Defina sua nova credencial de acesso ao sistema.</div>
+            </div>
+          </div>
 
           <form onSubmit={onUpdatePassword} className="mt-6 grid gap-4">
-            <label className="text-sm text-white/80">
+            <label className="text-xs font-semibold uppercase tracking-wider text-white/70">
               Nova Senha
-              <div className="relative mt-1">
+              <div className="relative mt-1.5">
+                <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" strokeWidth={1.75} />
                 <input
-                  className="input !mt-0 w-full pr-10"
+                  className="input !mt-0 w-full pl-10 pr-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   type={showPassword ? 'text' : 'password'}
@@ -174,16 +183,16 @@ export function LoginPage() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" strokeWidth={1.75} /> : <Eye className="h-4 w-4" strokeWidth={1.75} />}
                 </button>
               </div>
             </label>
 
-            <button disabled={loading} className="btn-primary">
+            <button disabled={loading} className="btn-primary !py-2.5">
               {loading ? 'Salvando…' : 'Salvar Nova Senha'}
             </button>
 
-            {error ? <div className="text-sm text-red-200">{error}</div> : null}
+            {error ? <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">{error}</div> : null}
           </form>
         </div>
       </div>
@@ -192,32 +201,46 @@ export function LoginPage() {
 
   return (
     <div className="mx-auto w-full max-w-md">
-      <div className="rounded-2xl border border-white/10 bg-neutral-950/50 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.06)] backdrop-blur">
-        <div className="text-xl font-semibold text-white">Entrar</div>
-        <div className="mt-1 text-sm text-white/60">Acesse a área do advogado.</div>
+      <div className="relative overflow-hidden rounded-2xl border border-white/[0.1] bg-slate-950/75 p-7 shadow-[0_24px_64px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/50 to-transparent" />
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-400/10 text-sky-300">
+            <Lock className="h-5 w-5" strokeWidth={1.75} />
+          </div>
+          <div>
+            <div className="text-lg font-semibold text-white">Acessar Sistema</div>
+            <div className="text-xs text-white/60">Autenticação segura para equipe e advogados.</div>
+          </div>
+        </div>
 
         <form onSubmit={onSubmit} className="mt-6 grid gap-4">
-          <label className="text-sm text-white/80">
+          <label className="text-xs font-semibold uppercase tracking-wider text-white/70">
             E-mail
-            <input
-              className="input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              type="email"
-              autoComplete="email"
-              required
-            />
+            <div className="relative mt-1.5">
+              <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" strokeWidth={1.75} />
+              <input
+                className="input !mt-0 pl-10"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                autoComplete="email"
+                placeholder="nome@castrooliveira.adv.br"
+                required
+              />
+            </div>
           </label>
 
-          <label className="text-sm text-white/80">
+          <label className="text-xs font-semibold uppercase tracking-wider text-white/70">
             Senha
-            <div className="relative mt-1">
+            <div className="relative mt-1.5">
+              <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" strokeWidth={1.75} />
               <input
-                className="input !mt-0 w-full pr-10"
+                className="input !mt-0 w-full pl-10 pr-10"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
+                placeholder="••••••••"
                 required
               />
               <button
@@ -225,18 +248,19 @@ export function LoginPage() {
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? <EyeOff className="h-4 w-4" strokeWidth={1.75} /> : <Eye className="h-4 w-4" strokeWidth={1.75} />}
               </button>
             </div>
           </label>
 
-          <button disabled={loading} className="btn-primary">
-            {loading ? 'Entrando…' : 'Entrar'}
+          <button disabled={loading} className="btn-primary mt-1 !py-2.5">
+            {loading ? 'Entrando…' : 'Entrar no Workspace'}
+            {!loading ? <ArrowRight className="h-4 w-4" strokeWidth={1.75} /> : null}
           </button>
 
-          {error ? <div className="text-sm text-red-200">{error}</div> : null}
+          {error ? <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">{error}</div> : null}
 
-          <div className="text-center mt-2">
+          <div className="mt-1 text-center">
             <button
               type="button"
               onClick={async () => {
@@ -256,7 +280,7 @@ export function LoginPage() {
                   setLoading(false);
                 }
               }}
-              className="text-xs text-white/50 hover:text-white/80 hover:underline"
+              className="text-xs text-sky-300/80 transition-colors hover:text-sky-200 hover:underline"
             >
               Primeiro Acesso / Esqueci a Senha
             </button>

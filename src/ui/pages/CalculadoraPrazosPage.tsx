@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, ClipboardCopy, Info, AlertCircle, CheckCircle2, AlertTriangle, CalendarDays, CalendarPlus } from 'lucide-react';
+import { Calculator, Calendar as CalendarIcon, ClipboardCopy, Info, AlertCircle, CheckCircle2, AlertTriangle, CalendarDays, CalendarPlus } from 'lucide-react';
 import { apiFetch } from '@/lib/apiClient';
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { useSearchParams, Link } from 'react-router-dom';
 
 type DetalheDia = {
@@ -118,24 +119,21 @@ Cálculo gerado automaticamente pelo CRM Jurídico Navidade de acordo com o Art.
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 text-white">
-      {/* Cabeçalho */}
-      <div className="mb-8 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-amber-200 to-amber-400 bg-clip-text text-transparent">
-            Calculadora de Prazos Judiciais
-          </h1>
-          <p className="text-sm text-neutral-400 mt-1">
-            Contagem automatizada de prazos processuais em dias úteis nos moldes da Lei nº 13.105/2015 (CPC/2015)
-          </p>
-        </div>
-        <div className="flex items-center gap-2 rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-1.5 text-xs text-amber-300 self-start md:self-auto">
-          <CalendarDays className="h-4 w-4" />
-          <span>Vigência: CPC/2015 (Art. 219)</span>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        icon={Calculator}
+        eyebrow="Jurídico"
+        title="Calculadora de Prazos Judiciais"
+        subtitle="Contagem automatizada de prazos processuais em dias úteis nos moldes da Lei nº 13.105/2015 (CPC/2015)."
+        actions={
+          <div className="badge badge-gold font-mono">
+            <CalendarDays className="h-3.5 w-3.5" strokeWidth={1.75} />
+            Vigência: CPC/2015 (Art. 219)
+          </div>
+        }
+      />
 
-      <div className="grid gap-8 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Painel de Filtros e Configurações */}
         <div className="lg:col-span-1">
           <Card className="border border-white/10 bg-neutral-950/70 p-6 backdrop-blur-xl">
@@ -234,8 +232,8 @@ Cálculo gerado automaticamente pelo CRM Jurídico Navidade de acordo com o Art.
           {resultado && (
             <div className="space-y-6">
               {/* Cartão de Destaque */}
-              <div className="relative overflow-hidden rounded-2xl border border-amber-400/20 bg-gradient-to-br from-amber-400/10 via-neutral-950/50 to-transparent p-6 shadow-[0_15px_30px_rgba(251,191,36,0.06)]">
-                <div className="absolute top-0 right-0 h-32 w-32 bg-amber-400/5 rounded-full blur-3xl pointer-events-none" />
+              <div className="relative overflow-hidden rounded-2xl border border-sky-400/25 bg-gradient-to-br from-sky-400/10 via-slate-950/60 to-transparent p-6 shadow-[0_15px_30px_rgba(56,189,248,0.1)]">
+                <div className="absolute top-0 right-0 h-32 w-32 bg-sky-400/10 rounded-full blur-3xl pointer-events-none" />
                 <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
                   <div>
                     <span className="text-xs font-bold uppercase tracking-wider text-amber-400/70">Data de Vencimento (Dies ad quem)</span>

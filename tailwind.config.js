@@ -1,6 +1,4 @@
 /** @type {import('tailwindcss').Config} */
-const colors = require('tailwindcss/colors');
-
 export default {
     darkMode: ['class'],
     content: ['./index.html', './src/**/*.{ts,tsx}'],
@@ -15,25 +13,38 @@ export default {
   			sm: 'calc(var(--radius) - 4px)'
   		},
       fontFamily: {
-        display: ['"Playfair Display"', 'Georgia', 'serif'],
-        body: ['Raleway', 'system-ui', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['"Plus Jakarta Sans"', 'Outfit', 'system-ui', 'sans-serif'],
+        body: ['Inter', '"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
   		colors: {
-        amber: colors.indigo, // Remap amber (gold) to indigo (Trust Blue) globally for app
-        // Luxury landing page gold palette
-        gold: {
-          100: '#F5EDD5',
-          200: '#E8D5A3',
-          300: '#D9BC72',
-          400: '#C9A96E',
-          500: '#B8860B',
-          600: '#8B6914',
-          700: '#5C4305',
-          800: '#3D2D04',
-          900: '#1F1602',
+        amber: {
+          50: '#f0f9ff',
+          100: '#e0f2fe',
+          200: '#bae6fd',
+          300: '#7dd3fc',
+          400: '#38bdf8',
+          500: '#0ea5e9',
+          600: '#0284c7',
+          700: '#0369a1',
+          800: '#075985',
+          900: '#0c4a6e',
+          950: '#082f49',
         },
-        luxury: '#0C0A09',
-        cream: '#F5F0E8',
+        gold: {
+          100: '#e0f2fe',
+          200: '#bae6fd',
+          300: '#7dd3fc',
+          400: '#38bdf8',
+          500: '#0ea5e9',
+          600: '#0284c7',
+          700: '#0369a1',
+          800: '#075985',
+          900: '#082f49',
+        },
+        luxury: '#050811',
+        cream: '#F1F5F9',
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {

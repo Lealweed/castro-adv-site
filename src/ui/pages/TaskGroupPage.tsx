@@ -1,7 +1,9 @@
+import { ArrowLeft, Layers } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type TaskStatus = 'open' | 'in_progress' | 'paused' | 'done' | 'cancelled' | string;
@@ -80,15 +82,18 @@ export function TaskGroupPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Tarefas (lote)</h1>
-          <p className="text-sm text-white/60">Grupo: {groupId ? String(groupId).slice(0, 8) : '—'}</p>
-        </div>
-        <Link to="/app/tarefas" className="btn-ghost">
-          Voltar
-        </Link>
-      </div>
+      <PageHeader
+        icon={Layers}
+        eyebrow="Operação"
+        title="Tarefas (lote)"
+        subtitle={`Grupo: ${groupId ? String(groupId).slice(0, 8) : '—'}`}
+        actions={
+          <Link to="/app/tarefas" className="btn-ghost">
+            <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
+            Voltar
+          </Link>
+        }
+      />
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
 

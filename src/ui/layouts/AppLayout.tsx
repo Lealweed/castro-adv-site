@@ -18,18 +18,16 @@ export function AppLayout() {
   }, [sidebarCollapsed]);
 
   return (
-    <div className="min-h-dvh bg-neutral-950 text-neutral-100 app-bg-dark theme-dark">
-      <div className="mx-auto flex min-h-dvh max-w-[1400px]">
-        <Sidebar collapsed={sidebarCollapsed} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar
-            sidebarCollapsed={sidebarCollapsed}
-            onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
-          />
-          <main className="min-w-0 flex-1 px-4 pb-10 pt-6 sm:px-6">
-            <Outlet />
-          </main>
-        </div>
+    <div className="flex min-h-dvh w-full bg-[#050811] text-slate-100 app-bg-dark theme-dark">
+      <Sidebar collapsed={sidebarCollapsed} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Topbar
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
+        />
+        <main className="mx-auto w-full min-w-0 max-w-[1440px] flex-1 px-4 pb-12 pt-6 sm:px-6 lg:px-8">
+          <Outlet />
+        </main>
       </div>
     </div>
   );

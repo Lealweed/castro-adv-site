@@ -1,7 +1,9 @@
+import { ArrowLeft, CheckSquare, Pencil } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { TaskAttachmentsSection } from '@/ui/widgets/TaskAttachmentsSection';
 import { TimelineSection } from '@/ui/widgets/TimelineSection';
 import { getMyOfficeRole } from '@/lib/roles';
@@ -383,15 +385,18 @@ export function TaskDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Tarefa</h1>
-          <p className="text-sm text-white/60">Detalhes e anexos.</p>
-        </div>
-        <Link to="/app/tarefas" className="btn-ghost">
-          Voltar
-        </Link>
-      </div>
+      <PageHeader
+        icon={CheckSquare}
+        eyebrow="Operação"
+        title={row?.title || 'Tarefa'}
+        subtitle="Detalhes, subtarefas, participantes e anexos."
+        actions={
+          <Link to="/app/tarefas" className="btn-ghost">
+            <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
+            Voltar
+          </Link>
+        }
+      />
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
 
@@ -522,7 +527,8 @@ export function TaskDetailsPage() {
                   setEditPriority(row.priority || 'medium');
                   setEditDueAt(row.due_at ? row.due_at.slice(0, 16) : '');
                 }}>
-                  ✏️ Editar
+                  <Pencil className="h-3.5 w-3.5" strokeWidth={1.75} />
+                  Editar
                 </button>
               )}
               {isAdmin ? (

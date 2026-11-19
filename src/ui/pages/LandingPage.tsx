@@ -1,47 +1,71 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUpRight,
+  Briefcase,
+  Building2,
+  Compass,
+  Cpu,
+  Globe,
+  HeartHandshake,
+  Lock,
+  MapPin,
+  MessageCircle,
+  Scale,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  type LucideIcon,
+} from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Motion variants
 // ---------------------------------------------------------------------------
 const stagger = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.11 } },
+  visible: { transition: { staggerChildren: 0.09 } },
 };
 
 const EASE = [0.16, 1, 0.3, 1] as [number, number, number, number];
 
 const itemFade = {
-  hidden: { opacity: 0, y: 28 },
+  hidden: { opacity: 0, y: 24 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.65, ease: EASE },
+    transition: { duration: 0.6, ease: EASE },
   },
 };
 
 // ---------------------------------------------------------------------------
 // Static data
 // ---------------------------------------------------------------------------
-const areas = [
+const areas: Array<{ title: string; icon: LucideIcon; items: string[] }> = [
   {
     title: 'Cível',
+    icon: Scale,
     items: ['Contratos e obrigações', 'Responsabilidade civil', 'Cobranças e acordos'],
   },
   {
     title: 'Criminal',
+    icon: ShieldCheck,
     items: ['Orientação e acompanhamento', 'Defesa técnica especializada', 'Fases investigatórias e processuais'],
   },
   {
     title: 'Empresarial',
+    icon: Building2,
     items: ['Apoio a rotinas empresariais', 'Contratos e negociações', 'Prevenção e gestão de riscos'],
   },
   {
     title: 'Família',
+    icon: HeartHandshake,
     items: ['Divórcio e dissolução', 'Guarda e convivência', 'Pensão alimentícia'],
   },
   {
     title: 'Trabalhista',
+    icon: Briefcase,
     items: ['Relações e orientação trabalhista', 'Acordos e tratativas', 'Acompanhamento de demandas'],
   },
 ];
@@ -114,11 +138,11 @@ const testimonials = [
   },
 ];
 
-const principles = [
-  { title: 'Ética', desc: 'Respeito estrito às normas e limites da atuação.' },
-  { title: 'Clareza', desc: 'Comunicação direta, sem juridiquês.' },
-  { title: 'Estratégia', desc: 'Foco na melhor resolução possível.' },
-  { title: 'Tecnologia', desc: 'Prazos e dados seguros em plataforma própria.' },
+const principles: Array<{ title: string; desc: string; icon: LucideIcon }> = [
+  { title: 'Ética', desc: 'Respeito estrito às normas e limites da atuação.', icon: ShieldCheck },
+  { title: 'Clareza', desc: 'Comunicação direta, sem juridiquês.', icon: Sparkles },
+  { title: 'Estratégia', desc: 'Foco na melhor resolução possível.', icon: Compass },
+  { title: 'Tecnologia', desc: 'Prazos e dados seguros em plataforma própria.', icon: Cpu },
 ];
 
 const whatsappE164 = '5591983485747';
@@ -136,21 +160,21 @@ const mapsUrl =
 // ---------------------------------------------------------------------------
 // Button class helpers
 // ---------------------------------------------------------------------------
-const goldBtn =
-  'inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-gold-400 to-gold-300 text-luxury font-body font-semibold text-[11px] uppercase tracking-[0.2em] px-8 py-4 shadow-[0_0_24px_rgba(201,169,110,0.18)] hover:shadow-[0_0_40px_rgba(201,169,110,0.38)] hover:brightness-110 transition-all duration-300';
+const techPrimaryBtn =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-sky-400 to-sky-500 text-slate-950 font-semibold text-xs uppercase tracking-[0.14em] px-7 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_12px_32px_-10px_rgba(14,165,233,0.6)] hover:from-sky-300 hover:to-sky-400 transition-all duration-200';
 
-const outlineBtn =
-  'inline-flex items-center justify-center gap-2 rounded-full border border-gold-400/50 text-gold-400 font-body font-semibold text-[11px] uppercase tracking-[0.2em] px-8 py-4 hover:bg-gold-400/10 hover:border-gold-400 transition-all duration-300';
+const techOutlineBtn =
+  'inline-flex items-center justify-center gap-2 rounded-xl border border-sky-400/35 bg-sky-400/5 text-sky-300 font-semibold text-xs uppercase tracking-[0.14em] px-7 py-3.5 hover:bg-sky-400/15 hover:border-sky-400/60 transition-all duration-200';
 
-const ghostBtn =
-  'group inline-flex items-center justify-center gap-1.5 text-cream/40 font-body text-[11px] uppercase tracking-[0.2em] hover:text-cream/70 transition-colors duration-300';
+const techGhostBtn =
+  'group inline-flex items-center justify-center gap-2 text-slate-400 text-xs font-medium uppercase tracking-[0.16em] hover:text-white transition-colors duration-200';
 
 // ---------------------------------------------------------------------------
 // Reusable sub-components
 // ---------------------------------------------------------------------------
-function GoldDivider() {
+function TechDivider() {
   return (
-    <div className="mx-auto mt-5 h-px w-14 bg-gradient-to-r from-transparent via-gold-400/60 to-transparent" />
+    <div className="mx-auto mt-4 h-px w-16 bg-gradient-to-r from-transparent via-sky-400/60 to-transparent" />
   );
 }
 
@@ -167,22 +191,22 @@ function SectionTitle({
     <motion.div className="mx-auto max-w-2xl text-center" variants={stagger}>
       <motion.span
         variants={itemFade}
-        className="font-body text-[10px] font-semibold uppercase tracking-[0.35em] text-gold-400"
+        className="font-mono text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-400"
       >
         {kicker}
       </motion.span>
       <motion.div variants={itemFade}>
-        <GoldDivider />
+        <TechDivider />
       </motion.div>
       <motion.h2
         variants={itemFade}
-        className="mt-9 font-display text-4xl font-light italic leading-[1.1] text-cream md:text-5xl"
+        className="mt-7 text-3xl font-semibold tracking-tight text-slate-100 md:text-5xl"
       >
         {title}
       </motion.h2>
       <motion.p
         variants={itemFade}
-        className="mt-5 font-body text-base font-light leading-relaxed text-cream/40"
+        className="mt-4 text-base leading-relaxed text-slate-400"
       >
         {desc}
       </motion.p>
@@ -192,16 +216,21 @@ function SectionTitle({
 
 function AreaCard({ area, wide = false }: { area: (typeof areas)[number]; wide?: boolean }) {
   void wide;
+  const Icon = area.icon;
   return (
-    <div className="group relative flex h-full min-h-[200px] flex-col overflow-hidden rounded-3xl border border-white/5 bg-[#131110] p-8 transition-all duration-500 hover:-translate-y-1 hover:border-gold-400/25 hover:shadow-[0_24px_48px_-12px_rgba(201,169,110,0.08)]">
-      {/* Hover top-line accent */}
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold-400/50 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-      <h3 className="font-display text-xl font-light italic text-cream">{area.title}</h3>
+    <div className="group relative flex h-full min-h-[200px] flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-950/65 p-7 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-sky-400/30 hover:shadow-[0_20px_48px_-16px_rgba(14,165,233,0.16)]">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/50 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      <div className="flex items-center gap-3">
+        <div className="flex size-10 items-center justify-center rounded-xl border border-sky-400/20 bg-sky-400/10 text-sky-300">
+          <Icon className="h-5 w-5" strokeWidth={1.75} />
+        </div>
+        <h3 className="text-xl font-semibold tracking-tight text-slate-100">{area.title}</h3>
+      </div>
       <ul className="mt-5 space-y-2.5">
         {area.items.map((it) => (
           <li key={it} className="flex items-start gap-3">
-            <span className="mt-[7px] size-1 shrink-0 rounded-full bg-gold-400/50 transition-colors group-hover:bg-gold-400/80" />
-            <span className="font-body text-sm font-light leading-relaxed text-cream/45">{it}</span>
+            <span className="mt-[8px] size-1.5 shrink-0 rounded-full bg-sky-400/50 transition-colors group-hover:bg-sky-400" />
+            <span className="text-sm leading-relaxed text-slate-400">{it}</span>
           </li>
         ))}
       </ul>
@@ -217,42 +246,44 @@ function TeamCard({ member }: { member: (typeof team)[number] }) {
     .map((s) => s[0]!.toUpperCase())
     .join('');
   return (
-    <div className="group rounded-3xl border border-white/5 bg-[#131110] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-400/25 hover:shadow-[0_16px_32px_-8px_rgba(201,169,110,0.08)]">
-      <div className="mb-5 flex items-center gap-4">
-        <div className="grid size-14 shrink-0 place-items-center rounded-full border border-gold-400/20 bg-gold-400/8 font-display text-lg text-gold-400 transition-all group-hover:border-gold-400/40 group-hover:bg-gold-400/12">
+    <div className="group rounded-2xl border border-white/[0.08] bg-slate-950/65 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-sky-400/30">
+      <div className="mb-4 flex items-center gap-4">
+        <div className="grid size-14 shrink-0 place-items-center rounded-xl border border-sky-400/25 bg-gradient-to-br from-sky-400/15 to-indigo-500/15 text-base font-bold text-sky-200 transition-all group-hover:border-sky-400/45">
           {initials}
         </div>
         <div>
-          <div className="font-display text-base text-cream">{member.name}</div>
-          <div className="mt-0.5 font-body text-xs font-medium uppercase tracking-[0.15em] text-gold-400/80">
+          <div className="text-base font-semibold text-slate-100">{member.name}</div>
+          <div className="mt-0.5 font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-sky-400/90">
             {member.role}
           </div>
           {member.oab && (
-            <div className="mt-0.5 font-body text-[11px] text-cream/30">{member.oab}</div>
+            <div className="mt-0.5 font-mono text-[11px] text-slate-500">{member.oab}</div>
           )}
         </div>
       </div>
-      <p className="font-body text-sm font-light leading-relaxed text-cream/40">{member.bio}</p>
+      <p className="text-sm leading-relaxed text-slate-400">{member.bio}</p>
     </div>
   );
 }
 
 function TestimonialCard({ name, initials, text, rating }: (typeof testimonials)[number]) {
   return (
-    <div className="w-[340px] shrink-0 rounded-3xl border border-white/6 bg-[#131110] p-6 transition-all hover:-translate-y-0.5 hover:border-gold-400/20">
+    <div className="w-[340px] shrink-0 rounded-2xl border border-white/[0.08] bg-slate-950/65 p-6 backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-sky-400/25">
       <div className="mb-4 flex items-center gap-3">
-        <div className="grid size-11 place-items-center rounded-full border border-gold-400/20 bg-gold-400/8 font-display text-sm font-semibold text-gold-400">
+        <div className="grid size-10 place-items-center rounded-xl border border-sky-400/25 bg-sky-400/10 text-xs font-bold text-sky-300">
           {initials}
         </div>
         <div>
-          <div className="font-body text-sm font-semibold text-cream">{name}</div>
-          <div className="mt-0.5 flex gap-0.5 text-gold-400/80 text-xs">
-            {'★'.repeat(rating)}
+          <div className="text-sm font-semibold text-slate-100">{name}</div>
+          <div className="mt-1 flex gap-0.5 text-sky-400">
+            {Array.from({ length: rating }).map((_, i) => (
+              <Star key={i} className="h-3.5 w-3.5 fill-sky-400 text-sky-400" />
+            ))}
           </div>
         </div>
       </div>
-      <p className="font-body text-sm font-light italic leading-relaxed text-cream/50">
-        "{text}"
+      <p className="text-sm leading-relaxed text-slate-400">
+        &ldquo;{text}&rdquo;
       </p>
     </div>
   );
@@ -263,88 +294,86 @@ function TestimonialCard({ name, initials, text, rating }: (typeof testimonials)
 // ---------------------------------------------------------------------------
 export function LandingPage() {
   return (
-    <div className="overflow-x-hidden bg-luxury text-cream">
+    <div className="overflow-x-hidden bg-[#050811] text-slate-100">
       {/* ================================================================= */}
-      {/* HERO                                                                */}
+      {/* HERO                                                              */}
       {/* ================================================================= */}
-      <section className="relative flex min-h-screen flex-col justify-center px-4 pb-16 pt-8">
+      <section className="relative flex min-h-screen flex-col justify-center px-4 pb-16 pt-8 tech-grid-bg">
         {/* Background atmosphere */}
-        <div className="pointer-events-none absolute inset-0 grain-overlay" />
-        <div className="pointer-events-none absolute right-0 top-0 h-[800px] w-[800px] bg-[radial-gradient(ellipse_at_top_right,rgba(201,169,110,0.07),transparent_62%)]" />
-        <div className="pointer-events-none absolute bottom-0 left-0 h-[500px] w-[500px] bg-[radial-gradient(ellipse_at_bottom_left,rgba(201,169,110,0.04),transparent_65%)]" />
+        <div className="pointer-events-none absolute right-0 top-0 h-[760px] w-[760px] bg-[radial-gradient(ellipse_at_top_right,rgba(14,165,233,0.12),transparent_62%)]" />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-[520px] w-[520px] bg-[radial-gradient(ellipse_at_bottom_left,rgba(99,102,241,0.09),transparent_65%)]" />
 
         <div className="mx-auto w-full max-w-7xl">
-          <div className="grid gap-16 lg:grid-cols-[1fr_400px] lg:items-center xl:grid-cols-[1fr_460px]">
+          <div className="grid gap-14 lg:grid-cols-[1fr_420px] lg:items-center xl:grid-cols-[1fr_460px]">
             {/* ---- Left: Headline + CTA ---- */}
             <div>
-              {/* Kicker */}
               <motion.div
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.55, delay: 0.1 }}
-                className="mb-14 flex items-center gap-4"
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="mb-10 inline-flex items-center gap-2.5 rounded-full border border-sky-400/20 bg-sky-400/10 px-4 py-1.5"
               >
-                <div className="h-px w-10 bg-gold-400/60" />
-                <span className="font-body text-[10px] font-semibold uppercase tracking-[0.38em] text-gold-400">
-                  Assessoria Jurídica de Alto Padrão
+                <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.85)]" />
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.25em] text-sky-300">
+                  Assessoria Jurídica Digital de Alto Padrão
                 </span>
               </motion.div>
 
-              <h1 className="font-display text-[clamp(3.5rem,8vw,6.5rem)] font-light leading-[1.02] tracking-tight text-cream">
+              <h1 className="text-[clamp(2.8rem,6.8vw,5.4rem)] font-bold leading-[1.03] tracking-tight text-slate-100">
                 {(['Castro e', 'Oliveira'] as const).map((line, i) => (
                   <motion.span
                     key={line}
                     className="block"
-                    initial={{ opacity: 0, y: 36 }}
+                    initial={{ opacity: 0, y: 28 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.22 + i * 0.13, duration: 0.72, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ delay: 0.2 + i * 0.11, duration: 0.65, ease: EASE }}
                   >
                     {line}
                   </motion.span>
                 ))}
                 <motion.span
-                  className="block italic text-gold-400"
-                  initial={{ opacity: 0, y: 36 }}
+                  className="block bg-gradient-to-r from-sky-300 via-sky-400 to-indigo-400 bg-clip-text text-transparent"
+                  initial={{ opacity: 0, y: 28 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.48, duration: 0.72, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ delay: 0.42, duration: 0.65, ease: EASE }}
                 >
                   Advocacia Estratégica
                 </motion.span>
               </h1>
 
               <motion.p
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.72, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                className="mt-10 max-w-[480px] font-body text-lg font-light leading-relaxed text-cream/40"
+                transition={{ delay: 0.62, duration: 0.55, ease: EASE }}
+                className="mt-7 max-w-[520px] text-base leading-relaxed text-slate-400 sm:text-lg"
               >
-                Atenção meticulosa aos detalhes. Assessoria jurídica de alta complexidade com
-                foco absoluto em resultados e exclusividade.
+                Atenção meticulosa aos detalhes, engenharia jurídica e plataforma própria com foco
+                absoluto em resultados, agilidade e transparência.
               </motion.p>
 
               {/* CTA Buttons */}
               <motion.div
-                initial={{ opacity: 0, y: 18 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                className="mt-12 flex flex-col items-start gap-4 sm:flex-row sm:items-center"
+                transition={{ delay: 0.78, duration: 0.55, ease: EASE }}
+                className="mt-10 flex flex-col items-start gap-3.5 sm:flex-row sm:items-center"
               >
                 <a
                   href={`https://wa.me/${whatsappE164}`}
                   target="_blank"
                   rel="noreferrer"
-                  className={goldBtn}
+                  className={techPrimaryBtn}
                 >
+                  <MessageCircle className="h-4 w-4" strokeWidth={1.75} />
                   Fale com a Equipe
                 </a>
-                <Link to="/portal" className={outlineBtn}>
+                <Link to="/portal" className={techOutlineBtn}>
+                  <Globe className="h-4 w-4" strokeWidth={1.75} />
                   Acessar Portal
                 </Link>
-                <Link to="/app" className={ghostBtn}>
+                <Link to="/app" className={techGhostBtn}>
                   Acesso Restrito
-                  <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">
-                    →
-                  </span>
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" strokeWidth={1.75} />
                 </Link>
               </motion.div>
 
@@ -352,19 +381,19 @@ export function LandingPage() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 1.1, duration: 0.7 }}
-                className="mt-16 grid grid-cols-3 gap-8 border-t border-white/5 pt-12"
+                transition={{ delay: 0.95, duration: 0.6 }}
+                className="mt-14 grid grid-cols-3 gap-6 border-t border-white/[0.08] pt-10"
               >
                 {[
                   { value: '100%', label: 'Sigilo Absoluto' },
                   { value: '24/7', label: 'Portal Exclusivo' },
-                  { value: 'Ágil', label: 'Gestão de Prazos' },
+                  { value: 'SLA', label: 'Gestão de Prazos' },
                 ].map((m) => (
-                  <div key={m.label} className="text-center">
-                    <div className="font-display text-3xl font-light text-gold-400 md:text-4xl">
+                  <div key={m.label}>
+                    <div className="font-mono text-2xl font-bold text-sky-300 md:text-3xl">
                       {m.value}
                     </div>
-                    <div className="mt-2 font-body text-[10px] uppercase tracking-[0.22em] text-cream/30">
+                    <div className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">
                       {m.label}
                     </div>
                   </div>
@@ -374,61 +403,57 @@ export function LandingPage() {
 
             {/* ---- Right: Portal preview card ---- */}
             <motion.div
-              initial={{ opacity: 0, x: 40 }}
+              initial={{ opacity: 0, x: 32 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.5, duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ delay: 0.45, duration: 0.75, ease: EASE }}
               className="relative w-full"
             >
-              {/* Glow behind card */}
-              <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[radial-gradient(circle_at_50%_50%,rgba(201,169,110,0.10),transparent_65%)] blur-3xl" />
+              <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.14),transparent_65%)] blur-3xl" />
 
-              <div className="relative overflow-hidden rounded-3xl border border-gold-400/18 bg-[#0F0D0B] p-8 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)]">
-                {/* Card header */}
-                <div className="mb-8 flex items-center gap-4">
-                  <div className="grid size-14 shrink-0 place-items-center rounded-2xl border border-gold-400/25 bg-gold-400/8 font-display text-xl text-gold-400">
-                    CO
+              <div className="relative overflow-hidden rounded-2xl border border-sky-400/20 bg-slate-950/80 p-7 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.7)] backdrop-blur-xl">
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/60 to-transparent" />
+
+                <div className="mb-7 flex items-center gap-4">
+                  <div className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl border border-sky-400/25 bg-slate-900">
+                    <img src="/brand/logo.jpg" alt="CO" className="h-full w-full object-cover" />
                   </div>
                   <div>
-                    <div className="font-display text-base text-cream">Portal do Cliente</div>
-                    <div className="mt-0.5 font-body text-[10px] uppercase tracking-[0.22em] text-gold-400/60">
-                      Ambiente Seguro
+                    <div className="text-base font-semibold text-white">Portal do Cliente</div>
+                    <div className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-sky-400/80">
+                      <span className="size-1.5 rounded-full bg-emerald-400" />
+                      Ambiente Criptografado
                     </div>
                   </div>
                 </div>
 
-                {/* Feature list */}
                 <div className="space-y-3">
                   {[
-                    { title: 'Acompanhamento processual', desc: 'Acesso em tempo real aos andamentos' },
-                    { title: 'Smart Drive Privado', desc: 'Envio seguro de documentos e provas' },
-                    { title: 'Comunicação Oficial', desc: 'Histórico de atividades e prazos do caso' },
+                    { title: 'Acompanhamento processual', desc: 'Acesso em tempo real aos andamentos e tribunais' },
+                    { title: 'Smart Drive Privado', desc: 'Envio seguro de documentos, provas e assinaturas' },
+                    { title: 'Comunicação Oficial', desc: 'Histórico de atividades, prazos e financeiro do caso' },
                   ].map((item, i) => (
                     <div
                       key={i}
-                      className="group/item rounded-2xl border border-white/5 bg-white/[0.025] p-4 transition-all hover:border-gold-400/22 hover:bg-gold-400/5"
+                      className="group/item rounded-xl border border-white/[0.06] bg-white/[0.025] p-4 transition-all hover:border-sky-400/25 hover:bg-sky-400/5"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="mt-[6px] size-1.5 shrink-0 rounded-full bg-gold-400/40 transition-colors group-hover/item:bg-gold-400/70" />
+                        <div className="mt-[7px] size-1.5 shrink-0 rounded-full bg-sky-400/60 transition-colors group-hover/item:bg-sky-300" />
                         <div>
-                          <div className="font-body text-sm font-medium text-cream/80">
-                            {item.title}
-                          </div>
-                          <div className="mt-0.5 font-body text-xs font-light text-cream/35">
-                            {item.desc}
-                          </div>
+                          <div className="text-sm font-medium text-slate-200">{item.title}</div>
+                          <div className="mt-0.5 text-xs text-slate-400">{item.desc}</div>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                {/* Card CTA */}
-                <div className="mt-6 border-t border-white/5 pt-6">
+                <div className="mt-6 border-t border-white/[0.08] pt-5">
                   <Link
                     to="/portal"
-                    className="flex w-full items-center justify-center gap-2 rounded-full border border-gold-400/22 bg-gold-400/8 py-3 font-body text-[10px] uppercase tracking-[0.2em] text-gold-400 transition-all hover:bg-gold-400/16 hover:border-gold-400/40"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-sky-400/25 bg-sky-400/10 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-sky-300 transition-all hover:border-sky-400/50 hover:bg-sky-400/20"
                   >
-                    Acessar Portal →
+                    Acessar Portal
+                    <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.75} />
                   </Link>
                 </div>
               </div>
@@ -440,28 +465,28 @@ export function LandingPage() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.3, duration: 0.6 }}
+          transition={{ delay: 1.15, duration: 0.6 }}
           className="absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2"
         >
-          <span className="font-body text-[9px] uppercase tracking-[0.35em] text-cream/25">
+          <span className="font-mono text-[9px] uppercase tracking-[0.35em] text-slate-500">
             Explorar
           </span>
           <motion.div
-            animate={{ y: [0, 7, 0] }}
+            animate={{ y: [0, 6, 0] }}
             transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-            className="text-sm text-gold-400/30"
+            className="text-sky-400/60"
           >
-            ↓
+            <ArrowDown className="h-4 w-4" strokeWidth={1.75} />
           </motion.div>
         </motion.div>
       </section>
 
       {/* ================================================================= */}
-      {/* ÁREAS DE ATUAÇÃO                                                   */}
+      {/* ÁREAS DE ATUAÇÃO                                                  */}
       {/* ================================================================= */}
       <motion.section
         id="areas"
-        className="mx-auto max-w-7xl px-4 py-24 md:py-36"
+        className="mx-auto max-w-7xl px-4 py-24 md:py-32"
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.08 }}
@@ -473,14 +498,12 @@ export function LandingPage() {
           desc="Assessoramos nossos clientes com clareza, transparência e alta capacidade técnica, visando sempre a melhor condução do cenário apresentado."
         />
 
-        <motion.div variants={stagger} className="mt-16 grid gap-4 md:grid-cols-3">
-          {/* Row 1 */}
+        <motion.div variants={stagger} className="mt-14 grid gap-4 md:grid-cols-3">
           {areas.slice(0, 3).map((a) => (
             <motion.div key={a.title} variants={itemFade}>
               <AreaCard area={a} />
             </motion.div>
           ))}
-          {/* Row 2: Família (2 cols) + Trabalhista (1 col) */}
           <motion.div variants={itemFade} className="md:col-span-2">
             <AreaCard area={areas[3]!} wide />
           </motion.div>
@@ -491,81 +514,80 @@ export function LandingPage() {
       </motion.section>
 
       {/* ================================================================= */}
-      {/* O ESCRITÓRIO                                                        */}
+      {/* O ESCRITÓRIO                                                      */}
       {/* ================================================================= */}
       <motion.section
         id="escritorio"
-        className="border-y border-white/5"
+        className="border-y border-white/[0.06] bg-slate-950/40"
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.08 }}
         variants={stagger}
       >
-        <div className="mx-auto max-w-7xl px-4 py-24 md:py-36">
-          <div className="grid gap-16 md:grid-cols-2 md:items-center">
-            {/* Left */}
+        <div className="mx-auto max-w-7xl px-4 py-24 md:py-32">
+          <div className="grid gap-14 md:grid-cols-2 md:items-center">
             <div>
               <motion.span
                 variants={itemFade}
-                className="font-body text-[10px] font-semibold uppercase tracking-[0.35em] text-gold-400"
+                className="font-mono text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-400"
               >
                 O Escritório
               </motion.span>
               <motion.h2
                 variants={itemFade}
-                className="mt-5 font-display text-4xl font-light italic leading-[1.1] text-cream md:text-5xl"
+                className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-slate-100 md:text-5xl"
               >
                 Princípios e<br />Compromisso Ético
               </motion.h2>
-              <motion.p variants={itemFade} className="mt-6 font-body text-base font-light leading-relaxed text-cream/40">
+              <motion.p variants={itemFade} className="mt-5 text-base leading-relaxed text-slate-400">
                 O Castro e Oliveira Advocacia foi fundado com o propósito de oferecer uma
                 advocacia organizada, ágil e absolutamente transparente. Rejeitamos promessas
                 irreais; focamos no estudo profundo de cada caso e na comunicação assertiva.
               </motion.p>
 
-              <motion.div
-                variants={stagger}
-                className="mt-10 grid gap-3 sm:grid-cols-2"
-              >
-                {principles.map((v) => (
-                  <motion.div
-                    key={v.title}
-                    variants={itemFade}
-                    className="rounded-2xl border border-white/5 bg-[#131110] p-5 transition-all hover:border-gold-400/20"
-                  >
-                    <div className="font-body text-[10px] font-semibold uppercase tracking-[0.22em] text-gold-400">
-                      {v.title}
-                    </div>
-                    <div className="mt-2 font-body text-sm font-light text-cream/40">{v.desc}</div>
-                  </motion.div>
-                ))}
+              <motion.div variants={stagger} className="mt-8 grid gap-3 sm:grid-cols-2">
+                {principles.map((v) => {
+                  const PIcon = v.icon;
+                  return (
+                    <motion.div
+                      key={v.title}
+                      variants={itemFade}
+                      className="rounded-xl border border-white/[0.08] bg-slate-950/60 p-4 transition-all hover:border-sky-400/25"
+                    >
+                      <div className="flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300">
+                        <PIcon className="h-3.5 w-3.5" strokeWidth={1.75} />
+                        {v.title}
+                      </div>
+                      <div className="mt-2 text-sm text-slate-400">{v.desc}</div>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
             </div>
 
-            {/* Right: quote card */}
             <motion.div variants={itemFade} className="relative">
-              <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[radial-gradient(circle_at_50%_50%,rgba(201,169,110,0.08),transparent_65%)] blur-3xl" />
-              <div className="relative overflow-hidden rounded-3xl border border-gold-400/15 bg-[#0F0D0B] p-10 shadow-xl">
-                <div className="font-body text-[10px] font-semibold uppercase tracking-[0.3em] text-gold-400/70">
+              <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.10),transparent_65%)] blur-3xl" />
+              <div className="relative overflow-hidden rounded-2xl border border-sky-400/20 bg-slate-950/80 p-8 shadow-xl backdrop-blur-xl sm:p-10">
+                <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.26em] text-sky-400/80">
                   Diretriz Interna
                 </div>
-                <p className="mt-7 font-display text-2xl font-light italic leading-snug text-cream/80">
-                  "Atendimento voltado à orientação responsável, técnica apurada e absoluto
-                  respeito aos limites legais e factuais do caso concreto."
+                <p className="mt-6 text-xl font-medium leading-relaxed text-slate-200 sm:text-2xl">
+                  &ldquo;Atendimento voltado à orientação responsável, técnica apurada e absoluto
+                  respeito aos limites legais e factuais do caso concreto.&rdquo;
                 </p>
-                <div className="mt-10 h-px bg-white/5" />
+                <div className="mt-8 h-px bg-white/[0.08]" />
                 <div className="mt-6">
-                  <div className="font-body text-[10px] font-semibold uppercase tracking-[0.25em] text-cream/30">
+                  <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
                     Central de Atendimento
                   </div>
                   <a
                     href={`https://wa.me/${whatsappE164}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-2 inline-flex items-center gap-2 font-body text-lg text-cream/70 transition-colors hover:text-gold-400"
+                    className="mt-2 inline-flex items-center gap-2 text-lg font-semibold text-slate-200 transition-colors hover:text-sky-300"
                   >
-                    {whatsappDisplay}{' '}
-                    <span className="text-sm text-gold-400">↗</span>
+                    {whatsappDisplay}
+                    <ArrowUpRight className="h-4 w-4 text-sky-400" strokeWidth={1.75} />
                   </a>
                 </div>
               </div>
@@ -575,11 +597,11 @@ export function LandingPage() {
       </motion.section>
 
       {/* ================================================================= */}
-      {/* EQUIPE                                                              */}
+      {/* EQUIPE                                                            */}
       {/* ================================================================= */}
       <motion.section
         id="equipe"
-        className="mx-auto max-w-7xl px-4 py-24 md:py-36"
+        className="mx-auto max-w-7xl px-4 py-24 md:py-32"
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.08 }}
@@ -591,10 +613,7 @@ export function LandingPage() {
           desc="Uma estrutura coesa e organizada para garantir que a estratégia e o andamento do seu caso fluam com perfeição."
         />
 
-        <motion.div
-          variants={stagger}
-          className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        >
+        <motion.div variants={stagger} className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {team.map((m) => (
             <motion.div key={m.name} variants={itemFade}>
               <TeamCard member={m} />
@@ -604,9 +623,9 @@ export function LandingPage() {
       </motion.section>
 
       {/* ================================================================= */}
-      {/* DEPOIMENTOS                                                         */}
+      {/* DEPOIMENTOS                                                       */}
       {/* ================================================================= */}
-      <section id="avaliacoes" className="border-y border-white/5 py-24 md:py-32">
+      <section id="avaliacoes" className="border-y border-white/[0.06] bg-slate-950/40 py-24 md:py-28">
         <motion.div
           className="mx-auto max-w-7xl px-4"
           initial="hidden"
@@ -621,8 +640,7 @@ export function LandingPage() {
           />
         </motion.div>
 
-        {/* Infinite marquee — two duplicate divs for seamless loop */}
-        <div className="relative mt-16 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+        <div className="relative mt-14 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
           <div className="flex gap-4">
             <div className="flex shrink-0 animate-marquee gap-4">
               {testimonials.map((t, i) => (
@@ -639,51 +657,50 @@ export function LandingPage() {
       </section>
 
       {/* ================================================================= */}
-      {/* CONTATO                                                             */}
+      {/* CONTATO                                                           */}
       {/* ================================================================= */}
       <motion.section
         id="contato"
-        className="mx-auto max-w-7xl px-4 py-24 md:py-36"
+        className="mx-auto max-w-7xl px-4 py-24 md:py-32"
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.08 }}
         variants={stagger}
       >
-        <div className="grid gap-12 md:grid-cols-2 lg:gap-24">
-          {/* Left: contact info */}
+        <div className="grid gap-12 md:grid-cols-2 lg:gap-20">
           <div>
             <motion.span
               variants={itemFade}
-              className="font-body text-[10px] font-semibold uppercase tracking-[0.35em] text-gold-400"
+              className="font-mono text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-400"
             >
               Agende uma Consulta
             </motion.span>
             <motion.h2
               variants={itemFade}
-              className="mt-5 font-display text-4xl font-light italic leading-[1.1] text-cream md:text-5xl"
+              className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-slate-100 md:text-5xl"
             >
               Fale com nossa<br />equipe jurídica
             </motion.h2>
             <motion.p
               variants={itemFade}
-              className="mt-6 max-w-md font-body text-base font-light leading-relaxed text-cream/40"
+              className="mt-5 max-w-md text-base leading-relaxed text-slate-400"
             >
               Envie uma mensagem descrevendo brevemente seu cenário. Retornaremos com agilidade
               para analisar a viabilidade do atendimento.
             </motion.p>
 
-            <motion.div variants={stagger} className="mt-10 space-y-6">
+            <motion.div variants={stagger} className="mt-9 space-y-5">
               <motion.div variants={itemFade} className="flex items-start gap-4">
-                <div className="mt-1 font-body text-gold-400">✦</div>
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-sky-400/20 bg-sky-400/10 text-sky-300">
+                  <MessageCircle className="h-4 w-4" strokeWidth={1.75} />
+                </div>
                 <div>
-                  <div className="font-body text-sm font-semibold text-cream/80">
-                    WhatsApp Direto
-                  </div>
+                  <div className="text-sm font-semibold text-slate-200">WhatsApp Direto</div>
                   <a
                     href={`https://wa.me/${whatsappE164}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-1 block font-body text-gold-400 transition-colors hover:text-gold-300"
+                    className="mt-1 block text-sm font-medium text-sky-300 transition-colors hover:text-sky-200"
                   >
                     {whatsappDisplay}
                   </a>
@@ -691,16 +708,16 @@ export function LandingPage() {
               </motion.div>
 
               <motion.div variants={itemFade} className="flex items-start gap-4">
-                <div className="mt-1 font-body text-gold-400">✦</div>
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-sky-400/20 bg-sky-400/10 text-sky-300">
+                  <MapPin className="h-4 w-4" strokeWidth={1.75} />
+                </div>
                 <div>
-                  <div className="font-body text-sm font-semibold text-cream/80">
-                    Endereço Presencial
-                  </div>
+                  <div className="text-sm font-semibold text-slate-200">Endereço Presencial</div>
                   <a
                     href={mapsUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-1 block font-body text-sm leading-relaxed text-gold-400 transition-colors hover:text-gold-300"
+                    className="mt-1 block text-sm leading-relaxed text-sky-300 transition-colors hover:text-sky-200"
                   >
                     {address.line1}
                     <br />
@@ -711,27 +728,24 @@ export function LandingPage() {
             </motion.div>
           </div>
 
-          {/* Right: restricted access card */}
           <motion.div variants={itemFade} className="relative">
-            <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[radial-gradient(circle_at_50%_50%,rgba(201,169,110,0.08),transparent_65%)] blur-3xl" />
-            <div className="relative overflow-hidden rounded-3xl border border-gold-400/15 bg-[#0F0D0B] p-8 shadow-xl sm:p-10">
-              <div className="font-display text-2xl font-light italic text-cream/80">
-                Acesso Restrito
+            <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.10),transparent_65%)] blur-3xl" />
+            <div className="relative overflow-hidden rounded-2xl border border-sky-400/20 bg-slate-950/80 p-8 shadow-xl backdrop-blur-xl sm:p-10">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-400/10 text-sky-300">
+                  <Lock className="h-4 w-4" strokeWidth={1.75} />
+                </div>
+                <div className="text-2xl font-semibold tracking-tight text-slate-100">Acesso Restrito</div>
               </div>
-              <p className="mt-4 font-body text-sm font-light leading-relaxed text-cream/35">
+              <p className="mt-4 text-sm leading-relaxed text-slate-400">
                 Ambiente exclusivo para clientes e equipe técnica. Acompanhe processos, envie
                 documentos e acesse prazos com total segurança e sigilo.
               </p>
-              <Link
-                to="/app"
-                className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-gold-400 to-gold-300 px-10 py-4 font-body text-[11px] font-semibold uppercase tracking-[0.2em] text-luxury shadow-[0_0_32px_rgba(201,169,110,0.2)] transition-all hover:brightness-110 hover:shadow-[0_0_48px_rgba(201,169,110,0.35)] group"
-              >
-                Entrar no Portal
-                <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">
-                  →
-                </span>
+              <Link to="/app" className={`${techPrimaryBtn} group mt-8 w-full py-3.5`}>
+                Entrar no Sistema
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" strokeWidth={1.75} />
               </Link>
-              <div className="mt-5 text-center font-body text-[11px] text-cream/20">
+              <div className="mt-5 text-center text-[11px] text-slate-500">
                 Site com caráter exclusivamente informativo e institucional.
               </div>
             </div>

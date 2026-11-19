@@ -1,7 +1,9 @@
+import { ShieldCheck, SlidersHorizontal, UsersRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { acceptOfficeInvite, createOfficeInvite, listMyOfficeInvites } from '@/lib/offices';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
@@ -302,10 +304,12 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Configurações</h1>
-        <p className="text-sm text-white/60">Escritório, membros e permissões.</p>
-      </div>
+      <PageHeader
+        icon={SlidersHorizontal}
+        eyebrow="Sistema"
+        title="Configurações"
+        subtitle="Escritório, perfil, WhatsApp corporativo, membros e permissões."
+      />
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
       {policyBlocked ? (
@@ -358,11 +362,13 @@ export function SettingsPage() {
               
               {isAdmin ? (
                 <div className="grid gap-2">
-                  <Link className="block w-full rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm font-semibold text-white transition-colors hover:bg-white/10" to="/app/configuracoes/equipe">
-                    👥 Gerenciar Equipe
+                  <Link className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] p-3.5 text-sm font-semibold text-white transition-colors hover:border-sky-400/30 hover:bg-white/[0.08]" to="/app/configuracoes/equipe">
+                    <UsersRound className="h-4 w-4 text-sky-300" strokeWidth={1.75} />
+                    Gerenciar Equipe
                   </Link>
-                  <Link className="block w-full rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm font-semibold text-amber-200 transition-colors hover:bg-white/10" to="/app/configuracoes/auditoria">
-                    🛡️ Auditoria e Logs
+                  <Link className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.04] p-3.5 text-sm font-semibold text-sky-200 transition-colors hover:border-sky-400/30 hover:bg-white/[0.08]" to="/app/configuracoes/auditoria">
+                    <ShieldCheck className="h-4 w-4 text-sky-300" strokeWidth={1.75} />
+                    Auditoria e Logs
                   </Link>
                 </div>
               ) : null}

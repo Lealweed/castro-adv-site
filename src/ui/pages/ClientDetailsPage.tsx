@@ -1,8 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CalendarPlus, DollarSign, Megaphone, MessageSquareText, SendHorizontal } from 'lucide-react';
+import {
+  ArrowLeft,
+  CalendarPlus,
+  DollarSign,
+  ExternalLink,
+  FileDown,
+  FileText,
+  Megaphone,
+  MessageCircle,
+  MessageSquareText,
+  SendHorizontal,
+  UserCheck,
+} from 'lucide-react';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { DocumentsSection } from '@/ui/widgets/DocumentsSection';
 import { ClientLinksSection } from '@/ui/widgets/ClientLinksSection';
 import { TimelineSection } from '@/ui/widgets/TimelineSection';
@@ -10,6 +23,7 @@ import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 import { hashPortalPin } from '@/lib/crypto';
 import { generateClientDossier } from '@/lib/pdfGenerator';
 import { generateProcuracaoDocx, buildProcuracaoData } from '@/lib/docGenerator';
+import { createAsaasCharge, extractAsaasInfo } from '@/lib/asaas';
 
 import { brlToCents, centsToBRL, loadClientTransactions, type FinanceTx } from '@/lib/finance';
 
@@ -36,6 +50,24 @@ function buildClientNotes(existingNotes: string | null, notice: string, national
   const parts = [extractSourceTag(existingNotes), notice.trim(), nationality.trim() ? `Nacionalidade: ${nationality.trim()}` : '']
     .filter(Boolean);
   return parts.length ? parts.join('\n') : null;
+}
+
+function getStatusLabel(status: string) {
+  const s = (status || '').toLowerCase();
+  if (s === 'peticao_inicial') return 'Petição Inicial';
+  if (s === 'citacao_defesa') return 'Citação e Defesa';
+  if (s === 'instrucao_provas') return 'Instrução e Provas';
+  if (s === 'julgamento_sentenca') return 'Sentença';
+  if (s === 'recurso') return 'Recurso';
+  if (s === 'execucao_recebimento') return 'Execução / Fim';
+  if (s === 'arquivado') return 'Arquivado';
+  return status;
+}
+
+function statusBadge(status: string) {
+  const s = (status || '').toLowerCase();
+  if (s === 'peticao_inicial' || s === 'citacao_defesa' || s === 'instrucao_provas') return 'badge badge-gold';
+  return 'badge';
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -128,6 +160,8 @@ export function ClientDetailsPage() {
   const [feeTotal, setFeeTotal] = useState('');
   const [feeInstallments, setFeeInstallments] = useState(1);
   const [feeFirstDueDate, setFeeFirstDueDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [feeEmitAsaas, setFeeEmitAsaas] = useState(true);
+  const [feeBillingType, setFeeBillingType] = useState<'UNDEFINED' | 'PIX' | 'BOLETO' | 'CREDIT_CARD'>('UNDEFINED');
 
   useEffect(() => {
     let alive = true;
@@ -231,10 +265,10 @@ export function ClientDetailsPage() {
       });
 
       if (invokeError) throw invokeError;
-      window.alert('✅ Mensagem enviada com sucesso!');
+      window.alert('Mensagem enviada com sucesso!');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Falha ao enviar WhatsApp.';
-      window.alert(`❌ Erro: ${message}`);
+      window.alert(`Erro: ${message}`);
     }
   }
 
@@ -421,6 +455,33 @@ export function ClientDetailsPage() {
         const installmentCents = baseAmount + (idx < remainder ? 1 : 0);
         const dueDate = addMonths(feeFirstDueDate, idx);
         const installmentLabel = feeInstallments > 1 ? ` (${idx + 1}/${feeInstallments})` : '';
+        const fullDesc = `${description}${installmentLabel}`;
+
+        let txNotes = 'Honorários lançados na ficha do cliente.';
+        let txMethod: string | null = null;
+
+        if (feeEmitAsaas) {
+          const asaasCharge = await createAsaasCharge({
+            clientId,
+            customerName: row?.name,
+            customerCpfCnpj: row?.cpf || undefined,
+            customerEmail: row?.email,
+            customerPhone: row?.whatsapp || row?.phone,
+            description: fullDesc,
+            amountCents: installmentCents,
+            dueDate,
+            billingType: feeBillingType,
+          });
+          txNotes = asaasCharge.notesTag;
+          txMethod =
+            feeBillingType === 'PIX'
+              ? 'pix'
+              : feeBillingType === 'BOLETO'
+                ? 'boleto'
+                : feeBillingType === 'CREDIT_CARD'
+                  ? 'card'
+                  : 'asaas';
+        }
 
         const { error: insertErr } = await sb.from('finance_transactions').insert({
           user_id: user.id,
@@ -428,10 +489,10 @@ export function ClientDetailsPage() {
           status: 'planned',
           occurred_on: occurredOn,
           due_date: dueDate,
-          description: `${description}${installmentLabel}`,
+          description: fullDesc,
           amount_cents: installmentCents,
-          payment_method: null,
-          notes: 'Honorários lançados na ficha do cliente.',
+          payment_method: txMethod,
+          notes: txNotes,
           client_id: clientId,
         });
 
@@ -457,70 +518,68 @@ export function ClientDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Cliente</h1>
-          <p className="text-sm text-white/60">Detalhes (Supabase).</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {row && (
-            <button
-              disabled={exportingPdf}
-              onClick={() => {
-                setExportingPdf(true);
-                try {
-                  generateClientDossier(
-                    {
-                      name: row.name,
-                      phone: row.phone,
-                      whatsapp: row.whatsapp,
-                      email: row.email,
-                      notes: row.notes,
-                      created_at: row.created_at,
-                    },
-                    cases,
-                  );
-                } finally {
-                  setExportingPdf(false);
-                }
-              }}
-              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition
-                         bg-gradient-to-r from-yellow-600 to-yellow-500 text-black
-                         hover:from-yellow-500 hover:to-yellow-400
-                         disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {exportingPdf ? 'Gerando…' : 'Exportar Dossiê (PDF)'}
-            </button>
-          )}
-          {row && (
-            <button
-              disabled={generatingDocx}
-              onClick={async () => {
-                if (!row) return;
-                setGeneratingDocx(true);
-                try {
-                  const data = buildProcuracaoData(row);
-                  await generateProcuracaoDocx(data);
-                } catch (err: unknown) {
-                  alert(getErrorMessage(err, 'Falha ao gerar procuração.'));
-                } finally {
-                  setGeneratingDocx(false);
-                }
-              }}
-              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition
-                         bg-gradient-to-r from-sky-600 to-sky-500 text-white
-                         hover:from-sky-500 hover:to-sky-400
-                         disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
-              {generatingDocx ? 'Gerando…' : 'Gerar Procuração (Word)'}
-            </button>
-          )}
-          <Link to="/app/clientes" className="btn-ghost">
-            Voltar
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        icon={UserCheck}
+        eyebrow="Jurídico"
+        title={row?.name || 'Cliente'}
+        subtitle="Ficha completa, processos, financeiro e comunicações do cliente."
+        actions={
+          <>
+            {row && (
+              <button
+                disabled={exportingPdf}
+                onClick={() => {
+                  setExportingPdf(true);
+                  try {
+                    generateClientDossier(
+                      {
+                        name: row.name,
+                        phone: row.phone,
+                        whatsapp: row.whatsapp,
+                        email: row.email,
+                        notes: row.notes,
+                        created_at: row.created_at,
+                      },
+                      cases,
+                    );
+                  } finally {
+                    setExportingPdf(false);
+                  }
+                }}
+                className="btn-ghost"
+              >
+                <FileDown className="h-4 w-4 text-sky-300" strokeWidth={1.75} />
+                {exportingPdf ? 'Gerando…' : 'Exportar Dossiê (PDF)'}
+              </button>
+            )}
+            {row && (
+              <button
+                disabled={generatingDocx}
+                onClick={async () => {
+                  if (!row) return;
+                  setGeneratingDocx(true);
+                  try {
+                    const data = buildProcuracaoData(row);
+                    await generateProcuracaoDocx(data);
+                  } catch (err: unknown) {
+                    alert(getErrorMessage(err, 'Falha ao gerar procuração.'));
+                  } finally {
+                    setGeneratingDocx(false);
+                  }
+                }}
+                className="btn-primary"
+              >
+                <FileText className="h-4 w-4" strokeWidth={1.75} />
+                {generatingDocx ? 'Gerando…' : 'Gerar Procuração (Word)'}
+              </button>
+            )}
+            <Link to="/app/clientes" className="btn-ghost">
+              <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
+              Voltar
+            </Link>
+          </>
+        }
+      />
 
       <Card>
         {loading ? <div className="text-sm text-white/70">Carregando…</div> : null}
@@ -642,9 +701,10 @@ export function ClientDetailsPage() {
                           {row.whatsapp && (
                             <button
                               onClick={() => void handleSendWhatsApp()}
-                              className="inline-flex items-center gap-1 rounded-lg bg-green-600/20 px-2 py-0.5 text-xs font-medium text-green-300 hover:bg-green-600/40 transition"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/25 bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/25 transition"
                             >
-                              💬 Zap
+                              <MessageCircle className="h-3.5 w-3.5" strokeWidth={1.75} />
+                              WhatsApp
                             </button>
                           )}
                         </div>
@@ -839,7 +899,7 @@ export function ClientDetailsPage() {
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="text-sm font-semibold text-white">{c.title}</div>
-                <span className="badge">{c.status}</span>
+                <span className={statusBadge(c.status)}>{getStatusLabel(c.status)}</span>
               </div>
               <div className="mt-1 text-xs text-white/50">
                 {c.process_number ? `CNJ: ${c.process_number}` : 'CNJ: —'}
@@ -886,22 +946,42 @@ export function ClientDetailsPage() {
           {!txLoading && clientTransactions.length === 0 ? <div className="text-sm text-white/60">Nenhum lançamento financeiro para este cliente.</div> : null}
           {!txLoading && clientTransactions.map((tx) => {
             const paid = tx.status === 'paid';
+            const asaas = extractAsaasInfo(tx.notes);
             return (
               <div key={tx.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <div className="text-xs text-white/50">Vencimento</div>
-                    <div className="text-sm text-white/90">{formatDueDate(tx.due_date)}</div>
+                    <div className="text-xs font-semibold text-white flex items-center gap-1.5">
+                      <span>{tx.description || 'Honorários'}</span>
+                      {asaas.isAsaas ? (
+                        <span className="badge border-sky-400/30 bg-sky-400/10 text-sky-200 text-[10px]">
+                          Asaas
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="text-xs text-white/50 mt-0.5">Vencimento: {formatDueDate(tx.due_date)}</div>
                   </div>
-                  <div>
-                    <div className="text-xs text-white/50">Valor</div>
-                    <div className="text-sm font-semibold text-white">{centsToBRL(tx.amount_cents)}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-white/50">Status</div>
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${paid ? 'bg-green-500/20 text-green-200' : 'bg-amber-500/20 text-amber-200'}`}>
-                      {paid ? 'Pago' : 'Pendente'}
-                    </span>
+                  <div className="flex items-center gap-4">
+                    {asaas.invoiceUrl ? (
+                      <a
+                        href={asaas.invoiceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 rounded-lg border border-amber-400/30 bg-amber-400/10 px-2.5 py-1 text-xs font-semibold text-amber-300 hover:bg-amber-400/20"
+                      >
+                        Fatura / PIX / Boleto <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : null}
+                    <div>
+                      <div className="text-xs text-white/50">Valor</div>
+                      <div className="text-sm font-semibold text-white">{centsToBRL(tx.amount_cents)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-white/50">Status</div>
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${paid ? 'bg-green-500/20 text-green-200' : 'bg-amber-500/20 text-amber-200'}`}>
+                        {paid ? 'Pago' : 'Pendente'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -968,6 +1048,34 @@ export function ClientDetailsPage() {
                   onChange={(e) => setFeeFirstDueDate(e.target.value)}
                 />
               </label>
+
+              <div className="mt-1 rounded-xl border border-amber-400/20 bg-amber-400/5 p-3 space-y-2.5">
+                <label className="flex items-center gap-2 text-xs font-semibold text-amber-200 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={feeEmitAsaas}
+                    onChange={(e) => setFeeEmitAsaas(e.target.checked)}
+                    className="h-4 w-4 rounded border-white/20 bg-slate-950 text-amber-400"
+                  />
+                  <span>Emitir cobrança oficial no Asaas (Gerar link PIX / Boleto)</span>
+                </label>
+
+                {feeEmitAsaas ? (
+                  <label className="block text-xs text-white/70">
+                    Forma de Pagamento no Asaas
+                    <select
+                      className="input !mt-1 !py-1.5 !text-xs"
+                      value={feeBillingType}
+                      onChange={(e) => setFeeBillingType(e.target.value as any)}
+                    >
+                      <option value="UNDEFINED">PIX ou Boleto (Cliente escolhe na Fatura)</option>
+                      <option value="PIX">Somente PIX (QR Code imediato)</option>
+                      <option value="BOLETO">Somente Boleto Bancário</option>
+                      <option value="CREDIT_CARD">Cartão de Crédito</option>
+                    </select>
+                  </label>
+                ) : null}
+              </div>
             </div>
 
             <div className="mt-5 flex justify-end gap-2">

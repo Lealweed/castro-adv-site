@@ -21,10 +21,12 @@ export type DocumentRow = {
   rejection_reason?: string | null;
   internal_comments?: string | null;
   parent_id?: string | null;
+  root_id?: string | null;
   version_number?: number;
   replacement_reason?: string | null;
   is_active?: boolean;
   checklist_item_id?: string | null;
+  uploader_name?: string | null;
 };
 
 export async function listClientDocuments(clientId: string) {
@@ -33,7 +35,7 @@ export async function listClientDocuments(clientId: string) {
 
   const { data, error } = await sb
     .from('documents')
-    .select('id,user_id,client_id,case_id,task_id,kind,title,file_path,mime_type,size_bytes,created_at,is_public,category,status,rejection_reason,internal_comments,parent_id,version_number,replacement_reason,is_active,checklist_item_id')
+    .select('id,user_id,client_id,case_id,task_id,kind,title,file_path,mime_type,size_bytes,created_at,is_public,category,status,rejection_reason,internal_comments,parent_id,root_id,version_number,replacement_reason,is_active,checklist_item_id')
     .eq('client_id', clientId)
     .order('created_at', { ascending: false });
 
@@ -47,8 +49,8 @@ export async function listDocumentVersions(parentId: string) {
 
   const { data, error } = await sb
     .from('documents')
-    .select('id,user_id,client_id,case_id,task_id,kind,title,file_path,mime_type,size_bytes,created_at,is_public,category,status,rejection_reason,internal_comments,parent_id,version_number,replacement_reason,is_active,checklist_item_id')
-    .eq('parent_id', parentId)
+    .select('id,user_id,client_id,case_id,task_id,kind,title,file_path,mime_type,size_bytes,created_at,is_public,category,status,rejection_reason,internal_comments,parent_id,root_id,version_number,replacement_reason,is_active,checklist_item_id')
+    .or(`parent_id.eq.${parentId},id.eq.${parentId},root_id.eq.${parentId}`)
     .order('version_number', { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -67,6 +69,7 @@ export async function uploadClientDocument(args: {
   status?: string | null;
   checklistItemId?: string | null;
   parentId?: string | null;
+  rootId?: string | null;
   versionNumber?: number;
   replacementReason?: string | null;
 }) {
@@ -87,12 +90,19 @@ export async function uploadClientDocument(args: {
   });
   if (upErr) throw new Error(upErr.message);
 
-  // If uploading a new version, deactivate the previous version
+  let finalVersionNumber = args.versionNumber || 1;
+  let finalRootId = args.rootId || null;
+
   if (args.parentId) {
-    await sb
-      .from('documents')
-      .update({ is_active: false } as any)
-      .eq('id', args.parentId);
+    const targetRoot = finalRootId || args.parentId;
+    const { data: nextVer, error: rpcErr } = await sb.rpc('prepare_new_document_version', {
+      p_root_id: targetRoot
+    });
+    if (rpcErr) throw new Error(rpcErr.message);
+    finalVersionNumber = nextVer || 2;
+    if (!finalRootId) {
+      finalRootId = args.parentId;
+    }
   }
 
   // Lawyers default uploads to 'approved'. Client portal uploads default to 'under_analysis'
@@ -113,7 +123,8 @@ export async function uploadClientDocument(args: {
     status: finalStatus,
     checklist_item_id: args.checklistItemId || null,
     parent_id: args.parentId || null,
-    version_number: args.versionNumber || 1,
+    root_id: finalRootId,
+    version_number: finalVersionNumber,
     replacement_reason: args.replacementReason || null,
     is_active: true,
   } as any);
@@ -257,4 +268,23 @@ export async function deleteDocument(doc: { id: string; file_path: string }) {
     // eslint-disable-next-line no-console
     console.warn('Failed to delete file from storage:', delFileErr.message);
   }
+}
+
+export async function restoreDocumentVersion(versionId: string, rootId: string) {
+  const sb = requireSupabase();
+  await getAuthedUser();
+
+  // 1. Deactivate all versions under this root (both root doc and version docs)
+  const { error: deactErr } = await sb
+    .from('documents')
+    .update({ is_active: false } as any)
+    .or(`root_id.eq.${rootId},id.eq.${rootId}`);
+  if (deactErr) throw new Error(deactErr.message);
+
+  // 2. Activate the selected version
+  const { error: actErr } = await sb
+    .from('documents')
+    .update({ is_active: true } as any)
+    .eq('id', versionId);
+  if (actErr) throw new Error(actErr.message);
 }

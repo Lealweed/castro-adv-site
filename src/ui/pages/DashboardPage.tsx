@@ -1,6 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Briefcase, DollarSign, Clock, AlertTriangle, CheckCircle2, CalendarDays, Users, Filter, Search } from 'lucide-react';
+import {
+  AlertTriangle,
+  BarChart3,
+  Briefcase,
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  Filter,
+  LayoutGrid,
+  ListChecks,
+  Plus,
+  Radar,
+  Scale,
+  Search,
+  Users,
+  UsersRound,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -364,18 +381,18 @@ export function DashboardPage() {
     }
 
     const statusData = [
-      { name: 'Aberto', key: 'open', value: statusCounts.get('open') || 0, color: '#f59e0b' },
-      { name: 'Andamento', key: 'in_progress', value: statusCounts.get('in_progress') || 0, color: '#93c5fd' },
-      { name: 'Pausado', key: 'paused', value: statusCounts.get('paused') || 0, color: '#fbbf24' },
-      { name: 'Concluído', key: 'done', value: statusCounts.get('done') || 0, color: '#86efac' },
-      { name: 'Cancelado', key: 'cancelled', value: statusCounts.get('cancelled') || 0, color: '#fca5a5' },
+      { name: 'Aberto', key: 'open', value: statusCounts.get('open') || 0, color: '#38bdf8' },
+      { name: 'Andamento', key: 'in_progress', value: statusCounts.get('in_progress') || 0, color: '#6366f1' },
+      { name: 'Pausado', key: 'paused', value: statusCounts.get('paused') || 0, color: '#a78bfa' },
+      { name: 'Concluído', key: 'done', value: statusCounts.get('done') || 0, color: '#10b981' },
+      { name: 'Cancelado', key: 'cancelled', value: statusCounts.get('cancelled') || 0, color: '#f43f5e' },
     ].filter((x) => x.value > 0);
 
     const riskData = [
-      { name: 'Atrasadas', value: risk.overdue, color: '#f87171' },
-      { name: 'Hoje', value: risk.today, color: '#f59e0b' },
-      { name: '48h', value: risk.due48, color: '#fbbf24' },
-      { name: 'Sem prazo', value: risk.noDue, color: '#a3a3a3' },
+      { name: 'Atrasadas', value: risk.overdue, color: '#f43f5e' },
+      { name: 'Hoje', value: risk.today, color: '#38bdf8' },
+      { name: '48h', value: risk.due48, color: '#818cf8' },
+      { name: 'Sem prazo', value: risk.noDue, color: '#64748b' },
     ];
 
     return { statusData, riskData };
@@ -495,50 +512,61 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)] sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(600px_200px_at_0%_0%,rgba(251,191,36,0.15),transparent_60%)]" />
-        <div className="relative flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200/90">Castro & Oliveira Advocacia</p>
-            <h1 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">Dashboard executivo</h1>
-            <p className="mt-1 text-sm text-white/60">Visão geral de clientes, casos, agenda e tarefas em tempo real.</p>
+      <header className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-950/60 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-6">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/45 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(600px_200px_at_0%_0%,rgba(56,189,248,0.14),transparent_60%)]" />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5 sm:items-center">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-400/10 text-sky-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+              <LayoutGrid className="h-5 w-5" strokeWidth={1.75} />
+            </div>
+            <div>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300/90">
+                Castro & Oliveira · Centro de Comando
+              </p>
+              <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Dashboard executivo</h1>
+              <p className="mt-0.5 text-sm text-white/60">Visão geral de clientes, casos, agenda e tarefas em tempo real.</p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link to="/app/clientes" className="btn-ghost !border-white/20 !bg-white/10">
+            <Link to="/app/clientes" className="btn-ghost">
+              <UsersRound className="h-4 w-4 text-sky-300" strokeWidth={1.75} />
               Clientes
             </Link>
-            <Link to="/app/casos" className="btn-ghost !border-white/20 !bg-white/10">
+            <Link to="/app/casos" className="btn-ghost">
+              <Scale className="h-4 w-4 text-sky-300" strokeWidth={1.75} />
               Casos
             </Link>
-            <Link to="/app/tarefas" className="btn-primary shadow-[0_10px_30px_rgba(255,255,255,0.18)]">
+            <Link to="/app/tarefas" className="btn-primary">
+              <Plus className="h-4 w-4" strokeWidth={2} />
               Nova tarefa
             </Link>
           </div>
         </div>
-      </div>
+      </header>
 
-      {error ? <div className="text-sm text-red-200">{error}</div> : null}
+      {error ? <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</div> : null}
 
       {/* Executive KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         {/* Card 1 — Casos em Triagem */}
         <Link
           to="/app/casos"
-          className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-amber-500/15 via-white/10 to-white/5 p-5 transition-all hover:-translate-y-1 hover:border-amber-400/40 hover:shadow-[0_12px_40px_rgba(251,191,36,0.15)]"
+          className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-950/60 p-5 backdrop-blur-xl transition-all hover:border-sky-400/35 hover:shadow-[0_12px_40px_rgba(56,189,248,0.14)]"
         >
-          <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-amber-400/10 blur-2xl transition-all group-hover:bg-amber-400/20" />
-          <div className="relative flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-xl bg-amber-400/15 text-amber-300 ring-1 ring-amber-400/20">
-              <Briefcase size={20} />
+          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-sky-400/10 blur-2xl transition-all group-hover:bg-sky-400/20" />
+          <div className="relative flex items-center gap-3.5">
+            <div className="flex size-11 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-400/10 text-sky-300">
+              <Briefcase className="h-5 w-5" strokeWidth={1.75} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-widest text-amber-200/80">Casos em Triagem</p>
-              <p className="mt-0.5 text-3xl font-bold text-white">{loading ? '—' : execCards.triagem}</p>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-widest text-sky-300/85">Casos em Triagem</p>
+              <p className="mt-0.5 text-3xl font-bold tracking-tight text-white tabular-nums">{loading ? '—' : execCards.triagem}</p>
             </div>
           </div>
-          <div className="relative mt-3 h-1 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="relative mt-4 h-1 w-full overflow-hidden rounded-full bg-white/[0.08]">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-300 transition-all"
+              className="h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-400 transition-all"
               style={{ width: `${Math.min(100, (execCards.triagem / Math.max(counts.cases, 1)) * 100)}%` }}
             />
           </div>
@@ -547,60 +575,65 @@ export function DashboardPage() {
         {/* Card 2 — Honorários a Receber */}
         <Link
           to="/app/financeiro"
-          className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/15 via-white/10 to-white/5 p-5 transition-all hover:-translate-y-1 hover:border-emerald-400/40 hover:shadow-[0_12px_40px_rgba(52,211,153,0.12)]"
+          className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-950/60 p-5 backdrop-blur-xl transition-all hover:border-emerald-400/35 hover:shadow-[0_12px_40px_rgba(16,185,129,0.14)]"
         >
-          <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-emerald-400/10 blur-2xl transition-all group-hover:bg-emerald-400/20" />
-          <div className="relative flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-xl bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/20">
-              <DollarSign size={20} />
+          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-emerald-400/10 blur-2xl transition-all group-hover:bg-emerald-400/20" />
+          <div className="relative flex items-center gap-3.5">
+            <div className="flex size-11 items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-400/10 text-emerald-300">
+              <DollarSign className="h-5 w-5" strokeWidth={1.75} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-200/80">Honorários a Receber</p>
-              <p className="mt-0.5 text-3xl font-bold text-white">
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-widest text-emerald-300/85">Honorários a Receber</p>
+              <p className="mt-0.5 text-3xl font-bold tracking-tight text-white tabular-nums">
                 {loading
                   ? '—'
                   : (execCards.honorarios / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </p>
             </div>
           </div>
-          <div className="relative mt-3 h-1 w-full overflow-hidden rounded-full bg-white/10">
-            <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-300 transition-all" />
+          <div className="relative mt-4 h-1 w-full overflow-hidden rounded-full bg-white/[0.08]">
+            <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-emerald-400 to-teal-300 transition-all" />
           </div>
         </Link>
 
         {/* Card 3 — Tarefas Pendentes */}
         <Link
           to="/app/tarefas"
-          className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-sky-500/15 via-white/10 to-white/5 p-5 transition-all hover:-translate-y-1 hover:border-sky-400/40 hover:shadow-[0_12px_40px_rgba(56,189,248,0.12)]"
+          className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-950/60 p-5 backdrop-blur-xl transition-all hover:border-indigo-400/35 hover:shadow-[0_12px_40px_rgba(99,102,241,0.14)]"
         >
-          <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-sky-400/10 blur-2xl transition-all group-hover:bg-sky-400/20" />
-          <div className="relative flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-xl bg-sky-400/15 text-sky-300 ring-1 ring-sky-400/20">
-              <Clock size={20} />
+          <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-indigo-400/10 blur-2xl transition-all group-hover:bg-indigo-400/20" />
+          <div className="relative flex items-center gap-3.5">
+            <div className="flex size-11 items-center justify-center rounded-xl border border-indigo-400/25 bg-indigo-400/10 text-indigo-300">
+              <Clock className="h-5 w-5" strokeWidth={1.75} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-widest text-sky-200/80">Tarefas Pendentes</p>
-              <p className="mt-0.5 text-3xl font-bold text-white">{loading ? '—' : execCards.tarefasPendentes}</p>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-widest text-indigo-300/85">Tarefas Pendentes</p>
+              <p className="mt-0.5 text-3xl font-bold tracking-tight text-white tabular-nums">{loading ? '—' : execCards.tarefasPendentes}</p>
             </div>
           </div>
-          <div className="relative mt-3 h-1 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="relative mt-4 h-1 w-full overflow-hidden rounded-full bg-white/[0.08]">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-sky-400 to-sky-300 transition-all"
+              className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-sky-400 transition-all"
               style={{ width: `${Math.min(100, execCards.tarefasPendentes * 5)}%` }}
             />
           </div>
         </Link>
       </div>
 
-      <Card className="border-white/15 bg-gradient-to-br from-[#0f1115] via-[#12161d] to-black shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <div className="text-sm font-semibold text-white">Radar de Processos (Escavador)</div>
-            <div className="mt-1 text-xs text-white/60">
-              Consulte um processo em formato CNJ para inspecionar tribunal, última movimentação e status atual via Escavador.
+      <Card className="border-white/[0.1] bg-slate-950/70">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-400/10 text-sky-300">
+              <Radar className="h-5 w-5" strokeWidth={1.75} />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-white">Radar de Processos (CNJ / Escavador / DataJud)</div>
+              <div className="mt-0.5 text-xs text-white/60">
+                Consulte um processo em formato CNJ para inspecionar tribunal, última movimentação e status atual.
+              </div>
             </div>
           </div>
-          <span className="badge border-amber-300/30 bg-amber-300/10 text-amber-100">API Escavador</span>
+          <span className="badge badge-gold font-mono">API Radar CNJ</span>
         </div>
 
         <form onSubmit={handleRadarSubmit} className="mt-4 flex flex-col gap-3 lg:flex-row">
@@ -610,54 +643,54 @@ export function DashboardPage() {
               onChange={(event) => setRadarCnj(formatCnjInput(event.target.value))}
               inputMode="numeric"
               placeholder="0000000-00.0000.0.00.0000"
-              className="h-11 rounded-xl border-white/10 bg-white/5 text-white placeholder:text-white/35"
+              className="h-11 rounded-xl border-white/[0.1] bg-slate-950/80 font-mono text-white placeholder:text-white/35 focus-visible:ring-sky-400/40"
             />
           </div>
           <Button
             type="submit"
             disabled={radarLoading}
-            className="h-11 rounded-xl bg-amber-400 px-5 text-black hover:bg-amber-300 disabled:bg-amber-400/60"
+            className="btn-primary h-11 rounded-xl px-5"
           >
-            <Search className="mr-2 size-4" />
+            <Search className="mr-2 size-4" strokeWidth={1.75} />
             {radarLoading ? 'Buscando...' : 'Buscar processo'}
           </Button>
         </form>
 
-        <div className="mt-2 text-[11px] text-white/45">
+        <div className="mt-2 font-mono text-[11px] text-white/45">
           Formato aceito: XXXXXXX-XX.XXXX.X.XX.XXXX
         </div>
 
-        {radarWarning ? <div className="mt-3 text-sm text-amber-200/90">{radarWarning}</div> : null}
-        {radarError ? <div className="mt-3 text-sm text-red-200">{radarError}</div> : null}
+        {radarWarning ? <div className="mt-3 text-sm text-sky-200/90">{radarWarning}</div> : null}
+        {radarError ? <div className="mt-3 text-sm text-rose-200">{radarError}</div> : null}
 
         {radarResult ? (
-          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="mt-4 rounded-xl border border-white/[0.08] bg-white/[0.04] p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div className="text-xs uppercase tracking-[0.18em] text-white/45">Processo</div>
-                <div className="mt-1 text-lg font-semibold text-white">{radarResult.numero}</div>
+                <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/45">Processo</div>
+                <div className="mt-1 font-mono text-lg font-semibold text-white">{radarResult.numero}</div>
               </div>
-              <span className="badge border-green-400/30 bg-green-400/10 text-green-200">
+              <span className="badge border-emerald-400/30 bg-emerald-400/10 text-emerald-200">
                 {radarResult.status}
               </span>
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-3">
-              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+              <div className="rounded-xl border border-white/[0.08] bg-slate-950/60 p-3">
                 <div className="text-[11px] uppercase tracking-wider text-white/45">Tribunal</div>
-                <div className="mt-1 text-sm font-medium text-amber-200">{radarResult.tribunal}</div>
+                <div className="mt-1 text-sm font-medium text-sky-200">{radarResult.tribunal}</div>
               </div>
-              <div className="rounded-xl border border-white/10 bg-black/20 p-3 md:col-span-2">
+              <div className="rounded-xl border border-white/[0.08] bg-slate-950/60 p-3 md:col-span-2">
                 <div className="text-[11px] uppercase tracking-wider text-white/45">Última movimentação</div>
                 <div className="mt-1 text-sm font-medium text-white">{radarResult.ultimoAndamento}</div>
               </div>
-              <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+              <div className="rounded-xl border border-white/[0.08] bg-slate-950/60 p-3">
                 <div className="text-[11px] uppercase tracking-wider text-white/45">Data</div>
-                <div className="mt-1 text-sm font-medium text-amber-200">{formatRadarDate(radarResult.dataUltimoAndamento)}</div>
+                <div className="mt-1 text-sm font-medium text-sky-200">{formatRadarDate(radarResult.dataUltimoAndamento)}</div>
               </div>
-              <div className="rounded-xl border border-white/10 bg-black/20 p-3 md:col-span-2">
+              <div className="rounded-xl border border-white/[0.08] bg-slate-950/60 p-3 md:col-span-2">
                 <div className="text-[11px] uppercase tracking-wider text-white/45">Status</div>
-                <div className="mt-1 text-sm font-medium text-amber-200">{radarResult.status}</div>
+                <div className="mt-1 text-sm font-medium text-sky-200">{radarResult.status}</div>
               </div>
             </div>
           </div>
@@ -667,11 +700,23 @@ export function DashboardPage() {
       <Hero1951 />
 
       <Tabs defaultValue="insights" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 rounded-2xl border border-white/15 bg-gradient-to-r from-white/10 to-white/5 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
-          <TabsTrigger value="insights">Insights</TabsTrigger>
-          <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
-          <TabsTrigger value="agenda">Agenda</TabsTrigger>
-          <TabsTrigger value="equipe">Equipe</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="insights">
+            <BarChart3 className="h-3.5 w-3.5" strokeWidth={1.75} />
+            Insights
+          </TabsTrigger>
+          <TabsTrigger value="tarefas">
+            <ListChecks className="h-3.5 w-3.5" strokeWidth={1.75} />
+            Tarefas
+          </TabsTrigger>
+          <TabsTrigger value="agenda">
+            <CalendarDays className="h-3.5 w-3.5" strokeWidth={1.75} />
+            Agenda
+          </TabsTrigger>
+          <TabsTrigger value="equipe">
+            <UsersRound className="h-3.5 w-3.5" strokeWidth={1.75} />
+            Equipe
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="insights" className="mt-4 space-y-6">
@@ -680,40 +725,47 @@ export function DashboardPage() {
               <Link
                 key={k.label}
                 to={k.to}
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-4 transition-all hover:-translate-y-0.5 hover:border-amber-300/30 hover:from-white/15 hover:to-white/10"
+                className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-950/55 p-4 backdrop-blur-xl transition-all hover:border-sky-400/30"
               >
-                <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-amber-300/10 blur-2xl transition-opacity group-hover:bg-amber-300/20" />
-                <div className="relative flex items-start justify-between gap-3">
-                  <div className="text-xs text-white/65">{k.label}</div>
-                  <span className="badge border-white/15 bg-white/5 text-[10px] text-white/70">{k.chip}</span>
+                <div className="pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full bg-sky-400/10 blur-2xl transition-opacity group-hover:bg-sky-400/20" />
+                <div className="relative flex items-start justify-between gap-2">
+                  <div className="text-xs font-medium text-white/65">{k.label}</div>
+                  <span className="badge text-[10px]">{k.chip}</span>
                 </div>
-                <div className={`relative mt-2 text-2xl font-semibold ${k.tone}`}>{loading ? '—' : k.value}</div>
-                <div className="relative mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                  <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-amber-300/50 to-white/40 transition-all group-hover:w-2/3" />
+                <div className={`relative mt-2 text-2xl font-semibold tabular-nums ${k.tone}`}>{loading ? '—' : k.value}</div>
+                <div className="relative mt-2.5 h-1 w-full overflow-hidden rounded-full bg-white/[0.08]">
+                  <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-sky-400/60 to-indigo-400/50 transition-all group-hover:w-2/3" />
                 </div>
               </Link>
             ))}
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-2 border-white/15 bg-gradient-to-br from-white/10 via-white/5 to-transparent">
+            <Card className="lg:col-span-2">
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold text-white">Esteira (14 dias)</div>
                   <div className="text-xs text-white/60">Criadas vs Concluídas — se criadas &gt; concluídas, a fila cresce.</div>
                 </div>
-                <span className="badge border-amber-300/30 bg-amber-300/10 text-amber-100">Produtividade</span>
+                <span className="badge badge-gold">Produtividade</span>
               </div>
 
               <div className="mt-4 h-[260px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={trend}>
-                    <XAxis dataKey="day" stroke="rgba(255,255,255,0.5)" fontSize={12} />
-                    <YAxis stroke="rgba(255,255,255,0.3)" fontSize={12} />
-                    <Tooltip />
+                    <XAxis dataKey="day" stroke="rgba(148,163,184,0.65)" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="rgba(148,163,184,0.45)" fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'rgba(5, 8, 17, 0.94)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '12px',
+                        color: '#f1f5f9',
+                      }}
+                    />
                     <Legend />
-                    <Area type="monotone" dataKey="criadas" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.15} />
-                    <Area type="monotone" dataKey="concluidas" stroke="#86efac" fill="#86efac" fillOpacity={0.12} />
+                    <Area type="monotone" dataKey="criadas" stroke="#38bdf8" fill="#38bdf8" fillOpacity={0.16} strokeWidth={2} />
+                    <Area type="monotone" dataKey="concluidas" stroke="#10b981" fill="#10b981" fillOpacity={0.14} strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -770,7 +822,14 @@ export function DashboardPage() {
                     <Cell key={idx} fill={e.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(5, 8, 17, 0.94)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
+                    color: '#f1f5f9',
+                  }}
+                />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -788,10 +847,17 @@ export function DashboardPage() {
           <div className="mt-4 h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartBase.riskData}>
-                <XAxis dataKey="name" stroke="rgba(255,255,255,0.5)" fontSize={12} />
-                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={12} />
-                <Tooltip />
-                <Bar dataKey="value">
+                <XAxis dataKey="name" stroke="rgba(148,163,184,0.65)" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="rgba(148,163,184,0.45)" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(5, 8, 17, 0.94)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
+                    color: '#f1f5f9',
+                  }}
+                />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                   {chartBase.riskData.map((e, idx) => (
                     <Cell key={idx} fill={e.color} />
                   ))}
@@ -1134,13 +1200,20 @@ export function DashboardPage() {
                   <div className="mt-4 h-[260px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={teamWorkload} layout="vertical">
-                        <XAxis type="number" stroke="rgba(255,255,255,0.3)" fontSize={12} />
-                        <YAxis dataKey="name" type="category" stroke="rgba(255,255,255,0.5)" fontSize={11} width={90} />
-                        <Tooltip />
+                        <XAxis type="number" stroke="rgba(148,163,184,0.45)" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis dataKey="name" type="category" stroke="rgba(148,163,184,0.75)" fontSize={11} width={90} tickLine={false} axisLine={false} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'rgba(5, 8, 17, 0.94)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '12px',
+                            color: '#f1f5f9',
+                          }}
+                        />
                         <Legend />
-                        <Bar dataKey="abertas" stackId="a" fill="#93c5fd" name="Abertas" />
-                        <Bar dataKey="criticas" stackId="a" fill="#fbbf24" name="Críticas (48h)" />
-                        <Bar dataKey="atrasadas" stackId="a" fill="#f87171" name="Atrasadas" />
+                        <Bar dataKey="abertas" stackId="a" fill="#38bdf8" name="Abertas" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="criticas" stackId="a" fill="#818cf8" name="Críticas (48h)" />
+                        <Bar dataKey="atrasadas" stackId="a" fill="#f43f5e" name="Atrasadas" />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

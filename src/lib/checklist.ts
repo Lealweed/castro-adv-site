@@ -55,11 +55,12 @@ export async function createChecklistItem(args: {
 
 export async function applyChecklistTemplate(caseId: string, templateKey: string) {
   const sb = requireSupabase();
-  await getAuthedUser();
+  const user = await getAuthedUser();
 
   const template = CHECKLIST_TEMPLATES[templateKey];
   if (!template) throw new Error('Modelo de checklist não encontrado.');
 
+  // 1) Inserir itens de checklist
   const itemsToInsert = template.items.map((item) => ({
     case_id: caseId,
     title: item.title,
@@ -69,6 +70,45 @@ export async function applyChecklistTemplate(caseId: string, templateKey: string
 
   const { error } = await sb.from('checklist_items').insert(itemsToInsert as any);
   if (error) throw new Error(error.message);
+
+  // 2) Inserir tarefas do playbook, se existirem
+  if (template.tasks && template.tasks.length > 0) {
+    const { data: caseData } = await sb
+      .from('cases')
+      .select('client_id, responsible_user_id')
+      .eq('id', caseId)
+      .maybeSingle();
+
+    const clientId = caseData?.client_id || null;
+    const assignedUserId = caseData?.responsible_user_id || user.id;
+
+    const tasksToInsert = template.tasks.map((task) => {
+      let dueIso: string | null = null;
+      if (task.daysToDue) {
+        const d = new Date();
+        d.setDate(d.getDate() + task.daysToDue);
+        dueIso = d.toISOString();
+      }
+
+      return {
+        user_id: user.id,
+        created_by_user_id: user.id,
+        assigned_to_user_id: assignedUserId,
+        title: task.title,
+        description: task.description,
+        priority: task.priority || 'medium',
+        status_v2: 'open',
+        due_at: dueIso,
+        client_id: clientId,
+        case_id: caseId,
+      };
+    });
+
+    const { error: taskErr } = await sb.from('tasks').insert(tasksToInsert as any);
+    if (taskErr) {
+      console.error('[Playbook] Falha ao criar tarefas do playbook:', taskErr);
+    }
+  }
 }
 
 export async function updateChecklistItem(

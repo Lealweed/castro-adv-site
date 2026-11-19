@@ -1,17 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
+  Activity,
   BarChart3,
   CalendarDays,
   CheckCircle2,
   ClipboardList,
   Clock3,
+  Download,
   FileText,
   Lock,
   MessageSquareText,
   Send,
   ShieldCheck,
+  Unlock,
   Users,
+  Zap,
 } from 'lucide-react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -58,7 +62,6 @@ type TeamWeeklyStatus = {
 type ReportDisplayStatus = 'draft' | 'submitted' | 'missing';
 
 const REPORT_COLUMNS = '*';
-const REPORTING_ROLES = new Set(['lawyer', 'member', 'staff', 'assistant']);
 
 function createEmptyMetrics(): WeeklyMetrics {
   return {
@@ -398,10 +401,8 @@ export function ProductivityPage() {
         const profiles = await listOfficeMemberProfiles(officeIdNow);
         const profilesMap = new Map<string, OfficeMemberProfile>(profiles.map((profile) => [profile.user_id, profile]));
 
-        const reportingMembersBase = officeMembers.filter((member) => REPORTING_ROLES.has(normalizeRole(member.role)));
-        const reportingMembers = reportingMembersBase.length
-          ? reportingMembersBase
-          : officeMembers.filter((member) => normalizeRole(member.role) !== 'admin');
+        // Inclui todos os membros do escritório (inclusive gestores/admins que também preenchem produtividade)
+        const reportingMembers = officeMembers.length > 0 ? officeMembers : [];
 
         const memberIds = Array.from(new Set(reportingMembers.map((member) => member.user_id).filter(Boolean)));
 
@@ -506,7 +507,7 @@ export function ProductivityPage() {
       }
 
       setCurrentStatus(status);
-      setSuccessMessage(status === 'submitted' ? '✅ Relatorio Enviado!' : 'Rascunho salvo com sucesso.');
+      setSuccessMessage(status === 'submitted' ? 'Relatório enviado com sucesso!' : 'Rascunho salvo com sucesso.');
 
       const { data: latestRows, error: latestError } = await sb
         .from('weekly_reports')
@@ -531,6 +532,107 @@ export function ProductivityPage() {
 
   function updateMetric<K extends keyof WeeklyMetrics>(key: K, value: WeeklyMetrics[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  const [autoFilling, setAutoFilling] = useState(false);
+
+  async function autoFillFromCrmData() {
+    if (!userId || isLocked) return;
+    setAutoFilling(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const sb = requireSupabase();
+      await getAuthedUser();
+
+      const startIso = `${selectedWeekStart}T00:00:00.000Z`;
+      const endIso = `${selectedWeekEnd}T23:59:59.999Z`;
+
+      const [tasksRes, agendaRes, docsRes] = await Promise.all([
+        sb
+          .from('tasks')
+          .select('id,title,status_v2,done_at,due_at')
+          .eq('assigned_to_user_id', userId)
+          .gte('done_at', startIso)
+          .lte('done_at', endIso),
+        sb
+          .from('agenda_items')
+          .select('id,kind,title,starts_at,due_date,status')
+          .eq('responsible_user_id', userId),
+        sb
+          .from('documents')
+          .select('id,kind,title,created_at')
+          .eq('user_id', userId)
+          .gte('created_at', startIso)
+          .lte('created_at', endIso),
+      ]);
+
+      const doneTasks = (tasksRes.data || []) as any[];
+      const allAgenda = (agendaRes.data || []) as any[];
+      const weekDocs = (docsRes.data || []) as any[];
+
+      const agendaDeadlinesInWeek = allAgenda.filter(
+        (a) => a.kind === 'deadline' && a.due_date && a.due_date >= selectedWeekStart && a.due_date <= selectedWeekEnd,
+      );
+      const agendaCommitmentsInWeek = allAgenda.filter((a) => {
+        if (a.kind !== 'commitment' || !a.starts_at) return false;
+        const d = String(a.starts_at).slice(0, 10);
+        return d >= selectedWeekStart && d <= selectedWeekEnd;
+      });
+
+      const computedDeadlines = doneTasks.length + agendaDeadlinesInWeek.length;
+      const computedPieces =
+        weekDocs.length +
+        doneTasks.filter((t) => /peti[cç][aã]o|pe[cç]a|minuta|contrato|recurso|contesta[cç][aã]o|manifesta[cç][aã]o/i.test(String(t.title || ''))).length;
+      const computedDiligences = agendaCommitmentsInWeek.length;
+      const computedAttendances =
+        agendaCommitmentsInWeek.filter((a) => /atendimento|reuni[aã]o|consulta|cliente/i.test(String(a.title || ''))).length ||
+        doneTasks.filter((t) => /atendimento|cliente|retorno|triagem/i.test(String(t.title || ''))).length;
+
+      setForm((prev) => ({
+        ...prev,
+        deadlinesMet: Math.max(prev.deadlinesMet, computedDeadlines),
+        attendancesPerformed: Math.max(prev.attendancesPerformed, computedAttendances),
+        piecesDrafted: Math.max(prev.piecesDrafted, computedPieces),
+        diligencesMeetings: Math.max(prev.diligencesMeetings, computedDiligences),
+      }));
+
+      setSuccessMessage(
+        `Dados sincronizados com o CRM na semana (${doneTasks.length} tarefas concluídas, ${agendaCommitmentsInWeek.length} compromissos na agenda e ${weekDocs.length} documentos gerados).`,
+      );
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Não foi possível calcular automaticamente a produção da semana.'));
+    } finally {
+      setAutoFilling(false);
+    }
+  }
+
+  function exportTeamCsv() {
+    if (!rankedTeamRows.length) return;
+    const headers = ['Colaborador', 'E-mail', 'Cargo', 'Score Total', 'Prazos', 'Atendimentos', 'Peças', 'Diligências', 'Status', 'Observações'];
+    const csvLines = rankedTeamRows.map((r) =>
+      [
+        `"${(r.name || '').replace(/"/g, '""')}"`,
+        `"${(r.email || '').replace(/"/g, '""')}"`,
+        `"${toRoleLabel(r.role)}"`,
+        r.score,
+        r.metrics.deadlinesMet,
+        r.metrics.attendancesPerformed,
+        r.metrics.piecesDrafted,
+        r.metrics.diligencesMeetings,
+        `"${statusLabel(r.reportStatus)}"`,
+        `"${(r.metrics.blockers || '').replace(/"/g, '""').replace(/\r?\n/g, ' | ')}"`,
+      ].join(','),
+    );
+    const csvContent = '\uFEFF' + [headers.join(','), ...csvLines].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `produtividade_equipe_${selectedWeekStart}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function appendNoteTemplate(template: string) {
@@ -609,13 +711,36 @@ export function ProductivityPage() {
           <div>
             <div className="text-sm font-semibold text-white">Checklist diario / semanal do colaborador</div>
             <div className="mt-1 text-xs text-white/60">
-              Lance a producao da semana e registre bloqueios ou observacoes relevantes para o gestor.
+              Lance a producao da semana ou puxe automaticamente das suas tarefas, agenda e documentos do CRM.
             </div>
           </div>
 
-          <span className={cn('inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide', badgeClass(currentStatus))}>
-            {statusLabel(currentStatus)}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {!isLocked ? (
+              <button
+                type="button"
+                onClick={() => void autoFillFromCrmData()}
+                disabled={autoFilling || saving}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-sky-400/30 bg-sky-400/15 px-3 py-1.5 text-xs font-semibold text-sky-200 transition hover:bg-sky-400/25 disabled:opacity-50"
+              >
+                <Zap className={`h-3.5 w-3.5 ${autoFilling ? 'animate-spin' : ''}`} strokeWidth={1.75} />
+                {autoFilling ? 'Calculando do CRM...' : 'Puxar Produção Real do CRM'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void saveReport('draft')}
+                disabled={saving}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/15"
+              >
+                <Unlock className="h-3.5 w-3.5 text-amber-300" />
+                Reabrir para Edição
+              </button>
+            )}
+            <span className={cn('inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide', badgeClass(currentStatus))}>
+              {statusLabel(currentStatus)}
+            </span>
+          </div>
         </div>
 
         <div className="mt-4 grid gap-4 xl:grid-cols-[1.45fr_0.9fr]">
@@ -755,8 +880,8 @@ export function ProductivityPage() {
               isLocked ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-neutral-950 hover:bg-amber-300',
             )}
           >
-            {isLocked ? <CheckCircle2 className="h-4 w-4" /> : <Send className="h-4 w-4" />}
-            {isLocked ? '✅ Relatorio Enviado!' : saving ? 'Enviando...' : 'Enviar Relatorio Final'}
+            {isLocked ? <CheckCircle2 className="h-4 w-4" strokeWidth={1.75} /> : <Send className="h-4 w-4" strokeWidth={1.75} />}
+            {isLocked ? 'Relatório Enviado' : saving ? 'Enviando...' : 'Enviar Relatório Final'}
           </button>
         </div>
 
@@ -861,8 +986,19 @@ export function ProductivityPage() {
               Ordenado por volume de producao para facilitar a leitura e o acompanhamento do time.
             </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
-            Equipe acompanhada: <strong>{rankedTeamRows.length}</strong>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80">
+              Equipe acompanhada: <strong>{rankedTeamRows.length}</strong>
+            </div>
+            <button
+              type="button"
+              onClick={exportTeamCsv}
+              disabled={rankedTeamRows.length === 0}
+              className="btn-ghost inline-flex items-center gap-1.5 !py-2 !text-xs border-amber-400/30 text-amber-200"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Exportar CSV
+            </button>
           </div>
         </div>
 
@@ -921,28 +1057,34 @@ export function ProductivityPage() {
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)] sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(560px_220px_at_0%_0%,rgba(251,191,36,0.18),transparent_60%)]" />
-        <div className="relative flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-200/90">Produtividade semanal</p>
-            <h1 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">Checklist do time juridico</h1>
-            <p className="mt-1 text-sm text-white/60">
-              {isManager
-                ? 'Acompanhe a semana em um painel mais visual e mantenha sua propria entrega registrada em uma aba dedicada.'
-                : 'Preencha sua rotina da semana em um formato mais simples, visual e rapido de revisar.'}
-            </p>
+      <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-950/60 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-6">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/45 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(560px_220px_at_0%_0%,rgba(56,189,248,0.14),transparent_60%)]" />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5 sm:items-center">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-400/10 text-sky-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+              <Activity className="h-5 w-5" strokeWidth={1.75} />
+            </div>
+            <div>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300/90">Produtividade semanal</p>
+              <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Checklist do time jurídico</h1>
+              <p className="mt-0.5 text-sm text-white/60">
+                {isManager
+                  ? 'Acompanhe a semana em um painel estratégico e mantenha sua própria entrega registrada em aba dedicada.'
+                  : 'Preencha sua rotina da semana em um formato simples, visual e rápido de revisar.'}
+              </p>
+            </div>
           </div>
 
-          <Card className="min-w-[240px] border-amber-300/20 bg-gradient-to-br from-amber-400/10 to-white/5">
+          <Card className="min-w-[240px] border-sky-400/20 bg-slate-950/70">
             <div className="flex items-start gap-3">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                <CalendarDays className="h-5 w-5 text-amber-300" />
+              <div className="rounded-xl border border-sky-400/20 bg-sky-400/10 p-2.5">
+                <CalendarDays className="h-5 w-5 text-sky-300" strokeWidth={1.75} />
               </div>
               <div>
-                <div className="text-xs uppercase tracking-[0.18em] text-white/50">Semana selecionada</div>
-                <div className="mt-2 text-lg font-semibold text-white">{formatWeekRange(selectedWeekStart, selectedWeekEnd)}</div>
-                <div className="mt-3 text-xs text-white/60">Selecione sempre a data inicial da semana.</div>
+                <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-white/50">Semana selecionada</div>
+                <div className="mt-1.5 text-lg font-semibold text-white tabular-nums">{formatWeekRange(selectedWeekStart, selectedWeekEnd)}</div>
+                <div className="mt-1 text-xs text-white/55">Selecione a data inicial da semana.</div>
               </div>
             </div>
           </Card>

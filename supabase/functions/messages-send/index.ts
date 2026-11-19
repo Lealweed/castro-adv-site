@@ -1,12 +1,13 @@
 // Edge Function: messages-send
-// Endurecimento profissional para integração WhatsApp/Evolution
+// Endurecimento profissional para integração WhatsApp/Evolution API
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL')!
-const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY')!
+const evolutionApiUrl = (Deno.env.get('EVOLUTION_API_URL') || '').replace(/\/+$/, '')
+const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY') || ''
+const evolutionInstance = Deno.env.get('EVOLUTION_INSTANCE') || 'Castrodeoliveiraadv'
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
@@ -29,21 +30,21 @@ function jsonResponse(body: object, status = 200) {
 }
 
 async function validateJwt(req: Request) {
-  const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
+  const authHeader = req.headers.get('authorization') || req.headers.get('Authorization')
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw { status: 401, error: 'unauthorized' };
+    throw { status: 401, error: 'unauthorized' }
   }
-  const token = authHeader.replace('Bearer ', '');
-  const N8N_SECRET = Deno.env.get('N8N_MESSAGES_SEND_SECRET');
-  if (N8N_SECRET && token === N8N_SECRET) {
-    return { n8n: true };
+  const token = authHeader.replace('Bearer ', '').trim()
+  const n8nSecret = Deno.env.get('N8N_MESSAGES_SEND_SECRET') || Deno.env.get('N8N_WEBHOOK_SECRET')
+  if (n8nSecret && token === n8nSecret) {
+    return { n8n: true, id: null }
   }
 
   const { data, error } = await supabase.auth.getUser(token)
   if (error || !data?.user) {
     throw { status: 401, error: 'unauthorized' }
   }
-  return data.user
+  return { n8n: false, id: data.user.id }
 }
 
 async function validateMembership(user_id: string, office_id: string) {
@@ -60,15 +61,16 @@ serve(async (req) => {
   try {
     if (req.method !== 'POST') return jsonResponse({ ok: false, error: 'method_not_allowed' }, 405)
     const body = await req.json()
-    const { office_id, to_number, message, idempotencyKey } = body
+    const { office_id, to_number, message, idempotencyKey, instance } = body
     if (!office_id || !to_number || !message) return jsonResponse({ ok: false, error: 'missing_fields' }, 400)
+
     const authResult = await validateJwt(req)
-    const isN8n = 'n8n' in authResult && authResult.n8n === true
-    if (!isN8n) {
+    if (!authResult.n8n && authResult.id) {
       const isMember = await validateMembership(authResult.id, office_id)
       if (!isMember) return jsonResponse({ ok: false, error: 'forbidden' }, 403)
     }
-    // Idempotência: checar se já existe outbox com idempotencyKey
+
+    // Idempotência: checar se já existe outbox com idempotency_key
     if (idempotencyKey) {
       const { data: existing } = await supabase
         .from('integration_outbox')
@@ -77,67 +79,66 @@ serve(async (req) => {
         .maybeSingle()
       if (existing) return jsonResponse({ ok: true, duplicate: true, outboxId: existing.id })
     }
-    // Normalizar número
+
     const normalizedTo = normalizePhone(to_number)
-    // Buscar from_number padrão do escritório
-    let from_number = ''
-    const { data: office } = await supabase
-      .from('offices')
-      .select('whatsapp_number')
-      .eq('id', office_id)
-      .maybeSingle()
-    if (office?.whatsapp_number) from_number = normalizePhone(office.whatsapp_number)
-    // Chamar Evolution API
-    let evolutionResp, evolutionData
+    const targetInstance = instance || evolutionInstance
+
+    // Chamar Evolution API (endpoint oficial sendText)
+    let evolutionResp: Response
+    let evolutionData: any
     try {
-      evolutionResp = await fetch(`${evolutionApiUrl}/messages`, {
+      evolutionResp = await fetch(`${evolutionApiUrl}/message/sendText/${targetInstance}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${evolutionApiKey}`,
+          apikey: evolutionApiKey,
+          Authorization: `Bearer ${evolutionApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          to: normalizedTo,
-          message,
-          from: from_number,
+          number: normalizedTo,
+          text: message,
         }),
       })
-      evolutionData = await evolutionResp.json()
-    } catch (err) {
+      evolutionData = await evolutionResp.json().catch(() => ({}))
+    } catch {
       return jsonResponse({ ok: false, error: 'evolution_network_error' }, 502)
     }
+
     if (!evolutionResp.ok) {
       return jsonResponse({ ok: false, error: 'evolution_error', details: evolutionData }, 502)
     }
-    // Salvar mensagem e outbox
-    const { data: msg, error: msgErr } = await supabase.from('whatsapp_messages').insert({
-      office_id,
-      to_number: normalizedTo,
-      from_number,
-      message,
-      direction: 'outbound',
-      provider: 'evolution',
-      provider_message_id: evolutionData?.id || null,
-      status: 'sent',
-      created_by: isN8n ? null : authResult.id,
-    }).select().maybeSingle()
-    if (msgErr) return jsonResponse({ ok: false, error: 'db_error' }, 500)
-    const { data: outbox, error: outboxErr } = await supabase.from('integration_outbox').insert({
-      office_id,
-      channel: 'whatsapp',
-      direction: 'outbound',
-      provider: 'evolution',
-      provider_message_id: evolutionData?.id || null,
-      to_number: normalizedTo,
-      from_number,
-      message,
-      status: 'sent',
-      idempotency_key: idempotencyKey || null,
-      created_by: isN8n ? null : authResult.id,
-    }).select().maybeSingle()
-    if (outboxErr) return jsonResponse({ ok: false, error: 'db_error' }, 500)
-    return jsonResponse({ ok: true, messageId: msg.id, outboxId: outbox.id })
-  } catch (err) {
+
+    const providerMsgId = evolutionData?.key?.id || evolutionData?.messageId || evolutionData?.id || null
+
+    // Registrar no integration_outbox conforme schema patch_integration_whatsapp_final.sql
+    const { data: outbox, error: outboxErr } = await supabase
+      .from('integration_outbox')
+      .insert({
+        office_id,
+        channel: 'whatsapp',
+        event_type: 'whatsapp_message_sent',
+        destination: normalizedTo,
+        payload: {
+          to_number: normalizedTo,
+          message,
+          provider: 'evolution',
+          provider_message_id: providerMsgId,
+          sent_by: authResult.id,
+        },
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        idempotency_key: idempotencyKey || null,
+      })
+      .select('id')
+      .maybeSingle()
+
+    if (outboxErr) {
+      return jsonResponse({ ok: true, providerMessageId: providerMsgId, warning: outboxErr.message })
+    }
+
+    return jsonResponse({ ok: true, providerMessageId: providerMsgId, outboxId: outbox?.id || null })
+  } catch (err: any) {
+    if (err?.status === 401) return jsonResponse({ ok: false, error: 'unauthorized' }, 401)
     return jsonResponse({ ok: false, error: 'internal_error' }, 500)
   }
 })

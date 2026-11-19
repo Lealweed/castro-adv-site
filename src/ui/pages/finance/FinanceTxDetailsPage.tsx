@@ -1,7 +1,9 @@
+import { ArrowLeft, Receipt } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { centsToBRL, listFinanceTx, type FinanceTx } from '@/lib/finance';
 import { listPartners, type PartnerRow } from '@/lib/partners';
 import { brlToCents } from '@/lib/finance';
@@ -88,15 +90,18 @@ export function FinanceTxDetailsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Lançamento</h1>
-          <p className="text-sm text-white/60">Dividir com parceiros (% ou fixo)</p>
-        </div>
-        <Link to="/app/financeiro" className="btn-ghost">
-          Voltar
-        </Link>
-      </div>
+      <PageHeader
+        icon={Receipt}
+        eyebrow="Financeiro"
+        title="Lançamento"
+        subtitle="Divisão e repasses com parceiros (% ou valor fixo)."
+        actions={
+          <Link to="/app/financeiro" className="btn-ghost">
+            <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
+            Voltar
+          </Link>
+        }
+      />
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
 

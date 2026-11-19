@@ -45,7 +45,7 @@ export function ClientAvatar({
 
   return (
     <div
-      className="relative overflow-hidden rounded-full border border-white/10 bg-white/5"
+      className="relative overflow-hidden rounded-full border border-sky-400/20 bg-gradient-to-br from-sky-500/20 to-indigo-500/20"
       style={{ width: size, height: size }}
       aria-label="Foto do cliente"
       title={name}
@@ -53,7 +53,7 @@ export function ClientAvatar({
       {url ? (
         <img src={url} alt={name} className="h-full w-full object-cover" />
       ) : (
-        <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-white/70">{initials}</div>
+        <div className="flex h-full w-full items-center justify-center text-xs font-semibold tracking-wider text-sky-200">{initials}</div>
       )}
     </div>
   );

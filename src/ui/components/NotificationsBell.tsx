@@ -81,34 +81,34 @@ export function NotificationsBell() {
 
   const unreadCount = unreadCountQuery.data || 0;
   const hasUnread = unreadCount > 0;
-  const notificationsLabel = hasUnread ? `Notificacoes, ${unreadCount} nao lidas` : 'Notificacoes';
+  const notificationsLabel = hasUnread ? `Notificações, ${unreadCount} não lidas` : 'Notificações';
   const notifications = recentNotificationsQuery.data || [];
 
   return (
     <div ref={rootRef} className="relative">
       <button
         type="button"
-        className="relative rounded-xl border border-white/10 bg-white/5 p-2 text-white/80 transition-colors hover:bg-white/10"
+        className="btn-icon relative"
         aria-label={notificationsLabel}
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((current) => !current)}
       >
-        <Bell className="h-4 w-4" />
+        <Bell className="h-4 w-4" strokeWidth={1.75} />
         {hasUnread ? (
-          <span className="absolute -right-1 -top-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-5 text-white shadow-[0_0_12px_rgba(239,68,68,0.45)]">
+          <span className="absolute -right-1 -top-1 inline-flex min-w-[1.15rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-4 text-white shadow-[0_0_12px_rgba(244,63,94,0.55)]">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         ) : null}
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-12 z-50 w-[380px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/95 shadow-[0_20px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl">
-          <div className="border-b border-white/10 px-4 py-3">
+        <div className="absolute right-0 top-12 z-50 w-[380px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-white/[0.1] bg-slate-950/95 shadow-[0_24px_64px_rgba(0,0,0,0.65)] backdrop-blur-xl">
+          <div className="border-b border-white/[0.08] px-4 py-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-sm font-semibold text-white">Central de notificacoes</div>
-                <div className="text-xs text-white/55">Automacoes, tarefas e alertas recentes do escritorio.</div>
+                <div className="text-sm font-semibold text-white">Central de Notificações</div>
+                <div className="text-xs text-white/55">Automações, tarefas e alertas recentes do escritório.</div>
               </div>
               <button
                 type="button"
@@ -116,24 +116,24 @@ export function NotificationsBell() {
                   setOpen(false);
                   navigate('/app/notificacoes');
                 }}
-                className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs text-white/80 hover:bg-white/10"
+                className="btn-ghost !rounded-lg !px-2.5 !py-1.5 !text-xs"
               >
                 Ver todas
-                <ChevronRight className="h-3.5 w-3.5" />
+                <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.75} />
               </button>
             </div>
           </div>
 
           <div className="max-h-[420px] overflow-y-auto p-3">
             {recentNotificationsQuery.isPending ? (
-              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-6 text-center text-sm text-white/65">
-                Carregando notificacoes...
+              <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-6 text-center text-sm text-white/65">
+                Carregando notificações...
               </div>
             ) : null}
 
             {!recentNotificationsQuery.isPending && notifications.length === 0 ? (
-              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-6 text-center text-sm text-white/65">
-                Nenhuma notificacao recente no momento.
+              <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-6 text-center text-sm text-white/65">
+                Nenhuma notificação recente no momento.
               </div>
             ) : null}
 
@@ -149,8 +149,8 @@ export function NotificationsBell() {
                       className={cn(
                         'rounded-xl border p-3 transition-all',
                         notification.is_read
-                          ? 'border-white/10 bg-white/5'
-                          : 'border-amber-400/20 bg-gradient-to-br from-amber-400/10 via-white/5 to-transparent',
+                          ? 'border-white/[0.08] bg-white/[0.04]'
+                          : 'border-sky-400/25 bg-gradient-to-br from-sky-400/10 via-white/[0.04] to-transparent',
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">

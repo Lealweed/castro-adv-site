@@ -1,7 +1,9 @@
+import { ClipboardCheck, Plus, Scale } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { getMyOfficeRole } from '@/lib/roles';
 import { getMyOfficeId, listOfficeMemberProfiles, type OfficeMemberProfile } from '@/lib/officeContext';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
@@ -22,11 +24,21 @@ type CaseRow = {
   responsible_user_id: string | null;
 };
 
+function getStatusLabel(status: string) {
+  const s = (status || '').toLowerCase();
+  if (s === 'peticao_inicial') return 'Petição Inicial';
+  if (s === 'citacao_defesa') return 'Citação e Defesa';
+  if (s === 'instrucao_provas') return 'Instrução e Provas';
+  if (s === 'julgamento_sentenca') return 'Sentença';
+  if (s === 'recurso') return 'Recurso';
+  if (s === 'execucao_recebimento') return 'Execução / Fim';
+  if (s === 'arquivado') return 'Arquivado';
+  return status;
+}
+
 function statusBadge(status: string) {
   const s = (status || '').toLowerCase();
-  if (s.includes('abert')) return 'badge badge-gold';
-  if (s.includes('and')) return 'badge';
-  if (s.includes('encerr') || s.includes('final')) return 'badge';
+  if (s === 'peticao_inicial' || s === 'citacao_defesa' || s === 'instrucao_provas') return 'badge badge-gold';
   return 'badge';
 }
 
@@ -47,7 +59,7 @@ export function CasesPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newStatus, setNewStatus] = useState('aberto');
+  const [newStatus, setNewStatus] = useState('peticao_inicial');
   const [newClientIds, setNewClientIds] = useState<string[]>([]);
   const [newProcessNumber, setNewProcessNumber] = useState('');
   const [newArea, setNewArea] = useState('');
@@ -199,20 +211,22 @@ export function CasesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Checklist template prompt modal */}
+      {/* Checklist and Task Playbook template prompt modal */}
       {checklistModalCaseId && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-[#1a1a2e] shadow-2xl p-6 space-y-4 animate-fadeIn">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl border border-sky-400/25 bg-slate-950 shadow-2xl p-6 space-y-4 animate-fadeIn">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-lg">📋</div>
+              <div className="w-10 h-10 rounded-xl bg-sky-400/10 border border-sky-400/25 text-sky-300 flex items-center justify-center">
+                <ClipboardCheck className="h-5 w-5" strokeWidth={1.75} />
+              </div>
               <div>
-                <div className="text-sm font-bold text-white">Deseja gerar um Checklist?</div>
-                <div className="text-xs text-white/50">Aplique um modelo de documentos para este caso.</div>
+                <div className="text-sm font-bold text-white">Deseja aplicar um Playbook?</div>
+                <div className="text-xs text-white/50">Cria o checklist de documentos do cliente e gera as tarefas do advogado.</div>
               </div>
             </div>
 
             <label className="text-sm text-white/80 block">
-              Modelo de Checklist
+              Modelo de Playbook / Checklist
               <select
                 className="select mt-1"
                 value={selectedTemplate}
@@ -224,13 +238,28 @@ export function CasesPage() {
               </select>
             </label>
 
-            <div className="bg-white/5 rounded-xl border border-white/5 p-3 max-h-40 overflow-y-auto space-y-1">
-              {CHECKLIST_TEMPLATES[selectedTemplate]?.items.map((item, i) => (
-                <div key={i} className="text-xs text-white/60 flex items-start gap-2">
-                  <span className="text-amber-400 mt-0.5 shrink-0">•</span>
-                  <span>{item.title}</span>
+            <div className="text-xs text-white/50 font-bold uppercase tracking-wider">Itens e Tarefas inclusas:</div>
+            <div className="bg-white/5 rounded-xl border border-white/5 p-3 max-h-40 overflow-y-auto space-y-2">
+              <div className="space-y-1">
+                <div className="text-[10px] text-amber-300 font-bold">Documentos do Cliente:</div>
+                {CHECKLIST_TEMPLATES[selectedTemplate]?.items.map((item, i) => (
+                  <div key={i} className="text-[11px] text-white/60 flex items-start gap-2 pl-2">
+                    <span className="text-amber-400 mt-0.5 shrink-0">•</span>
+                    <span>{item.title}</span>
+                  </div>
+                ))}
+              </div>
+              {CHECKLIST_TEMPLATES[selectedTemplate]?.tasks && (
+                <div className="space-y-1 pt-1 border-t border-white/5">
+                  <div className="text-[10px] text-sky-300 font-bold">Tarefas do Advogado:</div>
+                  {CHECKLIST_TEMPLATES[selectedTemplate]?.tasks?.map((task, i) => (
+                    <div key={i} className="text-[11px] text-white/60 flex items-start gap-2 pl-2">
+                      <span className="text-sky-400 mt-0.5 shrink-0">•</span>
+                      <span>{task.title} (vence em {task.daysToDue}d)</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
 
             <div className="flex flex-wrap gap-2 pt-1">
@@ -239,7 +268,7 @@ export function CasesPage() {
                 onClick={() => void onApplyTemplate()}
                 className="btn-primary"
               >
-                {applyingTemplate ? 'Aplicando...' : 'Gerar Checklist'}
+                {applyingTemplate ? 'Aplicando...' : 'Aplicar Playbook'}
               </button>
               <button
                 disabled={applyingTemplate}
@@ -253,15 +282,18 @@ export function CasesPage() {
         </div>
       )}
 
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Casos</h1>
-          <p className="text-sm text-white/60">Base real (Supabase).</p>
-        </div>
-        <button onClick={() => setCreateOpen(true)} className="btn-primary">
-          Novo caso
-        </button>
-      </div>
+      <PageHeader
+        icon={Scale}
+        eyebrow="Jurídico"
+        title="Casos"
+        subtitle="Gestão de processos, fases jurídicas e responsáveis."
+        actions={
+          <button onClick={() => setCreateOpen(true)} className="btn-primary">
+            <Plus className="h-4 w-4" strokeWidth={2} />
+            Novo caso
+          </button>
+        }
+      />
 
       {createOpen ? (
         <Card>
@@ -274,7 +306,15 @@ export function CasesPage() {
               </label>
               <label className="text-sm text-white/80">
                 Status
-                <input className="input" value={newStatus} onChange={(e) => setNewStatus(e.target.value)} />
+                <select className="select mt-1 w-full" value={newStatus} onChange={(e) => setNewStatus(e.target.value)}>
+                  <option value="peticao_inicial">Petição Inicial (Protocolo)</option>
+                  <option value="citacao_defesa">Citação do Réu e Defesa</option>
+                  <option value="instrucao_provas">Instrução e Provas</option>
+                  <option value="julgamento_sentenca">Julgamento (Sentença)</option>
+                  <option value="recurso">Recurso ao Tribunal</option>
+                  <option value="execucao_recebimento">Execução e Recebimento (Final)</option>
+                  <option value="arquivado">Arquivado</option>
+                </select>
               </label>
               <label className="text-sm text-white/80">
                 Número do processo (CNJ)
@@ -399,7 +439,7 @@ export function CasesPage() {
                       </td>
                       <td className="px-4 py-3 text-white/70">{c.client?.name || '—'}</td>
                       <td className="px-4 py-3">
-                        <span className={statusBadge(c.status)}>{c.status}</span>
+                        <span className={statusBadge(c.status)}>{getStatusLabel(c.status)}</span>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link className="btn-ghost !rounded-lg !px-3 !py-1.5 !text-xs" to={`/app/casos/${c.id}`}>
@@ -436,7 +476,7 @@ export function CasesPage() {
                         {c.process_number ? `CNJ: ${c.process_number}` : 'CNJ: —'}{c.area ? ` · ${c.area}` : ''}
                       </div>
                     </div>
-                    <span className={statusBadge(c.status)}>{c.status}</span>
+                    <span className={statusBadge(c.status)}>{getStatusLabel(c.status)}</span>
                   </div>
                   <div className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-amber-200">
                     Abrir →

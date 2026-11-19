@@ -12,6 +12,7 @@ import {
 } from '@/lib/notifications';
 import { cn } from '@/ui/utils/cn';
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -50,51 +51,41 @@ export function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden border-white/15 bg-gradient-to-br from-white/10 via-white/5 to-transparent">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-400/20 bg-amber-400/10">
-                <Bell className="h-5 w-5 text-amber-300" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-semibold text-white">Central de Notificacoes</h1>
-                <p className="text-sm text-white/60">
-                  Alertas mais recentes do sistema, com foco em email, portal e eventos criticos.
-                </p>
-              </div>
-            </div>
-          </div>
-
+      <PageHeader
+        icon={Bell}
+        eyebrow="Comando"
+        title="Central de Notificações"
+        subtitle="Alertas mais recentes do sistema, com foco em e-mail, portal e eventos críticos."
+        actions={
           <button
             type="button"
             onClick={() => markAllMutation.mutate()}
             disabled={isLoading || unreadCount === 0 || markAllMutation.isPending}
-            className="btn-primary inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-primary"
           >
-            <CheckCheck className="h-4 w-4" />
+            <CheckCheck className="h-4 w-4" strokeWidth={1.75} />
             {markAllMutation.isPending ? 'Marcando...' : 'Marcar todas como lidas'}
           </button>
-        </div>
-      </Card>
+        }
+      />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="border-white/10 bg-white/5">
+        <Card>
           <div className="text-xs uppercase tracking-[0.18em] text-white/50">Total</div>
-          <div className="mt-2 text-3xl font-semibold text-white">{notifications.length}</div>
-          <div className="mt-1 text-sm text-white/60">Notificacoes carregadas</div>
+          <div className="mt-2 text-3xl font-semibold text-white tabular-nums">{notifications.length}</div>
+          <div className="mt-1 text-sm text-white/60">Notificações carregadas</div>
         </Card>
 
-        <Card className="border-amber-400/20 bg-amber-400/5">
-          <div className="text-xs uppercase tracking-[0.18em] text-amber-200/80">Nao lidas</div>
-          <div className="mt-2 text-3xl font-semibold text-amber-100">{unreadCount}</div>
-          <div className="mt-1 text-sm text-white/60">Itens que ainda pedem atencao</div>
+        <Card className="border-sky-400/20 bg-sky-400/5">
+          <div className="text-xs uppercase tracking-[0.18em] text-sky-300/80">Não lidas</div>
+          <div className="mt-2 text-3xl font-semibold text-sky-200 tabular-nums">{unreadCount}</div>
+          <div className="mt-1 text-sm text-white/60">Itens que ainda pedem atenção</div>
         </Card>
 
         <Card className="border-emerald-400/20 bg-emerald-500/5">
-          <div className="text-xs uppercase tracking-[0.18em] text-emerald-200/80">Lidas</div>
-          <div className="mt-2 text-3xl font-semibold text-emerald-100">{readCount}</div>
-          <div className="mt-1 text-sm text-white/60">Ja processadas pela equipe</div>
+          <div className="text-xs uppercase tracking-[0.18em] text-emerald-300/80">Lidas</div>
+          <div className="mt-2 text-3xl font-semibold text-emerald-200 tabular-nums">{readCount}</div>
+          <div className="mt-1 text-sm text-white/60">Já processadas pela equipe</div>
         </Card>
       </div>
 

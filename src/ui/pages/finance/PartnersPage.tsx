@@ -1,7 +1,9 @@
+import { ArrowLeft, Handshake, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { createPartner, deletePartner, listPartners, type PartnerRow } from '@/lib/partners';
 
 export function PartnersPage() {
@@ -62,20 +64,24 @@ export function PartnersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Parceiros</h1>
-          <p className="text-sm text-white/60">Advogados/parceiros externos para repasses.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link to="/app/financeiro" className="btn-ghost">
-            Voltar
-          </Link>
-          <button onClick={() => setCreateOpen(true)} className="btn-primary">
-            Novo parceiro
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        icon={Handshake}
+        eyebrow="Financeiro"
+        title="Parceiros"
+        subtitle="Advogados e parceiros externos para repasses de honorários."
+        actions={
+          <>
+            <Link to="/app/financeiro" className="btn-ghost">
+              <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
+              Voltar
+            </Link>
+            <button onClick={() => setCreateOpen(true)} className="btn-primary">
+              <Plus className="h-4 w-4" strokeWidth={2} />
+              Novo parceiro
+            </button>
+          </>
+        }
+      />
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
 

@@ -1,7 +1,9 @@
+import { ArrowLeft, WalletCards } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { centsToBRL, listFinanceTx, type FinanceTx } from '@/lib/finance';
 import { computeSplitAmountCents, listPendingSplits, markSplitPaid, type SplitRow } from '@/lib/splits';
 
@@ -54,18 +56,19 @@ export function PayablesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">A pagar parceiros</h1>
-          <p className="text-sm text-white/60">Repasses pendentes (splits) por lançamento.</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-sm font-semibold text-white">Total: {centsToBRL(total)}</div>
+      <PageHeader
+        icon={WalletCards}
+        eyebrow="Financeiro"
+        title="A pagar parceiros"
+        subtitle="Repasses pendentes (splits) por lançamento."
+        badge={<span className="badge badge-gold font-mono tabular-nums">Total: {centsToBRL(total)}</span>}
+        actions={
           <Link to="/app/financeiro" className="btn-ghost">
+            <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
             Voltar
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
 

@@ -1,6 +1,8 @@
+import { CalendarClock, CalendarPlus, Plus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { getMyOfficeRole } from '@/lib/roles';
 import { getMyOfficeId } from '@/lib/officeContext';
 import { createAgenda, listAgendas, type AgendaRow } from '@/lib/agendas';
@@ -96,7 +98,7 @@ export function AgendaPage() {
 
   const [createAgendaOpen, setCreateAgendaOpen] = useState(false);
   const [agendaName, setAgendaName] = useState('');
-  const [agendaColor, setAgendaColor] = useState('#f59e0b');
+  const [agendaColor, setAgendaColor] = useState('#0ea5e9');
 
   const [view, setView] = useState<ViewMode>('today');
   const [monthCursor, setMonthCursor] = useState(() => {
@@ -524,7 +526,7 @@ export function AgendaPage() {
       await createAgenda({ officeId, name: agendaName, color: agendaColor, kind: 'shared' });
       setCreateAgendaOpen(false);
       setAgendaName('');
-      setAgendaColor('#f59e0b');
+      setAgendaColor('#0ea5e9');
       setSaving(false);
       await load();
     } catch (e: any) {
@@ -613,16 +615,32 @@ export function AgendaPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Agenda</h1>
-          <p className="text-sm text-white/60">Hoje · Semana · Mês</p>
-        </div>
+      <PageHeader
+        icon={CalendarClock}
+        eyebrow="Operação"
+        title="Agenda"
+        subtitle="Compromissos, audiências e prazos · Hoje · Semana · Mês"
+        actions={
+          <>
+            {role === 'admin' ? (
+              <button onClick={() => setCreateAgendaOpen(true)} className="btn-ghost">
+                <CalendarPlus className="h-4 w-4 text-sky-300" strokeWidth={1.75} />
+                Nova agenda
+              </button>
+            ) : null}
+            <button onClick={() => setCreateOpen(true)} className="btn-primary">
+              <Plus className="h-4 w-4" strokeWidth={2} />
+              Novo compromisso
+            </button>
+          </>
+        }
+      />
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {role === 'admin' ? (
             <select
-              className="select !mt-0"
+              className="select !mt-0 !w-auto"
               value={responsibleFilter}
               onChange={(e) => setResponsibleFilter(e.target.value)}
               title="Filtrar por responsável"
@@ -636,7 +654,7 @@ export function AgendaPage() {
             </select>
           ) : null}
 
-          <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1">
+          <div className="inline-flex rounded-xl border border-white/[0.08] bg-slate-950/60 p-1">
             {(
               [
                 { id: 'inbox', label: 'Entrada' },
@@ -648,7 +666,7 @@ export function AgendaPage() {
                 onClick={() => setScope(t.id)}
                 className={
                   'rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ' +
-                  (scope === t.id ? 'bg-white text-neutral-950' : 'text-white/70 hover:text-white')
+                  (scope === t.id ? 'bg-sky-400 text-slate-950' : 'text-white/70 hover:text-white')
                 }
                 title={t.id === 'outbox' ? 'Itens delegados por você (caixa de saída)' : undefined}
               >
@@ -657,7 +675,7 @@ export function AgendaPage() {
             ))}
           </div>
 
-          <div className="inline-flex rounded-xl border border-white/10 bg-white/5 p-1">
+          <div className="inline-flex rounded-xl border border-white/[0.08] bg-slate-950/60 p-1">
             {(
               [
                 { id: 'today', label: 'Hoje' },
@@ -670,14 +688,16 @@ export function AgendaPage() {
                 onClick={() => setView(t.id)}
                 className={
                   'rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ' +
-                  (view === t.id ? 'bg-white text-neutral-950' : 'text-white/70 hover:text-white')
+                  (view === t.id ? 'bg-sky-400 text-slate-950' : 'text-white/70 hover:text-white')
                 }
               >
                 {t.label}
               </button>
             ))}
           </div>
+        </div>
 
+        <div className="flex flex-wrap items-center gap-2">
           {view === 'month' ? (
             <div className="flex items-center gap-2">
               <button
@@ -703,16 +723,6 @@ export function AgendaPage() {
               </button>
             </div>
           ) : null}
-
-          {role === 'admin' ? (
-            <button onClick={() => setCreateAgendaOpen(true)} className="btn-ghost">
-              Nova agenda
-            </button>
-          ) : null}
-
-          <button onClick={() => setCreateOpen(true)} className="btn-primary">
-            Novo
-          </button>
         </div>
       </div>
 
@@ -913,8 +923,9 @@ export function AgendaPage() {
                       type="button"
                       className="btn-ghost !rounded-lg !px-2 !py-1.5 !text-xs"
                       onClick={() => { setLinkCaseId(''); setLinkCaseTitle(''); }}
+                      aria-label="Remover vínculo de caso"
                     >
-                      ✕
+                      <X className="h-3.5 w-3.5" strokeWidth={1.75} />
                     </button>
                   ) : null}
                 </div>

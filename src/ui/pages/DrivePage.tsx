@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Download, Trash2, Eye, EyeOff, Bot, Upload, Layers, CheckCircle2, AlertCircle, Clock, Check, X, RefreshCw } from 'lucide-react';
+import { FileText, Download, Trash2, Eye, EyeOff, Bot, Upload, Layers, CheckCircle2, AlertCircle, Clock, Check, X, RefreshCw, HardDrive, Sparkles, Send, FolderCheck } from 'lucide-react';
+import PizZip from 'pizzip';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 
 import type { DocumentRow } from '@/lib/documents';
 import { deleteDocument, getDocumentDownloadUrl, toggleDocumentVisibility, uploadClientDocument } from '@/lib/documents';
@@ -193,15 +195,122 @@ export function DrivePage() {
   }, [rows, q, type, visibility]);
 
   const [analyzingDoc, setAnalyzingDoc] = useState<string | null>(null);
+  const [aiDocModal, setAiDocModal] = useState<{
+    docTitle: string;
+    clientName: string;
+    docType: string;
+    sizeKb: number;
+    pagesOrWords: string;
+    cpfsCnpjs: string[];
+    cnjNumbers: string[];
+    monetaryValues: string[];
+    detectedTerms: string[];
+    summaryText: string;
+  } | null>(null);
 
-  async function onAnalyzeWithAI(doc: DocumentRow) {
+  async function onAnalyzeWithAI(doc: DocumentRow & { client_name?: string }) {
     if (analyzingDoc) return;
     setAnalyzingDoc(doc.id);
-    
-    setTimeout(() => {
-      alert(`[LegalDoc AI] Análise concluída para: ${doc.title}\n\n- Partes Identificadas: 2\n- Riscos: Baixo\n- Cláusulas Extraídas: 5\n\nResumo salvo nas observações do cliente.`);
+    setError(null);
+
+    try {
+      const url = await getDocumentDownloadUrl(doc.file_path, doc.id);
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('Não foi possível baixar o arquivo para análise.');
+      const buffer = await resp.arrayBuffer();
+      const sizeKb = Math.max(1, Math.round(buffer.byteLength / 1024));
+      const isDocx =
+        doc.file_path.toLowerCase().endsWith('.docx') ||
+        (doc.mime_type || '').toLowerCase().includes('wordprocessingml');
+
+      let extractedText = '';
+      let pagesOrWords = '';
+
+      if (isDocx) {
+        try {
+          const zip = new PizZip(buffer);
+          const xml = zip.file('word/document.xml')?.asText() || '';
+          extractedText = xml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          const wordCount = extractedText ? extractedText.split(/\s+/).length : 0;
+          pagesOrWords = `${wordCount} palavras extraídas (.docx)`;
+        } catch {
+          extractedText = doc.title;
+          pagesOrWords = `${sizeKb} KB (.docx)`;
+        }
+      } else {
+        const rawLatin = new TextDecoder('latin1').decode(buffer);
+        const pageMatches = rawLatin.match(/\/Type\s*\/Page\b/g);
+        const pageCount = pageMatches ? pageMatches.length : 1;
+        const textChunks = rawLatin.match(/\(([^()]{3,200})\)/g) || [];
+        extractedText =
+          doc.title +
+          ' ' +
+          textChunks
+            .map((s) => s.slice(1, -1))
+            .join(' ')
+            .replace(/[^\x20-\x7EÀ-ÿ]/g, ' ');
+        pagesOrWords = `${pageCount} página(s) estimada(s) (PDF · ${sizeKb} KB)`;
+      }
+
+      const combinedSource = `${doc.title} ${extractedText}`;
+
+      const cpfs = Array.from(
+        new Set(combinedSource.match(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b|\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/g) || []),
+      ).slice(0, 6);
+      const cnjs = Array.from(
+        new Set(combinedSource.match(/\b\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}\b/g) || []),
+      ).slice(0, 5);
+      const moneys = Array.from(
+        new Set(combinedSource.match(/R\$\s?\d{1,3}(?:\.\d{3})*(?:,\d{2})/g) || []),
+      ).slice(0, 6);
+
+      const legalDictionary = [
+        { key: 'procuracao', regex: /procura[cç][aã]o|outorgante|outorgado|poderes/i, label: 'Procuração / Outorga de Poderes' },
+        { key: 'contrato', regex: /contrato|cl[aá]usula|honor[aá]rios|contratante|contratado/i, label: 'Contrato / Cláusulas de Honorários' },
+        { key: 'peticao', regex: /excelent[ií]ssimo|ju[ií]zo|peti[cç][aã]o|requer| tutela |liminar/i, label: 'Peça Processual / Petição' },
+        { key: 'sentenca', regex: /senten[cç]a|julgo|procedente|dispositivo|ac[oó]rd[aã]o/i, label: 'Decisão Judicial / Sentença' },
+        { key: 'identidade', regex: /\brg\b|\bcpf\b|identidade|cnh|nascimento|certid[aã]o/i, label: 'Documento Pessoal / Certidão' },
+        { key: 'endereco', regex: /comprovante|resid[eê]ncia|endere[cç]o|energia|água|fatura/i, label: 'Comprovante de Endereço / Fatura' },
+      ];
+
+      const detectedTerms = legalDictionary
+        .filter((item) => item.regex.test(combinedSource))
+        .map((item) => item.label);
+
+      const docType =
+        detectedTerms[0] ||
+        (doc.kind === 'template' ? 'Modelo de Documento (.docx)' : 'Documento Jurídico / Anexo');
+
+      const summaryText = `[Análise IA em ${new Date().toLocaleDateString('pt-BR')}]: Tipo: ${docType} | Volume: ${pagesOrWords}${
+        cpfs.length ? ` | Docs: ${cpfs.join(', ')}` : ''
+      }${cnjs.length ? ` | CNJ: ${cnjs.join(', ')}` : ''}${
+        moneys.length ? ` | Valores: ${moneys.join(', ')}` : ''
+      }`;
+
+      // Salva o resumo real no banco de dados (internal_comments do documento)
+      const sb = requireSupabase();
+      await sb
+        .from('documents')
+        .update({ internal_comments: summaryText } as any)
+        .eq('id', doc.id);
+
+      setAiDocModal({
+        docTitle: doc.title,
+        clientName: doc.client_name || 'Cliente',
+        docType,
+        sizeKb,
+        pagesOrWords,
+        cpfsCnpjs: cpfs,
+        cnjNumbers: cnjs,
+        monetaryValues: moneys,
+        detectedTerms: detectedTerms.length ? detectedTerms : ['Anexo Geral / Sem cláusulas críticas restritivas'],
+        summaryText,
+      });
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao analisar documento.');
+    } finally {
       setAnalyzingDoc(null);
-    }, 2500);
+    }
   }
 
   async function onDownload(doc: DocumentRow) {
@@ -310,34 +419,31 @@ export function DrivePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Layers className="w-6 h-6 text-amber-400" />
-            Cofre Digital & Drive Central
-          </h1>
-          <p className="text-xs text-white/50">Gerencie documentos, acompanhe as pendências dos clientes e faça revisões.</p>
-        </div>
+      <PageHeader
+        icon={HardDrive}
+        eyebrow="Operação"
+        title="Cofre Digital & Smart Drive"
+        subtitle="Gerencie documentos, acompanhe as pendências dos clientes e faça revisões com análise de conteúdo."
+        actions={
+          <>
+            <button
+              onClick={() => {
+                setLoading(true);
+                load();
+              }}
+              className="btn-icon"
+              title="Atualizar Dados"
+            >
+              <RefreshCw className="w-4 h-4" strokeWidth={1.75} />
+            </button>
 
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => {
-              setLoading(true);
-              load();
-            }}
-            className="btn-ghost !border-white/10 !p-2" 
-            title="Atualizar Dados"
-          >
-            <RefreshCw className="w-4 h-4 text-white/70" />
-          </button>
-
-          <button onClick={() => setUploadOpen(true)} className="btn-primary flex items-center gap-2">
-            <Upload className="w-4 h-4" />
-            Novo Documento
-          </button>
-        </div>
-      </div>
+            <button onClick={() => setUploadOpen(true)} className="btn-primary">
+              <Upload className="w-4 h-4" strokeWidth={1.75} />
+              Novo Documento
+            </button>
+          </>
+        }
+      />
 
       {/* Metrics Section */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -416,11 +522,19 @@ export function DrivePage() {
               {upFiles.length <= 1 && (
                 <>
                   <input className="input !mt-1" value={upTitle} onChange={(e) => { setUpTitle(e.target.value); setUpTitleEdited(true); }} placeholder="Ex: João - Identificação - 01.06.2025" />
-                  {!upTitleEdited && upClientId && <span className="text-[10px] text-white/40 mt-0.5 block">✦ Gerado automaticamente — edite se necessário</span>}
+                  {!upTitleEdited && upClientId && (
+                    <span className="text-[10px] text-white/45 mt-1 inline-flex items-center gap-1">
+                      <Sparkles className="h-3 w-3 text-sky-300" strokeWidth={1.75} />
+                      Gerado automaticamente — edite se necessário
+                    </span>
+                  )}
                 </>
               )}
               {upFiles.length > 1 && (
-                <span className="text-[10px] text-white/40 mt-1 block">✦ Nome gerado automaticamente por arquivo (Ex: João - Categoria - 01.06.2025 (1))</span>
+                <span className="text-[10px] text-white/45 mt-1 inline-flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-sky-300" strokeWidth={1.75} />
+                  Nome gerado automaticamente por arquivo (Ex: João - Categoria - 01.06.2025 (1))
+                </span>
               )}
             </label>
             
@@ -741,8 +855,18 @@ export function DrivePage() {
                               <div className="font-semibold text-white truncate max-w-[200px]" title={d.title}>
                                 {d.title}
                                 {d.kind === 'template' && <span className="ml-2 badge border-blue-500/30 bg-blue-500/10 text-blue-300">Modelo</span>}
-                                {d.status === 'forwarded' && <span className="ml-2 badge bg-purple-500/10 text-purple-300 border-purple-500/20">📤 Enc. Cartório</span>}
-                                {d.status === 'filed' && <span className="ml-2 badge bg-teal-500/10 text-teal-300 border-teal-500/20">📁 Protocolado</span>}
+                                {d.status === 'forwarded' && (
+                                  <span className="ml-2 badge bg-purple-500/10 text-purple-300 border-purple-500/20">
+                                    <Send className="h-3 w-3" strokeWidth={1.75} />
+                                    Enc. Cartório
+                                  </span>
+                                )}
+                                {d.status === 'filed' && (
+                                  <span className="ml-2 badge bg-teal-500/10 text-teal-300 border-teal-500/20">
+                                    <FolderCheck className="h-3 w-3" strokeWidth={1.75} />
+                                    Protocolado
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </td>
@@ -805,6 +929,90 @@ export function DrivePage() {
           </Card>
         </div>
       )}
+
+      {/* Modal Real de Análise Jurídica de Documento (IA) */}
+      {aiDocModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" onClick={() => setAiDocModal(null)}>
+          <div
+            className="w-full max-w-lg rounded-2xl border border-amber-400/30 bg-neutral-950 p-6 shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400/15 text-amber-300 border border-amber-400/30">
+                  <Bot className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Análise Inteligente de Documento</h3>
+                  <p className="text-xs text-white/60">{aiDocModal.docTitle} · {aiDocModal.clientName}</p>
+                </div>
+              </div>
+              <button onClick={() => setAiDocModal(null)} className="text-white/40 hover:text-white p-1">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="text-white/50">Classificação Detectada</div>
+                <div className="mt-1 font-semibold text-amber-300">{aiDocModal.docType}</div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="text-white/50">Estrutura / Volume</div>
+                <div className="mt-1 font-semibold text-white">{aiDocModal.pagesOrWords}</div>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 text-xs">
+              <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                <div className="font-semibold text-white mb-1.5">Elementos Jurídicos Identificados:</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {aiDocModal.detectedTerms.map((t, i) => (
+                    <span key={i} className="badge border-amber-400/30 bg-amber-400/10 text-amber-200">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {aiDocModal.cpfsCnpjs.length > 0 ? (
+                <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                  <span className="text-white/60">CPF / CNPJ extraídos: </span>
+                  <span className="font-mono text-white">{aiDocModal.cpfsCnpjs.join(', ')}</span>
+                </div>
+              ) : null}
+
+              {aiDocModal.cnjNumbers.length > 0 ? (
+                <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                  <span className="text-white/60">Processos CNJ citados: </span>
+                  <span className="font-mono text-amber-200">{aiDocModal.cnjNumbers.join(', ')}</span>
+                </div>
+              ) : null}
+
+              {aiDocModal.monetaryValues.length > 0 ? (
+                <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+                  <span className="text-white/60">Valores monetários identificados: </span>
+                  <span className="font-semibold text-emerald-300">{aiDocModal.monetaryValues.join(' · ')}</span>
+                </div>
+              ) : null}
+
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-emerald-200">
+                <div className="font-semibold flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <span>Resumo gravado no histórico interno do documento</span>
+                </div>
+                <p className="mt-1 text-[11px] opacity-90">{aiDocModal.summaryText}</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button onClick={() => setAiDocModal(null)} className="btn-primary !text-xs">
+                Concluir
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

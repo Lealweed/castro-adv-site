@@ -1,7 +1,9 @@
+import { Search, UserPlus, UsersRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { ClientAvatar } from '@/ui/widgets/ClientAvatar';
 import { formatCpf, isValidCpf, onlyDigits } from '@/lib/cpf';
 import { formatCnpj, isValidCnpj } from '@/lib/cnpj';
@@ -289,15 +291,18 @@ export function ClientsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Clientes</h1>
-          <p className="text-sm text-white/60">Base real (Supabase).</p>
-        </div>
-        <button onClick={() => setCreateOpen(true)} className="btn-primary">
-          Novo cliente
-        </button>
-      </div>
+      <PageHeader
+        icon={UsersRound}
+        eyebrow="Jurídico"
+        title="Clientes"
+        subtitle="Cadastro centralizado, contatos e documentos dos clientes."
+        actions={
+          <button onClick={() => setCreateOpen(true)} className="btn-primary">
+            <UserPlus className="h-4 w-4" strokeWidth={1.75} />
+            Novo cliente
+          </button>
+        }
+      />
 
       {createOpen ? (
         <Card>
@@ -573,15 +578,16 @@ export function ClientsPage() {
 
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div className="w-full sm:w-72">
+          <div className="relative w-full sm:w-80">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" strokeWidth={1.75} />
             <input
-              className="input !mt-0 !py-2 !text-sm"
+              className="input !mt-0 !py-2 !pl-9 !text-sm"
               placeholder="Buscar por nome, CPF/CNPJ ou WhatsApp..."
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
           </div>
-          <div className="text-xs text-white/50">
+          <div className="font-mono text-xs text-white/50 tabular-nums">
             {filtered.length} cliente{filtered.length !== 1 ? 's' : ''} encontrado{filtered.length !== 1 ? 's' : ''}
           </div>
         </div>

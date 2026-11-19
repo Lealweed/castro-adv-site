@@ -1,52 +1,69 @@
-/* Google Fonts — Playfair Display (serif headings) + Raleway (body) */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600;1,700;1,800&family=Raleway:wght@200;300;400;500;600;700&display=swap');
+/* Google Fonts — Plus Jakarta Sans + Inter + Outfit + JetBrains Mono */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Modern Trust Blue accent */
-  --accent: 37 99 235; /* blue-600 */
-  --accent-2: 59 130 246; /* blue-500 */
-  --accent-soft: 30 58 138; /* blue-900 */
+  /* Obsidian LegalTech Electric Sky accent */
+  --accent: 14 165 233; /* sky-500 */
+  --accent-2: 56 189 248; /* sky-400 */
+  --accent-soft: 12 74 110; /* sky-900 */
 }
 
 @layer components {
   /* Buttons */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold tracking-tight transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99];
   }
   .btn-primary {
-    @apply btn bg-white text-neutral-950 hover:bg-white/90;
+    @apply btn bg-gradient-to-b from-sky-400 to-sky-500 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_8px_24px_-8px_rgba(14,165,233,0.55)] hover:from-sky-300 hover:to-sky-400;
   }
   .btn-ghost {
-    @apply btn border border-white/10 bg-white/5 text-white/80 hover:bg-white/10;
+    @apply btn border border-white/[0.1] bg-white/[0.04] text-slate-200 hover:border-sky-400/35 hover:bg-white/[0.08] hover:text-white;
   }
   .btn-icon {
-    @apply inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 p-2 text-white/80 hover:bg-white/10;
+    @apply inline-flex items-center justify-center rounded-xl border border-white/[0.1] bg-white/[0.04] p-2 text-slate-300 transition-all hover:border-sky-400/35 hover:bg-white/[0.08] hover:text-white;
   }
 
   .link-accent {
-    @apply font-semibold text-amber-200 hover:underline;
+    @apply font-semibold text-sky-300 hover:text-sky-200 hover:underline;
+  }
+
+  .font-outfit {
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
   }
 
   /* Inputs */
   .input {
-    @apply mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none placeholder:text-white/40;
-    @apply focus:border-amber-300/40;
+    @apply mt-1 w-full rounded-xl border border-white/[0.1] bg-slate-950/70 px-3.5 py-2.5 text-sm text-slate-100 outline-none placeholder:text-slate-500 transition-all;
+    @apply focus:border-sky-400/50 focus:bg-slate-950/90 focus:ring-2 focus:ring-sky-400/15;
   }
   .select {
-    @apply mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none;
-    @apply focus:border-amber-300/40;
+    @apply mt-1 w-full rounded-xl border border-white/[0.1] bg-slate-950/70 px-3.5 py-2.5 text-sm text-slate-100 outline-none transition-all;
+    @apply focus:border-sky-400/50 focus:bg-slate-950/90 focus:ring-2 focus:ring-sky-400/15;
+  }
+  .select option {
+    background-color: #0b1120;
+    color: #f1f5f9;
   }
 
   /* Badges */
   .badge {
-    @apply inline-flex items-center rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[11px] font-semibold text-white/70;
+    @apply inline-flex items-center gap-1 rounded-full border border-white/[0.1] bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium tracking-wide text-slate-300;
   }
   .badge-gold {
-    @apply border-amber-400/30 bg-amber-400/10 text-amber-200;
+    @apply border-sky-400/30 bg-sky-400/10 text-sky-200;
+  }
+
+  /* Subtle 44px architectural tech grid */
+  .tech-grid-bg {
+    background-image:
+      linear-gradient(to right, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+    background-size: 44px 44px;
   }
 }
 
@@ -59,20 +76,37 @@ body {
   height: 100%;
 }
 
-/* Grain / noise overlay for landing hero */
+/* Grain / noise overlay for atmospheric depth */
 .grain-overlay {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 256px 256px;
-  opacity: 0.045;
+  opacity: 0.035;
   mix-blend-mode: overlay;
   pointer-events: none;
 }
 
-/* Default to light to avoid flash on the public site.
-   App screens set their own theme wrapper (theme-dark). */
+/* Crisp custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.22);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.45);
+}
+
+/* Default body setup */
 body {
-  @apply bg-[#fbfaf7] text-neutral-950;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  @apply bg-[#050811] text-slate-100;
 }
 
 .theme-light {
@@ -83,37 +117,35 @@ body {
   color-scheme: dark;
 }
 
-/* Public site background (ivory + subtle blue glow)
-   IMPORTANT: use background-color + background-image (avoid `background:` shorthand)
-   so we don't accidentally reset Tailwind background colors. */
+/* Public site background */
 .app-bg {
-  background-color: #f8fafc;
+  background-color: #f4f7fb;
   background-image:
-    radial-gradient(900px 500px at 15% 0%, rgba(37, 99, 235, 0.12), transparent 55%),
-    radial-gradient(900px 500px at 90% 10%, rgba(37, 99, 235, 0.08), transparent 55%),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.01));
+    radial-gradient(900px 500px at 15% 0%, rgba(14, 165, 233, 0.1), transparent 55%),
+    radial-gradient(900px 500px at 90% 10%, rgba(99, 102, 241, 0.07), transparent 55%);
 }
 
-/* Internal app background (dark navy) */
+/* Internal app background (Obsidian LegalTech) */
 .app-bg-dark {
-  background-color: #020617; /* slate-950 deep navy */
+  background-color: #050811;
   background-image:
-    radial-gradient(1200px 600px at 20% 0%, rgba(37, 99, 235, 0.15), transparent 55%),
-    radial-gradient(900px 500px at 90% 10%, rgba(255, 255, 255, 0.04), transparent 55%),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+    radial-gradient(1100px 540px at 12% -5%, rgba(14, 165, 233, 0.11), transparent 55%),
+    radial-gradient(900px 520px at 92% 4%, rgba(99, 102, 241, 0.08), transparent 55%),
+    radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.065) 1px, transparent 0);
+  background-size: 100% 100%, 100% 100%, 28px 28px;
 }
 
-/* Legacy utilities kept for compatibility (now mapped to blue) */
+/* Legacy utilities mapped to tech sky/cyan */
 .text-gold {
-  color: rgb(96, 165, 250); /* blue-400 */
+  color: rgb(56, 189, 248);
 }
 
 .bg-gold {
-  background-color: rgb(37, 99, 235); /* blue-600 */
+  background-color: rgb(14, 165, 233);
 }
 
 .border-gold {
-  border-color: rgba(37, 99, 235, 0.45);
+  border-color: rgba(56, 189, 248, 0.4);
 }
 
 @layer base {
@@ -563,11 +595,13 @@ body {
 
 /* ---- App light mode overrides ---- */
 html[data-app-theme='light'] .app-bg-dark {
-  background-color: #f8fafc !important;
+  background-color: #f4f7fb !important;
+  color: #0f172a !important;
   background-image:
-    radial-gradient(1200px 600px at 20% 0%, rgba(37, 99, 235, 0.08), transparent 55%),
-    radial-gradient(900px 500px at 90% 10%, rgba(0, 0, 0, 0.04), transparent 55%),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.01), rgba(0, 0, 0, 0.02)) !important;
+    radial-gradient(1200px 600px at 15% 0%, rgba(14, 165, 233, 0.09), transparent 55%),
+    radial-gradient(900px 500px at 90% 10%, rgba(99, 102, 241, 0.06), transparent 55%),
+    radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.05) 1px, transparent 0) !important;
+  background-size: 100% 100%, 100% 100%, 28px 28px !important;
 }
 
 html[data-app-theme='light'] .theme-dark {
@@ -577,39 +611,111 @@ html[data-app-theme='light'] .theme-dark {
 html[data-app-theme='light'] .bg-neutral-950,
 html[data-app-theme='light'] .bg-neutral-950\/70,
 html[data-app-theme='light'] .bg-neutral-950\/80,
-html[data-app-theme='light'] .bg-neutral-950\/45 {
-  background-color: rgba(255, 255, 255, 0.78) !important;
+html[data-app-theme='light'] .bg-neutral-950\/95,
+html[data-app-theme='light'] .bg-neutral-950\/50,
+html[data-app-theme='light'] .bg-neutral-950\/45,
+html[data-app-theme='light'] .bg-neutral-950\/40,
+html[data-app-theme='light'] .bg-neutral-900,
+html[data-app-theme='light'] .bg-neutral-900\/40,
+html[data-app-theme='light'] .bg-neutral-900\/95,
+html[data-app-theme='light'] .bg-slate-950,
+html[data-app-theme='light'] .bg-slate-950\/95,
+html[data-app-theme='light'] .bg-slate-950\/80,
+html[data-app-theme='light'] .bg-slate-950\/70,
+html[data-app-theme='light'] .bg-slate-950\/60,
+html[data-app-theme='light'] .bg-slate-950\/55,
+html[data-app-theme='light'] .bg-slate-950\/50,
+html[data-app-theme='light'] .bg-slate-900,
+html[data-app-theme='light'] .bg-slate-900\/90,
+html[data-app-theme='light'] .bg-slate-900\/70,
+html[data-app-theme='light'] .bg-\[\#050811\] {
+  background-color: rgba(255, 255, 255, 0.88) !important;
 }
 
-html[data-app-theme='light'] .border-white\/10 {
-  border-color: rgba(15, 23, 42, 0.12) !important;
+html[data-app-theme='light'] .border-white\/10,
+html[data-app-theme='light'] .border-white\/15,
+html[data-app-theme='light'] .border-white\/\[0\.08\],
+html[data-app-theme='light'] .border-white\/\[0\.1\] {
+  border-color: rgba(15, 23, 42, 0.09) !important;
 }
 
-html[data-app-theme='light'] .bg-white\/5 {
-  background-color: rgba(15, 23, 42, 0.04) !important;
+html[data-app-theme='light'] .bg-white\/5,
+html[data-app-theme='light'] .bg-white\/\[0\.04\] {
+  background-color: rgba(15, 23, 42, 0.035) !important;
 }
 
-html[data-app-theme='light'] .bg-white\/10 {
-  background-color: rgba(15, 23, 42, 0.08) !important;
+html[data-app-theme='light'] .bg-white\/10,
+html[data-app-theme='light'] .bg-white\/\[0\.08\] {
+  background-color: rgba(15, 23, 42, 0.065) !important;
 }
 
-html[data-app-theme='light'] .text-white,
-html[data-app-theme='light'] .text-white\/80,
-html[data-app-theme='light'] .text-white\/70,
-html[data-app-theme='light'] .text-white\/60,
-html[data-app-theme='light'] .text-white\/50,
-html[data-app-theme='light'] .text-white\/40 {
+html[data-app-theme='light'] .text-white {
   color: #0f172a !important;
 }
 
+html[data-app-theme='light'] .text-white\/90,
+html[data-app-theme='light'] .text-white\/80,
+html[data-app-theme='light'] .text-slate-100,
+html[data-app-theme='light'] .text-slate-200 {
+  color: #1e293b !important;
+}
+
+html[data-app-theme='light'] .text-white\/70,
+html[data-app-theme='light'] .text-slate-300 {
+  color: #334155 !important;
+}
+
+html[data-app-theme='light'] .text-white\/65,
+html[data-app-theme='light'] .text-white\/60,
+html[data-app-theme='light'] .text-white\/55,
+html[data-app-theme='light'] .text-slate-400 {
+  color: #475569 !important;
+}
+
+html[data-app-theme='light'] .text-white\/50,
+html[data-app-theme='light'] .text-white\/45,
+html[data-app-theme='light'] .text-white\/40,
+html[data-app-theme='light'] .text-slate-500 {
+  color: #64748b !important;
+}
+
+html[data-app-theme='light'] .text-amber-100,
+html[data-app-theme='light'] .text-amber-200,
+html[data-app-theme='light'] .text-amber-200\/90,
+html[data-app-theme='light'] .text-amber-200\/80,
+html[data-app-theme='light'] .text-amber-300,
+html[data-app-theme='light'] .text-amber-400,
+html[data-app-theme='light'] .text-sky-200,
+html[data-app-theme='light'] .text-sky-300 {
+  color: #0369a1 !important;
+}
+
+html[data-app-theme='light'] .badge-gold {
+  background-color: rgba(14, 165, 233, 0.12) !important;
+  border-color: rgba(2, 132, 199, 0.3) !important;
+  color: #0369a1 !important;
+}
+
 html[data-app-theme='light'] .btn-primary {
-  background: #0f172a !important;
-  color: #fff !important;
+  background: linear-gradient(180deg, #0284c7, #0369a1) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 20px -8px rgba(2, 132, 199, 0.45) !important;
+}
+
+html[data-app-theme='light'] .btn-ghost {
+  background: rgba(15, 23, 42, 0.04) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  color: #0f172a !important;
 }
 
 html[data-app-theme='light'] .input,
 html[data-app-theme='light'] .select {
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: #ffffff !important;
   color: #0f172a !important;
-  border-color: rgba(15, 23, 42, 0.15) !important;
+  border-color: rgba(15, 23, 42, 0.16) !important;
+}
+
+html[data-app-theme='light'] .select option {
+  background-color: #ffffff;
+  color: #0f172a;
 }

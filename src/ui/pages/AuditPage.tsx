@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, ShieldAlert, FileSearch, Trash2, Edit3, PlusCircle, Download } from 'lucide-react';
+import { Activity, ShieldAlert, ShieldCheck, FileSearch, Trash2, Edit3, PlusCircle, Download, Smartphone, Monitor, Globe } from 'lucide-react';
 import { saveAs } from 'file-saver';
 
 import type { AuditLogRow } from '@/lib/audit';
 import { listAuditLogs } from '@/lib/audit';
 import { getMyOfficeRole } from '@/lib/roles';
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { humanizeAudit } from '@/ui/widgets/timelineHumanize';
 
 type TableName = 'all' | 'clients' | 'cases' | 'tasks' | 'documents' | 'finance_transactions' | 'office_members';
@@ -50,15 +51,20 @@ function getSeverityBg(action: string, tableName: string) {
   return 'bg-white/5 border-white/10'; // Normal
 }
 
-function getDeviceLabel(userAgent: string | null): string | null {
+type DeviceMeta = {
+  type: 'mobile' | 'desktop' | 'browser';
+  label: string;
+};
+
+function getDeviceMeta(userAgent: string | null): DeviceMeta | null {
   if (!userAgent) return null;
   const ua = userAgent.toLowerCase();
-  if (ua.includes('iphone') || ua.includes('ipad')) return '📱 iOS';
-  if (ua.includes('android')) return '📱 Android';
-  if (ua.includes('mac')) return '🖥️ Mac';
-  if (ua.includes('windows')) return '🖥️ Windows';
-  if (ua.includes('linux')) return '🖥️ Linux';
-  return '🌐 Navegador';
+  if (ua.includes('iphone') || ua.includes('ipad')) return { type: 'mobile', label: 'iOS' };
+  if (ua.includes('android')) return { type: 'mobile', label: 'Android' };
+  if (ua.includes('mac')) return { type: 'desktop', label: 'Mac' };
+  if (ua.includes('windows')) return { type: 'desktop', label: 'Windows' };
+  if (ua.includes('linux')) return { type: 'desktop', label: 'Linux' };
+  return { type: 'browser', label: 'Navegador' };
 }
 
 function getBrowserLabel(userAgent: string | null): string | null {
@@ -117,7 +123,7 @@ function exportToCsv(rows: AuditLogRow[]) {
       it.client_id || '',
       it.case_id || '',
       it.task_id || '',
-      getDeviceLabel(it.user_agent) || '',
+      getDeviceMeta(it.user_agent)?.label || '',
       getBrowserLabel(it.user_agent) || '',
     ].map(escapeCsvCell).join(',');
   });
@@ -205,21 +211,23 @@ export function AuditPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Smart Audit & Segurança</h1>
-          <p className="text-sm text-white/60">Linha do tempo inteligente de rastreio. Veja quem fez o que, quando e onde no sistema.</p>
-        </div>
-        <button
-          onClick={() => exportToCsv(filtered)}
-          disabled={filtered.length === 0}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          title="Exportar registros filtrados como CSV"
-        >
-          <Download className="w-4 h-4" />
-          Exportar CSV ({filtered.length})
-        </button>
-      </div>
+      <PageHeader
+        icon={ShieldCheck}
+        eyebrow="Sistema"
+        title="Smart Audit & Segurança"
+        subtitle="Linha do tempo inteligente de rastreio. Veja quem fez o quê, quando e onde no sistema."
+        actions={
+          <button
+            onClick={() => exportToCsv(filtered)}
+            disabled={filtered.length === 0}
+            className="btn-ghost"
+            title="Exportar registros filtrados como CSV"
+          >
+            <Download className="w-4 h-4 text-sky-300" strokeWidth={1.75} />
+            Exportar CSV ({filtered.length})
+          </button>
+        }
+      />
 
       {error ? <div className="text-sm text-red-200 bg-red-500/10 border border-red-500/20 p-4 rounded-xl">{error}</div> : null}
 
@@ -245,7 +253,7 @@ export function AuditPage() {
                 <option value="all">Todas as ações</option>
                 <option value="insert">Criação / Inserção</option>
                 <option value="update">Edição / Atualização</option>
-                <option value="delete">Exclusão ⚠️</option>
+                <option value="delete">Exclusão</option>
               </select>
             </div>
 
@@ -335,11 +343,18 @@ export function AuditPage() {
                       <div className="mt-3 flex items-center gap-3 text-[10px] uppercase font-bold tracking-wider text-white/30">
                         <span className="bg-white/5 px-2 py-0.5 rounded">{it.table_name}</span>
                         <span>REF: {it.record_id ? it.record_id.slice(0, 8) : '—'}</span>
-                        {it.user_agent && (
-                          <span className="text-white/20 normal-case font-normal" title={it.user_agent}>
-                            {getDeviceLabel(it.user_agent)}{getBrowserLabel(it.user_agent) ? ` · ${getBrowserLabel(it.user_agent)}` : ''}
-                          </span>
-                        )}
+                        {it.user_agent && (() => {
+                          const dev = getDeviceMeta(it.user_agent);
+                          if (!dev) return null;
+                          const DevIcon = dev.type === 'mobile' ? Smartphone : dev.type === 'desktop' ? Monitor : Globe;
+                          const browser = getBrowserLabel(it.user_agent);
+                          return (
+                            <span className="inline-flex items-center gap-1 text-white/35 normal-case font-normal" title={it.user_agent}>
+                              <DevIcon className="h-3 w-3 text-sky-300/70" strokeWidth={1.75} />
+                              {dev.label}{browser ? ` · ${browser}` : ''}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
 

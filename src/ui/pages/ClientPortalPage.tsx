@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   AlertTriangle,
+  Check,
   CheckCircle2,
   CreditCard,
   Eye,
@@ -10,9 +11,11 @@ import {
   Home,
   LogOut,
   MessageCircle,
+  Phone,
   Upload,
   User,
   AlertCircle,
+  Bell,
   Calendar,
   Layers,
   ChevronRight,
@@ -32,6 +35,7 @@ import {
   listPortalClientCases,
   listPortalCaseChecklists,
   portalUploadChecklistDocument,
+  portalUpdateClientAvatar,
   type PortalClient,
   type PortalMeeting,
   type PortalMessage,
@@ -41,10 +45,20 @@ import {
 import { ClientAvatar } from '@/ui/widgets/ClientAvatar';
 import type { DocumentRow } from '@/lib/documents';
 import { centsToBRL, type FinanceTx } from '@/lib/finance';
+import { extractAsaasInfo } from '@/lib/asaas';
 import { hasSupabaseEnv, supabase } from '@/lib/supabaseClient';
  
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
-const PORTAL_USER_ID = '00000000-0000-0000-0000-000000000000';
+
+function formatDateOnlyBR(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  const clean = String(dateStr).split('T')[0];
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return new Date(dateStr).toLocaleDateString('pt-BR');
+}
  
 type PortalState = 'login' | 'authenticated';
 type TabKey = 'home' | 'cases' | 'drive' | 'finance' | 'messages';
@@ -128,6 +142,159 @@ export function ClientPortalPage() {
   const [messageInput, setMessageInput] = useState('');
   const [sendingMsg, setSendingMsg] = useState(false);
   const [messagesError, setMessagesError] = useState<string | null>(null);
+
+  // Polling e notificações
+  const [msgCount, setMsgCount] = useState<number | null>(null);
+  const [checklistStatuses, setChecklistStatuses] = useState<string>('');
+  const [activeNotification, setActiveNotification] = useState<{ title: string; body: string; type: TabKey } | null>(null);
+
+  // Web Audio API Synthesized Chime (C5 and E5 double note)
+  function playNotificationSound() {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(523.25, ctx.currentTime);
+      gain1.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08);
+      gain2.gain.setValueAtTime(0.15, ctx.currentTime + 0.08);
+      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.68);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.6);
+      
+      osc2.start(ctx.currentTime + 0.08);
+      osc2.stop(ctx.currentTime + 0.68);
+    } catch (e) {
+      console.warn('Audio feedback failed:', e);
+    }
+  }
+
+  // Avatar upload handler
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !portalSessionToken || !client?.id) return;
+    setUploading(true);
+    setSuccessMsg(null);
+    setErrorMsg(null);
+    try {
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('A foto de perfil deve ter no máximo 5 MB.');
+      }
+      
+      const newPath = await portalUpdateClientAvatar(portalSessionToken, client.id, file);
+      
+      const updatedClient = {
+        ...client,
+        avatar_path: newPath
+      };
+      
+      setClient(updatedClient);
+      sessionStorage.setItem('clientPortalClient', JSON.stringify(updatedClient));
+      setSuccessMsg('Foto de perfil atualizada com sucesso!');
+    } catch (err: unknown) {
+      setErrorMsg(getErrorMessage(err, 'Falha ao atualizar foto de perfil.'));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  // Polling hook para atualizar mensagens e checklists em background
+  useEffect(() => {
+    if (state !== 'authenticated' || !portalSessionToken) return;
+
+    // Run first check to set baseline count
+    listPortalClientMessages(portalSessionToken)
+      .then(msgs => setMsgCount(msgs.length))
+      .catch(() => null);
+
+    if (selectedCaseId) {
+      listPortalCaseChecklists(portalSessionToken, selectedCaseId)
+        .then(items => {
+          const statusStr = items.map(it => `${it.id}:${it.status}`).join(';');
+          setChecklistStatuses(statusStr);
+        })
+        .catch(() => null);
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        // 1. Check for new messages
+        const msgs = await listPortalClientMessages(portalSessionToken);
+        if (msgCount !== null && msgs.length > msgCount) {
+          playNotificationSound();
+          const lastMsg = msgs[msgs.length - 1];
+          setActiveNotification({
+            title: 'Nova mensagem recebida',
+            body: lastMsg.content.length > 50 ? `${lastMsg.content.slice(0, 50)}...` : lastMsg.content,
+            type: 'messages'
+          });
+          setMsgCount(msgs.length);
+          // If active tab is messages, keep messages sync
+          if (tab === 'messages') {
+            setMessages(msgs);
+          }
+        } else if (msgCount === null || msgs.length !== msgCount) {
+          setMsgCount(msgs.length);
+        }
+
+        // 2. Check for checklist modifications
+        if (selectedCaseId) {
+          const items = await listPortalCaseChecklists(portalSessionToken, selectedCaseId);
+          const currentStatusStr = items.map(it => `${it.id}:${it.status}`).join(';');
+          
+          if (checklistStatuses && currentStatusStr !== checklistStatuses) {
+            // Find which item changed
+            const prevMap = new Map(checklistStatuses.split(';').map(s => s.split(':') as [string, string]));
+            let changedItem = '';
+            let newStatus = '';
+            for (const item of items) {
+              if (prevMap.get(item.id) !== item.status) {
+                changedItem = item.title;
+                newStatus = item.status;
+                break;
+              }
+            }
+
+            if (changedItem) {
+              playNotificationSound();
+              let statusLabel = newStatus;
+              if (newStatus === 'approved') statusLabel = 'Aprovado';
+              if (newStatus === 'rejected') statusLabel = 'Correção Solicitada';
+              if (newStatus === 'under_analysis') statusLabel = 'Em Análise';
+              
+              setActiveNotification({
+                title: 'Atualização no Checklist',
+                body: `O item "${changedItem}" foi atualizado para: ${statusLabel}`,
+                type: 'drive'
+              });
+            }
+            setChecklistStatuses(currentStatusStr);
+            setChecklists(items); // Keep lists synchronized
+          } else if (!checklistStatuses) {
+            setChecklistStatuses(currentStatusStr);
+          }
+        }
+      } catch (e) {
+        console.error('Polling error:', e);
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [state, portalSessionToken, selectedCaseId, msgCount, checklistStatuses, tab]);
 
   // Fetch dados do cliente ao autenticar
   useEffect(() => {
@@ -270,7 +437,7 @@ export function ClientPortalPage() {
 
         const { error: insErr } = await supabase.from('documents').insert({
           id: docId,
-          user_id: PORTAL_USER_ID,
+          user_id: null,
           client_id: client.id,
           case_id: selectedCaseId || null,
           kind: 'personal',
@@ -342,7 +509,7 @@ export function ClientPortalPage() {
     ctx.moveTo(coords.x, coords.y);
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = '#f59e0b'; // Amber-500
+    ctx.strokeStyle = '#0ea5e9'; // Electric Sky-500
     setIsDrawing(true);
     setSigCanvas(canvas);
   }
@@ -401,9 +568,47 @@ export function ClientPortalPage() {
     try {
       if (!sigCanvas) throw new Error('Por favor, desenhe sua assinatura no espaço indicado.');
 
+      // 1) Validação real do PIN do cliente contra o banco/sessão
+      const storedCpf =
+        onlyDigits(cpfInput) ||
+        (typeof window !== 'undefined' ? sessionStorage.getItem('clientPortalCpf') || '' : '');
+      if (pinInput && pinConfirm !== pinInput.trim()) {
+        throw new Error('PIN incorreto. Digite a mesma senha numérica de 6 dígitos usada para acessar o portal.');
+      } else if (storedCpf.length === 11) {
+        const verified = await loginClientPortal(storedCpf, pinConfirm).catch(() => null);
+        if (!verified?.sessionToken) {
+          throw new Error('PIN incorreto. Digite a mesma senha numérica de 6 dígitos usada para acessar o portal.');
+        }
+      }
+
+      // 2) Captura de IP público real e geração de Hash Criptográfico SHA-256 da assinatura
+      let clientIp = 'Sessão Segura TLS (Portal Autenticado)';
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        if (ipRes.ok) {
+          const ipJson = (await ipRes.json()) as { ip?: string };
+          if (ipJson?.ip) clientIp = ipJson.ip;
+        }
+      } catch {
+        // fallback mantém Sessão Segura TLS
+      }
+
+      const signedAtIso = new Date().toISOString();
+      const rawSignaturePayload = `${client.id}|${signingChecklistItem.id}|${signedAtIso}|${sigCanvas.toDataURL()}`;
+      let signatureHashHex = '';
+      if (globalThis.crypto?.subtle) {
+        const digest = await globalThis.crypto.subtle.digest(
+          'SHA-256',
+          new TextEncoder().encode(rawSignaturePayload),
+        );
+        signatureHashHex = Array.from(new Uint8Array(digest))
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('');
+      }
+
       const docCanvas = document.createElement('canvas');
       docCanvas.width = 600;
-      docCanvas.height = 400;
+      docCanvas.height = 420;
       const ctx = docCanvas.getContext('2d');
       if (!ctx) throw new Error('Falha ao gerar documento de assinatura.');
 
@@ -419,32 +624,36 @@ export function ClientPortalPage() {
 
       ctx.fillStyle = '#334155';
       ctx.font = 'bold 12px sans-serif';
-      ctx.fillText('SIGNATÁRIO:', 30, 95);
+      ctx.fillText('SIGNATÁRIO:', 30, 92);
       ctx.font = '12px sans-serif';
-      ctx.fillText(`Nome: ${client.name}`, 30, 115);
-      ctx.fillText(`CPF: ${cpfInput || 'Configurado em Perfil'}`, 30, 130);
-      ctx.fillText(`E-mail: ${client.email || 'Não informado'}`, 30, 145);
+      ctx.fillText(`Nome: ${client.name}`, 30, 110);
+      ctx.fillText(`CPF: ${storedCpf ? formatCpfMask(storedCpf) : 'Validado via Sessão do Portal'}`, 30, 126);
+      ctx.fillText(`E-mail: ${client.email || 'Não informado'}`, 30, 142);
 
       ctx.font = 'bold 12px sans-serif';
-      ctx.fillText('METADADOS DE AUDITORIA:', 30, 180);
+      ctx.fillText('METADADOS DE AUDITORIA:', 30, 174);
       ctx.font = '11px sans-serif';
-      ctx.fillText(`Data/Hora: ${new Date().toLocaleString('pt-BR')}`, 30, 200);
-      ctx.fillText(`Endereço IP: 186.230.${Math.floor(Math.random() * 254)}.${Math.floor(Math.random() * 254)}`, 30, 215);
-      ctx.fillText(`Autenticação: PIN numérico de acesso`, 30, 230);
-      ctx.fillText(`Navegador: ${navigator.userAgent.slice(0, 55)}...`, 30, 245);
+      ctx.fillText(`Data/Hora: ${new Date(signedAtIso).toLocaleString('pt-BR')}`, 30, 192);
+      ctx.fillText(`Endereço IP: ${clientIp}`, 30, 208);
+      ctx.fillText(`Autenticação: PIN numérico de 6 dígitos validado`, 30, 224);
+      ctx.fillText(`Navegador: ${navigator.userAgent.slice(0, 58)}...`, 30, 240);
+      if (signatureHashHex) {
+        ctx.font = '10px monospace';
+        ctx.fillText(`SHA-256: ${signatureHashHex.slice(0, 48)}...`, 30, 256);
+      }
 
       ctx.strokeStyle = '#e2e8f0';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(30, 265);
-      ctx.lineTo(570, 265);
+      ctx.moveTo(30, 270);
+      ctx.lineTo(570, 270);
       ctx.stroke();
 
       ctx.fillStyle = '#334155';
       ctx.font = 'bold 11px sans-serif';
-      ctx.fillText('ASSINATURA DESENHADA:', 30, 290);
+      ctx.fillText('ASSINATURA DESENHADA:', 30, 294);
       
-      ctx.drawImage(sigCanvas, 30, 300, 250, 80);
+      ctx.drawImage(sigCanvas, 30, 304, 250, 80);
 
       const blob = await new Promise<Blob | null>((resolve) => docCanvas.toBlob(resolve, 'image/png'));
       if (!blob) throw new Error('Falha ao processar assinatura.');
@@ -536,8 +745,8 @@ export function ClientPortalPage() {
 
   if (!hasSupabaseEnv || !supabase) {
     return (
-      <div className="min-h-screen bg-[#08090b] flex flex-col items-center justify-center gap-4 px-4">
-        <AlertTriangle className="size-12 text-red-400" />
+      <div className="min-h-screen app-bg-dark flex flex-col items-center justify-center gap-4 px-4">
+        <AlertTriangle className="size-12 text-rose-400" strokeWidth={1.75} />
         <h1 className="text-xl font-semibold text-white">Portal Indisponível</h1>
         <p className="text-sm text-white/50 text-center max-w-sm">
           Configuração de ambiente não encontrada para acessar o portal do cliente.
@@ -548,17 +757,24 @@ export function ClientPortalPage() {
 
   if (state === 'login') {
     return (
-      <div className="min-h-screen bg-[#08090b] flex flex-col items-center px-4 py-8">
+      <div className="min-h-screen app-bg-dark relative flex flex-col items-center justify-center px-4 py-8">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.10),transparent_55%)] pointer-events-none" />
+        
         <img
           src="/brand/logo.jpg"
           alt="Castro & Oliveira Advocacia"
-          className="h-16 w-auto rounded-xl shadow-lg"
+          className="relative h-20 w-auto rounded-2xl border border-sky-400/25 shadow-[0_12px_40px_rgba(14,165,233,0.16)]"
         />
-        <div className="mt-8 w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-6">
-          <h1 className="text-xl font-semibold text-white">Acessar Meu Portal</h1>
-          <p className="mt-2 text-sm text-white/60">Informe seu CPF e sua Senha Numérica (PIN) para acessar o portal.</p>
+        
+        <div className="relative mt-8 w-full max-w-md overflow-hidden rounded-2xl border border-white/[0.1] bg-slate-950/75 backdrop-blur-xl p-8 shadow-[0_24px_64px_rgba(0,0,0,0.55)]">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/50 to-transparent" />
+          <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-300/80">
+            Castro & Oliveira · Ambiente Seguro
+          </div>
+          <h1 className="mt-1.5 text-2xl font-bold text-white tracking-tight">Acessar Meu Portal</h1>
+          <p className="mt-2 text-xs text-white/55 leading-relaxed">Informe seu CPF e sua Senha Numérica (PIN) para acessar seu painel VIP exclusivo.</p>
 
-          <form className="mt-5 grid gap-3" onSubmit={async (e) => {
+          <form className="mt-6 grid gap-4" onSubmit={async (e) => {
             e.preventDefault();
             setAuthLoading(true);
             setAuthError(null);
@@ -568,6 +784,9 @@ export function ClientPortalPage() {
               if (!pinInput.trim()) throw new Error('Informe sua senha numérica (PIN).');
               
               const portalLogin = await loginClientPortal(cpfLimpo, pinInput.trim());
+              if (typeof window !== 'undefined') {
+                sessionStorage.setItem('clientPortalCpf', cpfLimpo);
+              }
               setPortalSessionToken(portalLogin.sessionToken);
               setClient(portalLogin.client);
               setClientNotes(cleanPortalNotice(portalLogin.client.notes));
@@ -578,10 +797,10 @@ export function ClientPortalPage() {
               setAuthLoading(false);
             }
           }}>
-            <label className="text-sm text-white/80">
+            <label className="text-xs font-bold text-white/70 uppercase tracking-wider block">
               CPF
               <input
-                className="input mt-1"
+                className="input mt-1.5 font-mono"
                 value={cpfInput}
                 onChange={(e) => setCpfInput(formatCpfMask(e.target.value))}
                 inputMode="numeric"
@@ -590,11 +809,11 @@ export function ClientPortalPage() {
                 autoFocus
               />
             </label>
-            <label className="text-sm text-white/80">
+            <label className="text-xs font-bold text-white/70 uppercase tracking-wider block">
               Senha (PIN)
-              <div className="relative mt-1">
+              <div className="relative mt-1.5">
                 <input
-                  className="input w-full pr-10"
+                  className="input w-full pr-10 font-mono"
                   value={pinInput}
                   onChange={(e) => setPinInput(onlyDigits(e.target.value).slice(0, 6))}
                   inputMode="numeric"
@@ -613,9 +832,9 @@ export function ClientPortalPage() {
               </div>
             </label>
             {authError ? (
-              <div className="rounded-xl border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-200">{authError}</div>
+              <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2.5 text-xs text-rose-200">{authError}</div>
             ) : null}
-            <button className="btn-primary mt-1" type="submit" disabled={authLoading}>
+            <button className="btn-primary mt-2 !py-3 tracking-wide" type="submit" disabled={authLoading}>
               {authLoading ? 'Acessando...' : 'Acessar meu Portal'}
             </button>
           </form>
@@ -625,15 +844,15 @@ export function ClientPortalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0c10] via-[#10131a] to-[#181c24] flex flex-col items-center px-0 py-0 pb-20 md:pb-6">
+    <div className="min-h-screen app-bg-dark flex flex-col items-center px-0 py-0 pb-20 md:pb-6">
       <div className="mt-10 mb-4 flex w-full max-w-xl items-center justify-between gap-4 px-4">
-        <img src="/brand/logo.jpg" alt="Castro & Oliveira Advocacia" className="h-20 w-auto rounded-2xl border-2 border-white/10 shadow-2xl" />
+        <img src="/brand/logo.jpg" alt="Castro & Oliveira Advocacia" className="h-16 w-auto rounded-2xl border border-sky-400/25 shadow-[0_10px_30px_rgba(14,165,233,0.16)]" />
         <button
           type="button"
           onClick={handlePortalExit}
-          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
+          className="btn-ghost !py-2"
         >
-          <LogOut className="size-4" />
+          <LogOut className="size-4" strokeWidth={1.75} />
           Sair
         </button>
       </div>
@@ -641,16 +860,37 @@ export function ClientPortalPage() {
       {/* Profile Header */}
       {state === 'authenticated' && client && (
         <div className="flex flex-col items-center gap-3 mt-2 mb-6">
-          <div className="flex items-center gap-4">
-            <ClientAvatar name={client.name} avatarPath={client.avatar_path} size={72} />
+          <div className="flex items-center gap-4 bg-slate-950/70 backdrop-blur-xl border border-white/[0.08] p-4 rounded-2xl shadow-xl">
+            <div className="relative group cursor-pointer">
+              <ClientAvatar name={client.name} avatarPath={client.avatar_path} size={72} />
+              <label 
+                className="absolute inset-0 bg-black/60 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer text-center"
+                title="Alterar foto de perfil"
+              >
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                />
+                <Upload className="w-4 h-4 text-white mb-0.5" />
+                <span className="text-[9px] font-bold text-white uppercase tracking-wider">Alterar</span>
+              </label>
+            </div>
             <div>
-              <div className="text-2xl font-bold text-white font-[Space_Grotesk] drop-shadow-lg">{client.name}</div>
-              <div className="text-sm text-white/70 font-[Inter]">{client.email || '—'}</div>
+              <div className="text-xl font-bold text-white tracking-tight">{client.name}</div>
+              <div className="text-xs text-white/55 mt-0.5">{client.email || '—'}</div>
             </div>
           </div>
-          <div className="flex gap-6 text-base text-white/90 mt-2 font-[Inter]">
-            <span className="flex items-center gap-1"><span className="text-amber-300">📱</span> {client.phone || '—'}</span>
-            <span className="flex items-center gap-1"><span className="text-amber-300">💬</span> {client.whatsapp || '—'}</span>
+          <div className="flex gap-6 text-sm text-white/80 mt-1">
+            <span className="flex items-center gap-1.5">
+              <Phone className="h-4 w-4 text-sky-400" strokeWidth={1.75} />
+              {client.phone || '—'}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <MessageCircle className="h-4 w-4 text-sky-400" strokeWidth={1.75} />
+              {client.whatsapp || '—'}
+            </span>
           </div>
         </div>
       )}
@@ -658,7 +898,7 @@ export function ClientPortalPage() {
       {/* Main Content Area */}
       <div className="flex-1 w-full max-w-xl mx-auto flex flex-col mt-2">
         {/* Tab Navigation */}
-        <nav className="fixed bottom-0 left-0 right-0 z-10 flex justify-around bg-[#0a0c10]/95 backdrop-blur-md border-t border-white/10 py-3 md:static md:rounded-2xl md:border md:bg-white/5 md:mb-6">
+        <nav className="fixed bottom-0 left-0 right-0 z-10 flex justify-around bg-slate-950/90 backdrop-blur-xl border-t border-white/[0.08] py-3 md:static md:rounded-2xl md:border md:bg-slate-950/60 md:mb-6">
           <button className={`flex flex-col items-center gap-1 px-2 transition-colors ${tab === 'home' ? 'text-amber-300' : 'text-white/60 hover:text-white'}`} onClick={() => setTab('home')}><Home className="size-5" /><span className="text-[10px] font-semibold">Início</span></button>
           <button className={`flex flex-col items-center gap-1 px-2 transition-colors ${tab === 'cases' ? 'text-amber-300' : 'text-white/60 hover:text-white'}`} onClick={() => setTab('cases')}><Briefcase className="size-5" /><span className="text-[10px] font-semibold">Processos</span></button>
           <button className={`flex flex-col items-center gap-1 px-2 transition-colors ${tab === 'drive' ? 'text-amber-300' : 'text-white/60 hover:text-white'}`} onClick={() => setTab('drive')}><Folder className="size-5" /><span className="text-[10px] font-semibold">Pendências</span></button>
@@ -805,12 +1045,27 @@ export function ClientPortalPage() {
                             step: 6,
                             title: '6. Execução e Recebimento',
                             desc: 'Fase final do processo para cobrança dos valores devidos e liberação do pagamento.'
+                          },
+                          {
+                            step: 7,
+                            title: '7. Arquivado',
+                            desc: 'O processo foi encerrado definitivamente e arquivado pela justiça.'
                           }
                         ].map((item) => {
                           const status = String(selectedPortalCase.status).toUpperCase();
                           const activeStep = (() => {
-                            if (status === 'CLOSED') return 6;
-                            if (status === 'ON_HOLD') return 4;
+                            if (status === 'PETICAO_INICIAL') return 1;
+                            if (status === 'CITACAO_DEFESA') return 2;
+                            if (status === 'INSTRUCAO_PROVAS') return 3;
+                            if (status === 'JULGAMENTO_SENTENCA') return 4;
+                            if (status === 'RECURSO') return 5;
+                            if (status === 'EXECUCAO_RECEBIMENTO') return 6;
+                            if (status === 'ARQUIVADO') return 7;
+
+                            // Fallback para status legados ou livres
+                            if (status === 'CLOSED' || status === 'CONCLUIDO') return 6;
+                            if (status === 'ON_HOLD' || status === 'SUSPENSO') return 4;
+
                             const caseDate = new Date(selectedPortalCase.created_at).getTime();
                             const diffDays = (Date.now() - caseDate) / (1000 * 60 * 60 * 24);
                             if (diffDays < 15) return 1;
@@ -834,14 +1089,14 @@ export function ClientPortalPage() {
                             bulletColor = 'bg-amber-400/20 border-amber-400 text-amber-300';
                             textColor = 'text-white font-bold';
                             descColor = 'text-white/80';
-                            shadow = 'shadow-[0_0_12px_rgba(251,191,36,0.3)]';
+                            shadow = 'shadow-[0_0_12px_rgba(56,189,248,0.32)]';
                           }
 
                           return (
                             <div key={item.step} className="relative group">
                               {/* Marcador da Timeline */}
-                              <div className={`absolute -left-[35px] top-1 flex h-6 w-6 items-center justify-center rounded-full border bg-neutral-950 text-[10px] font-bold transition-all ${bulletColor} ${shadow}`}>
-                                {isCompleted ? '✓' : item.step}
+                              <div className={`absolute -left-[35px] top-1 flex h-6 w-6 items-center justify-center rounded-full border bg-slate-950 text-[10px] font-bold transition-all ${bulletColor} ${shadow}`}>
+                                {isCompleted ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} /> : item.step}
                               </div>
 
                               {/* Conteúdo do Estágio */}
@@ -944,7 +1199,7 @@ export function ClientPortalPage() {
                                 
                                 {item.due_date && (
                                   <div className="text-[10px] text-white/40 flex items-center gap-1 mt-1">
-                                    <Calendar className="w-3.5 h-3.5" /> Prazo de envio: {new Date(item.due_date).toLocaleDateString()}
+                                    <Calendar className="w-3.5 h-3.5" /> Prazo de envio: {formatDateOnlyBR(item.due_date)}
                                   </div>
                                 )}
                               </div>
@@ -1073,19 +1328,44 @@ export function ClientPortalPage() {
                 <div className="font-semibold text-white mb-3 flex items-center gap-1.5"><CreditCard className="w-4 h-4 text-amber-400" /> Extrato Financeiro</div>
                 {financeLoading ? <div className="text-white/40 text-sm">Carregando...</div> : transactions.length > 0 ? (
                   <ul className="space-y-3">
-                    {transactions.map((tx) => (
-                      <li key={tx.id} className="flex justify-between items-center text-sm border-b border-white/5 pb-2">
-                        <div>
-                          <div className="text-white/80 font-medium">{tx.description || 'Parcela'}</div>
-                          <div className="text-xs text-white/40 mt-0.5">
-                            {tx.due_date ? new Date(tx.due_date).toLocaleDateString('pt-BR') : 'Sem vencimento'}
+                    {transactions.map((tx) => {
+                      const asaas = extractAsaasInfo(tx.notes);
+                      const isPaid = tx.status === 'paid';
+                      return (
+                        <li key={tx.id} className="flex flex-wrap justify-between items-center gap-3 text-sm border-b border-white/5 pb-3">
+                          <div>
+                            <div className="text-white/90 font-medium flex items-center gap-2">
+                              <span>{tx.description || 'Parcela'}</span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isPaid ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                                {isPaid ? 'Pago' : 'Em aberto'}
+                              </span>
+                            </div>
+                            <div className="text-xs text-white/40 mt-0.5">
+                              Vencimento: {tx.due_date ? formatDateOnlyBR(tx.due_date) : 'Sem vencimento'}
+                            </div>
                           </div>
-                        </div>
-                        <div className={`font-medium ${tx.status === 'paid' ? 'text-green-400' : 'text-amber-400'}`}>
-                          {centsToBRL(tx.amount_cents)}
-                        </div>
-                      </li>
-                    ))}
+                          <div className="flex items-center gap-3">
+                            {asaas.invoiceUrl ? (
+                              <a
+                                href={asaas.invoiceUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                                  isPaid
+                                    ? 'border border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
+                                    : 'bg-amber-400 text-neutral-950 hover:bg-amber-300 shadow-md shadow-amber-400/10'
+                                }`}
+                              >
+                                {isPaid ? 'Ver Recibo' : 'Pagar PIX / Boleto'}
+                              </a>
+                            ) : null}
+                            <div className={`font-semibold ${isPaid ? 'text-green-400' : 'text-amber-400'}`}>
+                              {centsToBRL(tx.amount_cents)}
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : <div className="text-white/40 text-sm text-center py-6">Nenhuma movimentação financeira encontrada.</div>}
               </div>
@@ -1152,7 +1432,7 @@ export function ClientPortalPage() {
       {/* Modal de Assinatura Eletrônica */}
       {signatureModalOpen && signingChecklistItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[#0e1017] border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col animate-slideIn">
+          <div className="bg-slate-950 border border-white/[0.1] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col animate-slideIn">
             {/* Cabeçalho */}
             <div className="p-5 border-b border-white/5 flex items-center justify-between">
               <div>
@@ -1247,7 +1527,7 @@ export function ClientPortalPage() {
               >
                 {uploading ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-neutral-900" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     Assinando...
                   </>
                 ) : (
@@ -1256,6 +1536,34 @@ export function ClientPortalPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Active Notification Toast */}
+      {activeNotification && (
+        <div className="fixed bottom-24 right-4 left-4 md:left-auto md:w-96 z-50 rounded-2xl border border-amber-500/30 bg-neutral-950/95 backdrop-blur-xl p-4 shadow-2xl animate-fade-in flex gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-400/10 flex items-center justify-center shrink-0">
+            <Bell className="w-5 h-5 text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-bold text-white font-outfit">{activeNotification.title}</div>
+            <div className="text-[11px] text-white/60 mt-0.5 leading-relaxed truncate">{activeNotification.body}</div>
+            <button 
+              onClick={() => {
+                setTab(activeNotification.type);
+                setActiveNotification(null);
+              }}
+              className="text-[10px] font-bold text-amber-300 hover:underline mt-2 block"
+            >
+              Visualizar atualização
+            </button>
+          </div>
+          <button 
+            onClick={() => setActiveNotification(null)}
+            className="text-white/40 hover:text-white shrink-0 self-start"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 

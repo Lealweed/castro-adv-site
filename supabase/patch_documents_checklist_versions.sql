@@ -75,9 +75,9 @@ SET search_path = public
 AS $$
 DECLARE
   v_client_id uuid;
-  v_ctx json;
+  v_ctx jsonb;
 BEGIN
-  v_ctx := row_to_json(public.portal_get_client_context(p_session_token));
+  v_ctx := public.portal_get_client_context(p_session_token);
   v_client_id := (v_ctx->'client'->>'id')::uuid;
 
   IF v_client_id IS NULL THEN
@@ -126,9 +126,9 @@ SET search_path = public
 AS $$
 DECLARE
   v_client_id uuid;
-  v_ctx json;
+  v_ctx jsonb;
 BEGIN
-  v_ctx := row_to_json(public.portal_get_client_context(p_session_token));
+  v_ctx := public.portal_get_client_context(p_session_token);
   v_client_id := (v_ctx->'client'->>'id')::uuid;
 
   IF v_client_id IS NULL THEN
@@ -183,13 +183,13 @@ SET search_path = public
 AS $$
 DECLARE
   v_client_id uuid;
-  v_ctx json;
+  v_ctx jsonb;
   v_doc_id uuid;
   v_version integer;
   v_office_id uuid;
 BEGIN
   -- 1) Resolve client context
-  v_ctx := row_to_json(public.portal_get_client_context(p_session_token));
+  v_ctx := public.portal_get_client_context(p_session_token);
   v_client_id := (v_ctx->'client'->>'id')::uuid;
 
   IF v_client_id IS NULL THEN

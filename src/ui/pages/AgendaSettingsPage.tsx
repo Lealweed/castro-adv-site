@@ -1,7 +1,9 @@
+import { ArrowLeft, SlidersHorizontal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { getMyOfficeId } from '@/lib/officeContext';
 import { getMyOfficeRole } from '@/lib/roles';
 import { getOfficeSettings, updateOfficeSettings, type OfficeSettings } from '@/lib/officeSettings';
@@ -75,15 +77,18 @@ export function AgendaSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Configurações da Agenda</h1>
-          <p className="text-sm text-white/60">Padrões por escritório (admin).</p>
-        </div>
-        <Link to="/app/agenda" className="btn-ghost">
-          Voltar
-        </Link>
-      </div>
+      <PageHeader
+        icon={SlidersHorizontal}
+        eyebrow="Operação"
+        title="Configurações da Agenda"
+        subtitle="Padrões de lembretes, fuso horário e parâmetros por escritório."
+        actions={
+          <Link to="/app/agenda" className="btn-ghost">
+            <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
+            Voltar
+          </Link>
+        }
+      />
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
 

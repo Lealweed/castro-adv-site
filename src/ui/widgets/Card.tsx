@@ -4,7 +4,7 @@ export function Card({ className, children }: { className?: string; children: Re
   return (
     <section
       className={cn(
-        'rounded-2xl border border-white/10 bg-neutral-950/45 p-4 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-5 transition-all duration-300 hover:shadow-[0_20px_80px_rgba(37,99,235,0.15)] hover:-translate-y-1',
+        'rounded-2xl border border-white/[0.08] bg-slate-950/55 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_12px_32px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-colors duration-200 hover:border-white/[0.14] sm:p-5',
         className
       )}
     >

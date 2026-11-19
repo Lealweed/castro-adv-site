@@ -1,48 +1,81 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  BarChart3,
+  Activity,
   Bell,
-  BellRing,
-  Briefcase,
-  Building2,
-  Calendar,
-  CheckSquare,
-  Cog,
-  Coins,
-  HardDrive,
-  LayoutDashboard,
-  Sparkles,
-  TrendingUp,
-  ClipboardList,
-  Users,
   Calculator,
-  Cpu,
+  CalendarClock,
+  Globe,
+  HardDrive,
+  Inbox,
+  KanbanSquare,
+  LayoutGrid,
+  ListChecks,
+  Radar,
+  Scale,
+  SlidersHorizontal,
+  Sparkles,
+  UsersRound,
+  Wallet,
+  Webhook,
+  type LucideIcon,
 } from 'lucide-react';
-
 
 import { cn } from '@/ui/utils/cn';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
-const items = [
-  { to: '/app', label: 'Dashboard', shortLabel: 'Dash', icon: LayoutDashboard },
-  { to: '/app/produtividade', label: 'Produtividade', shortLabel: 'Prod', icon: TrendingUp },
-  { to: '/app/clientes', label: 'Clientes', shortLabel: 'Cli', icon: Users },
-  { to: '/app/triagem', label: 'Triagem / Leads', shortLabel: 'Lead', icon: ClipboardList },
-  { to: '/app/casos', label: 'Casos', shortLabel: 'Cas', icon: Briefcase },
-  { to: '/app/notificacoes', label: 'Notificacoes', shortLabel: 'Not', icon: Bell },
-  { to: '/app/publicacoes', label: 'PJe / Intimações', shortLabel: 'PJe', icon: BellRing },
-  { to: '/app/calculadora', label: 'Calculadora CPC', shortLabel: 'CPC', icon: Calculator },
-  { to: '/app/agenda', label: 'Agenda', shortLabel: 'Age', icon: Calendar },
-  { to: '/app/tarefas', label: 'Tarefas', shortLabel: 'Tar', icon: CheckSquare },
-  { to: '/app/financeiro', label: 'Financeiro', shortLabel: 'Fin', icon: Coins },
-  { to: '/app/drive', label: 'Smart Drive', shortLabel: 'Drv', icon: HardDrive },
-  { to: '/app/relatorios-ia', label: 'Relatórios com IA', shortLabel: 'IA', icon: Sparkles },
-  { to: '/app/integracoes', label: 'Integrações & API', shortLabel: 'API', icon: Cpu },
-  { to: '/portal', label: 'Portal do Cliente', shortLabel: 'Portal', icon: Building2 },
-  { to: '/app/configuracoes', label: 'Configurações', shortLabel: 'Cfg', icon: Cog },
-];
+type NavItem = {
+  to: string;
+  label: string;
+  shortLabel: string;
+  icon: LucideIcon;
+  end?: boolean;
+};
 
+type NavGroup = {
+  title: string;
+  items: NavItem[];
+};
+
+const navGroups: NavGroup[] = [
+  {
+    title: 'Comando',
+    items: [
+      { to: '/app', label: 'Dashboard', shortLabel: 'Dash', icon: LayoutGrid, end: true },
+      { to: '/app/produtividade', label: 'Produtividade', shortLabel: 'Prod', icon: Activity },
+      { to: '/app/notificacoes', label: 'Notificações', shortLabel: 'Notif', icon: Bell },
+    ],
+  },
+  {
+    title: 'Jurídico',
+    items: [
+      { to: '/app/clientes', label: 'Clientes', shortLabel: 'Cli', icon: UsersRound },
+      { to: '/app/triagem', label: 'Triagem / Leads', shortLabel: 'Lead', icon: Inbox },
+      { to: '/app/casos', label: 'Casos', shortLabel: 'Casos', icon: Scale },
+      { to: '/app/publicacoes', label: 'PJe / Intimações', shortLabel: 'PJe', icon: Radar },
+      { to: '/app/calculadora', label: 'Calculadora CPC', shortLabel: 'CPC', icon: Calculator },
+    ],
+  },
+  {
+    title: 'Operação',
+    items: [
+      { to: '/app/agenda', label: 'Agenda', shortLabel: 'Agd', icon: CalendarClock },
+      { to: '/app/tarefas', label: 'Tarefas', shortLabel: 'Tar', icon: ListChecks, end: true },
+      { to: '/app/tarefas/kanban', label: 'Kanban', shortLabel: 'Kbn', icon: KanbanSquare },
+      { to: '/app/financeiro', label: 'Financeiro', shortLabel: 'Fin', icon: Wallet },
+      { to: '/app/drive', label: 'Smart Drive', shortLabel: 'Drv', icon: HardDrive },
+    ],
+  },
+  {
+    title: 'Inteligência',
+    items: [
+      { to: '/app/relatorios-ia', label: 'Relatórios com IA', shortLabel: 'IA', icon: Sparkles },
+      { to: '/app/integracoes', label: 'Integrações & API', shortLabel: 'API', icon: Webhook },
+      { to: '/portal', label: 'Portal do Cliente', shortLabel: 'Portal', icon: Globe },
+      { to: '/app/configuracoes', label: 'Configurações', shortLabel: 'Cfg', icon: SlidersHorizontal },
+    ],
+  },
+];
 
 type SidebarProps = {
   collapsed?: boolean;
@@ -53,12 +86,14 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
 
   const userInitials = useMemo(() => {
     const source = userName === 'Carregando...' ? 'CO' : userName;
-    return source
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() || '')
-      .join('') || 'CO';
+    return (
+      source
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() || '')
+        .join('') || 'CO'
+    );
   }, [userName]);
 
   useEffect(() => {
@@ -66,13 +101,13 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
       try {
         const sb = requireSupabase();
         const user = await getAuthedUser();
-        
+
         const { data: profile } = await sb
           .from('user_profiles')
           .select('display_name, email')
           .eq('user_id', user.id)
           .maybeSingle();
-          
+
         const name = profile?.display_name || profile?.email?.split('@')[0] || 'Usuário';
         setUserName(name);
       } catch {
@@ -84,80 +119,126 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'hidden shrink-0 border-r border-white/10 bg-neutral-950/70 backdrop-blur-xl transition-all duration-300 md:flex md:flex-col',
+        'hidden shrink-0 border-r border-white/[0.08] bg-slate-950/75 backdrop-blur-xl transition-all duration-300 md:sticky md:top-0 md:flex md:h-dvh md:flex-col',
         collapsed ? 'w-20' : 'w-64',
       )}
     >
-      <div className={cn('flex h-16 items-center border-b border-white/10', collapsed ? 'justify-center px-2' : 'gap-3 px-4')}>
-        {collapsed ? (
-          <div className="group relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-amber-400/20 bg-gradient-to-br from-amber-400/20 via-white/10 to-transparent shadow-[0_10px_30px_rgba(251,191,36,0.18)]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.24),transparent_60%)]" />
-            <span className="relative text-[11px] font-black uppercase tracking-[0.22em] text-amber-100">CO</span>
-          </div>
-        ) : (
-          <>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-              <BarChart3 className="h-5 w-5 text-amber-400" />
-            </div>
-            <div className="leading-tight">
-              <div className="text-sm font-semibold text-white">CRM Jurídico</div>
-              <div className="text-xs text-white/60">Castro & Oliveira</div>
-            </div>
-          </>
+      {/* Brand Header */}
+      <div
+        className={cn(
+          'flex h-16 shrink-0 items-center border-b border-white/[0.08]',
+          collapsed ? 'justify-center px-2' : 'gap-3 px-4',
         )}
+      >
+        <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-sky-400/25 bg-slate-900 shadow-[0_0_20px_rgba(56,189,248,0.16)]">
+          <img
+            src="/brand/logo.jpg"
+            alt="Castro & Oliveira"
+            className="h-full w-full object-cover"
+            loading="eager"
+          />
+          <span className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10" />
+        </div>
+
+        {!collapsed ? (
+          <div className="min-w-0 leading-tight">
+            <div className="truncate text-sm font-semibold tracking-tight text-white">Castro & Oliveira</div>
+            <div className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-sky-300/80">
+              <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.85)]" />
+              LEGAL OS · CRM
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      <nav className="flex-1 px-2 py-3">
-        {items.map((it) => (
-          <NavLink
-            key={it.to}
-            to={it.to}
-            end={it.to === '/app'}
-            className={({ isActive }) =>
-              cn(
-                'group relative mb-1 flex rounded-xl py-2 text-sm font-medium transition-all duration-200',
-                collapsed ? 'justify-center px-2' : 'items-center gap-3 px-3',
-                isActive
-                  ? 'bg-amber-400/10 text-white ring-1 ring-amber-400/20'
-                  : 'text-white/70 hover:bg-white/5 hover:text-white',
-              )
-            }
-          >
-            <it.icon className="h-4 w-4 shrink-0" />
-            <span className={cn(collapsed && 'sr-only')}>{it.label}</span>
+      {/* Navigation Groups */}
+      <nav className="flex-1 space-y-4 overflow-y-auto px-2.5 py-4">
+        {navGroups.map((group) => (
+          <div key={group.title}>
+            {!collapsed ? (
+              <div className="mb-1.5 px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">
+                {group.title}
+              </div>
+            ) : (
+              <div className="mx-auto my-2 h-px w-8 bg-white/[0.08]" />
+            )}
 
-            {collapsed ? (
-              <>
-                <span className="pointer-events-none absolute left-[calc(100%+0.65rem)] top-1/2 z-20 -translate-y-1/2 rounded-lg border border-white/10 bg-neutral-900/95 px-2.5 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-[0_12px_30px_rgba(0,0,0,0.35)] transition-all duration-150 group-hover:translate-x-1 group-hover:opacity-100">
-                  {it.label}
-                </span>
-                <span className="pointer-events-none absolute -bottom-1 left-1/2 -translate-x-1/2 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/45">
-                  {it.shortLabel}
-                </span>
-              </>
-            ) : null}
-          </NavLink>
+            <div className="space-y-0.5">
+              {group.items.map((it) => (
+                <NavLink
+                  key={it.to}
+                  to={it.to}
+                  end={it.end}
+                  className={({ isActive }) =>
+                    cn(
+                      'group relative flex rounded-xl py-2 text-sm font-medium transition-all duration-150',
+                      collapsed ? 'justify-center px-2 py-2.5' : 'items-center gap-3 px-3',
+                      isActive
+                        ? 'bg-sky-400/10 text-white ring-1 ring-sky-400/20'
+                        : 'text-white/65 hover:bg-white/[0.05] hover:text-white',
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      {isActive ? (
+                        <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.85)]" />
+                      ) : null}
+
+                      <it.icon
+                        className={cn(
+                          'h-[17px] w-[17px] shrink-0 transition-colors',
+                          isActive ? 'text-sky-300' : 'text-white/55 group-hover:text-sky-300',
+                        )}
+                        strokeWidth={1.75}
+                      />
+
+                      <span className={cn('truncate', collapsed && 'sr-only')}>{it.label}</span>
+
+                      {collapsed ? (
+                        <span className="pointer-events-none absolute left-[calc(100%+0.65rem)] top-1/2 z-30 -translate-y-1/2 whitespace-nowrap rounded-lg border border-white/[0.1] bg-slate-900/95 px-2.5 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-[0_12px_30px_rgba(0,0,0,0.45)] transition-all duration-150 group-hover:translate-x-1 group-hover:opacity-100">
+                          {it.label}
+                        </span>
+                      ) : null}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 
-      <div className="mt-auto p-3">
-        <div className={cn('rounded-2xl border border-white/10 bg-white/5', collapsed ? 'px-2 py-3 text-center' : 'p-3')}>
+      {/* Bottom User Tile */}
+      <div className="mt-auto shrink-0 border-t border-white/[0.08] p-3">
+        <div
+          className={cn(
+            'rounded-xl border border-white/[0.08] bg-white/[0.04]',
+            collapsed ? 'px-1.5 py-2.5 text-center' : 'flex items-center gap-3 p-2.5',
+          )}
+        >
           {collapsed ? (
-            <div className="group relative">
-              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-400/20 bg-gradient-to-br from-amber-300/30 to-white/5 text-sm font-bold text-white shadow-[0_10px_30px_rgba(251,191,36,0.12)]">
+            <div className="group relative flex flex-col items-center">
+              <div className="relative flex size-10 items-center justify-center rounded-xl border border-sky-400/25 bg-gradient-to-br from-sky-400/20 to-indigo-500/15 text-xs font-bold text-white shadow-[0_6px_20px_rgba(56,189,248,0.14)]">
                 {userInitials}
+                <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-slate-950 bg-emerald-400" />
               </div>
-              <div className="mt-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-200/70">CO</div>
-              <div className="mt-1 text-[9px] text-white/40">online</div>
-              <span className="pointer-events-none absolute bottom-full left-[calc(100%+0.65rem)] mb-2 hidden rounded-lg border border-white/10 bg-neutral-900/95 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-[0_12px_30px_rgba(0,0,0,0.35)] group-hover:block">
+              <span className="pointer-events-none absolute bottom-full left-[calc(100%+0.65rem)] mb-2 hidden whitespace-nowrap rounded-lg border border-white/[0.1] bg-slate-900/95 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-xl group-hover:block">
                 {userName}
               </span>
             </div>
           ) : (
             <>
-              <div className="text-xs font-semibold text-white">Usuário Logado</div>
-              <div className="mt-1 text-sm text-white/80">{userName}</div>
-              <div className="mt-2 text-[10px] uppercase font-bold text-amber-200/70 tracking-wider">Castro & Oliveira Advocacia</div>
+              <div className="relative flex size-9 shrink-0 items-center justify-center rounded-xl border border-sky-400/25 bg-gradient-to-br from-sky-400/20 to-indigo-500/15 text-xs font-bold text-white">
+                {userInitials}
+                <span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-slate-950 bg-emerald-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-semibold text-white">{userName}</div>
+                <div className="truncate font-mono text-[10px] uppercase tracking-wider text-sky-300/75">
+                  Conectado · Online
+                </div>
+              </div>
             </>
           )}
         </div>

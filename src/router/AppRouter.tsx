@@ -49,7 +49,14 @@ export function AppRouter() {
     <BrowserRouter>
       <Suspense
         fallback={
-          <div className="app-bg-dark min-h-screen grid place-items-center text-sm text-white/70">Carregando…</div>
+          <div className="app-bg-dark min-h-screen grid place-items-center px-4">
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/[0.08] bg-slate-950/70 px-8 py-6 backdrop-blur-xl">
+              <div className="size-8 animate-spin rounded-full border-2 border-sky-400 border-t-transparent" />
+              <div className="font-mono text-xs uppercase tracking-[0.2em] text-sky-200/80">
+                Carregando ambiente…
+              </div>
+            </div>
+          </div>
         }
       >
         <Routes>

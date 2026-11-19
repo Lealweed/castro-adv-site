@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BellRing, Scale, Search, CheckCircle2, ChevronRight, FileText, X, Loader2 } from 'lucide-react';
+import { Radar, Scale, Search, CheckCircle2, ChevronRight, FileText, X, Loader2, RefreshCw } from 'lucide-react';
 
 import { Card } from '@/ui/widgets/Card';
+import { PageHeader } from '@/ui/widgets/PageHeader';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 import { loadCasesLite } from '@/lib/loadCasesLite';
 import type { CaseLite } from '@/lib/loadCasesLite';
@@ -26,6 +27,43 @@ type PublicationRow = {
   
   case?: { title: string; id: string }[] | null;
 };
+
+function formatDateOnlyBR(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  const clean = String(dateStr).split('T')[0];
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return new Date(dateStr).toLocaleDateString('pt-BR');
+}
+
+function sanitizePublicationHtml(rawHtml: string | null | undefined): string {
+  if (!rawHtml) return '';
+  if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+    return rawHtml.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  }
+
+  const doc = new DOMParser().parseFromString(rawHtml, 'text/html');
+  const forbiddenTags = ['script', 'iframe', 'object', 'embed', 'form', 'style', 'link', 'meta', 'svg', 'math'];
+  forbiddenTags.forEach((tag) => {
+    doc.querySelectorAll(tag).forEach((el) => el.remove());
+  });
+
+  doc.body.querySelectorAll('*').forEach((el) => {
+    Array.from(el.attributes).forEach((attr) => {
+      const name = attr.name.toLowerCase();
+      const value = attr.value.trim().toLowerCase();
+      if (name.startsWith('on') || name === 'srcdoc') {
+        el.removeAttribute(attr.name);
+      } else if ((name === 'href' || name === 'src' || name === 'xlink:href') && (value.startsWith('javascript:') || value.startsWith('data:text/html'))) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+
+  return doc.body.innerHTML;
+}
 
 export function PublicationsPage() {
   const [rows, setRows] = useState<PublicationRow[]>([]);
@@ -182,29 +220,22 @@ export function PublicationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-white flex items-center gap-2">
-            <BellRing className="text-amber-400" />
-            Diário Oficial (PJe)
-          </h1>
-          <p className="text-sm text-white/60">Sincronização automática com a API do Comunica PJe.</p>
-        </div>
-        <button 
-          onClick={handleSync} 
-          disabled={loading || syncing} 
-          className="btn-ghost flex items-center gap-2"
-        >
-          {syncing ? (
-            <>
-              <Loader2 className="w-4.5 h-4.5 animate-spin text-amber-400" />
-              Sincronizando...
-            </>
-          ) : (
-            'Atualizar agora'
-          )}
-        </button>
-      </div>
+      <PageHeader
+        icon={Radar}
+        eyebrow="Jurídico"
+        title="Diário Oficial (PJe)"
+        subtitle="Sincronização automática e monitoramento de intimações via Comunica PJe."
+        actions={
+          <button
+            onClick={handleSync}
+            disabled={loading || syncing}
+            className="btn-ghost"
+          >
+            <RefreshCw className={`h-4 w-4 text-sky-300 ${syncing ? 'animate-spin' : ''}`} strokeWidth={1.75} />
+            {syncing ? 'Sincronizando...' : 'Atualizar agora'}
+          </button>
+        }
+      />
 
       {error ? <div className="text-sm text-red-200 bg-red-500/10 p-3 rounded-xl border border-red-500/20">{error}</div> : null}
 
@@ -256,7 +287,7 @@ export function PublicationsPage() {
                 >
                   <div className="pt-1">
                     {!pub.is_read ? (
-                      <div className="w-2.5 h-2.5 rounded-full bg-amber-400 mt-1 shadow-[0_0_8px_rgba(251,191,36,0.6)]" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-sky-400 mt-1 shadow-[0_0_8px_rgba(56,189,248,0.65)]" />
                     ) : (
                       <CheckCircle2 className="w-4 h-4 text-emerald-500/50" />
                     )}
@@ -267,7 +298,7 @@ export function PublicationsPage() {
                         {pub.sigla_tribunal}
                       </span>
                       <span className="text-xs text-white/40 font-mono">
-                        {new Date(pub.data_disponibilizacao).toLocaleDateString('pt-BR')}
+                        {formatDateOnlyBR(pub.data_disponibilizacao)}
                       </span>
                     </div>
                     <div className={`text-sm truncate ${!pub.is_read ? 'font-semibold text-white' : 'text-white/80'}`}>
@@ -327,7 +358,7 @@ export function PublicationsPage() {
                   </div>
                   <div>
                     <span className="text-white/40 block text-xs mb-0.5">Disponibilização</span>
-                    <span className="text-white/90">{new Date(selectedItem.data_disponibilizacao).toLocaleDateString('pt-BR')}</span>
+                    <span className="text-white/90">{formatDateOnlyBR(selectedItem.data_disponibilizacao)}</span>
                   </div>
                 </div>
               </div>
@@ -341,8 +372,7 @@ export function PublicationsPage() {
                 <div 
                   className="prose prose-invert prose-sm max-w-none text-white/80 p-5 bg-black/40 rounded-xl border border-white/5 leading-relaxed"
                   dangerouslySetInnerHTML={{ 
-                    __html: selectedItem.texto
-                      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Basic XSS protection just in case
+                    __html: sanitizePublicationHtml(selectedItem.texto)
                   }} 
                 />
 
@@ -376,10 +406,10 @@ export function PublicationsPage() {
 
       {/* Modal de Vinculação */}
       {isLinkModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-slideIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-950 border border-white/[0.1] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-slideIn">
             {/* Cabeçalho */}
-            <div className="p-5 border-b border-white/5 flex items-center justify-between">
+            <div className="p-5 border-b border-white/[0.08] flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-white text-base">Vincular a um Caso</h3>
                 <p className="text-xs text-white/50">Selecione o processo correspondente no CRM</p>
@@ -396,11 +426,11 @@ export function PublicationsPage() {
             </div>
 
             {/* Busca */}
-            <div className="p-4 border-b border-white/5 bg-black/20">
+            <div className="p-4 border-b border-white/[0.08] bg-slate-950/60">
               <div className="relative">
                 <Search className="w-4 h-4 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input 
-                  className="w-full bg-[#121224] border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm outline-none focus:border-amber-400 text-white placeholder-white/30"
+                  className="input !mt-0 pl-9"
                   placeholder="Buscar por título, número ou cliente..."
                   value={caseSearchQuery}
                   onChange={(e) => setCaseSearchQuery(e.target.value)}

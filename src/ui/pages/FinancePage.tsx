@@ -1,9 +1,11 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { RefreshCw, ExternalLink, CheckCircle2, History, Landmark, Wallet } from 'lucide-react';
 
 import { Card } from '@/ui/widgets/Card';
 import { getMyOfficeRole } from '@/lib/roles';
 import { getAuthedUser } from '@/lib/supabaseDb';
+import { extractAsaasInfo, getAsaasHistory, syncAsaasToCrm, type AsaasHistory, type AsaasSyncResult } from '@/lib/asaas';
 import {
   brlToCents,
   centsToBRL,
@@ -58,6 +60,48 @@ export function FinancePage() {
   const [openingAmount, setOpeningAmount] = useState('');
   const [pdvAmount, setPdvAmount] = useState('');
   const [pdvDesc, setPdvDesc] = useState('');
+  const [syncingAsaas, setSyncingAsaas] = useState(false);
+  const [asaasSyncResult, setAsaasSyncResult] = useState<AsaasSyncResult | null>(null);
+  const [showAsaasHistory, setShowAsaasHistory] = useState(false);
+  const [asaasHistoryLoading, setAsaasHistoryLoading] = useState(false);
+  const [asaasHistory, setAsaasHistory] = useState<AsaasHistory | null>(null);
+  const [asaasHistoryTab, setAsaasHistoryTab] = useState<'payments' | 'statement' | 'transfers'>('payments');
+
+  async function handleToggleAsaasHistory() {
+    const next = !showAsaasHistory;
+    setShowAsaasHistory(next);
+    if (next && !asaasHistory) {
+      setAsaasHistoryLoading(true);
+      setError(null);
+      try {
+        const hist = await getAsaasHistory();
+        setAsaasHistory(hist);
+      } catch (err: any) {
+        setError(err?.message || 'Falha ao consultar histórico do Asaas.');
+      } finally {
+        setAsaasHistoryLoading(false);
+      }
+    }
+  }
+
+  async function handleSyncAsaas() {
+    setSyncingAsaas(true);
+    setError(null);
+    setAsaasSyncResult(null);
+    try {
+      const result = await syncAsaasToCrm();
+      setAsaasSyncResult(result);
+      if (showAsaasHistory) {
+        const hist = await getAsaasHistory().catch(() => null);
+        if (hist) setAsaasHistory(hist);
+      }
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao sincronizar com o Asaas.');
+    } finally {
+      setSyncingAsaas(false);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -285,19 +329,42 @@ export function FinancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)] sm:p-6">
-        <div className="absolute inset-0 bg-[radial-gradient(500px_180px_at_0%_0%,rgba(251,191,36,0.15),transparent_60%)]" />
-        <div className="relative flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200/90">Castro de Oliveira Adv</p>
-            <h1 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">Financeiro executivo</h1>
-            <p className="mt-1 text-sm text-white/60">
-              Conciliação de receitas/despesas, previsões e visão operacional por status.
-            </p>
+      <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-950/60 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_12px_32px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-6">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/45 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(500px_180px_at_0%_0%,rgba(56,189,248,0.14),transparent_60%)]" />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5 sm:items-center">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-sky-400/25 bg-sky-400/10 text-sky-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+              <Wallet className="h-5 w-5" strokeWidth={1.75} />
+            </div>
+            <div>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300/90">Operação · Financeiro</p>
+              <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Financeiro executivo</h1>
+              <p className="mt-0.5 text-sm text-white/60">
+                Conciliação de receitas/despesas, integração Asaas e visão operacional por status.
+              </p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
           {canSeeFullFinance ? (
             <>
+              <button
+                onClick={() => void handleToggleAsaasHistory()}
+                className="btn-ghost flex items-center gap-2 border-sky-400/30 text-sky-200 hover:bg-sky-400/10"
+                title="Visualizar extrato e histórico completo da conta Asaas"
+              >
+                <History className="h-4 w-4 text-sky-400" />
+                {showAsaasHistory ? 'Ocultar Histórico Asaas' : 'Histórico / Extrato Asaas'}
+              </button>
+              <button
+                onClick={() => void handleSyncAsaas()}
+                disabled={syncingAsaas}
+                className="btn-ghost flex items-center gap-2 border-amber-400/30 text-amber-200 hover:bg-amber-400/10"
+                title="Importar clientes, cobranças e extrato do Asaas para o Financeiro"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncingAsaas ? 'animate-spin text-amber-400' : ''}`} />
+                {syncingAsaas ? 'Sincronizando Asaas…' : 'Sincronizar Asaas'}
+              </button>
               <Link to="/app/financeiro/parceiros" className="btn-ghost">
                 Parceiros
               </Link>
@@ -314,6 +381,152 @@ export function FinancePage() {
           </div>
         </div>
       </div>
+
+      {asaasSyncResult ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm text-emerald-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+            <span>
+              <strong>Asaas sincronizado:</strong> {asaasSyncResult.customersProcessed} clientes verificados ({asaasSyncResult.clientsCreated} novos, {asaasSyncResult.clientsMatched} vinculados) · {asaasSyncResult.paymentsCreated} novas cobranças, {asaasSyncResult.paymentsUpdated} atualizadas e {asaasSyncResult.statementImported || 0} itens de extrato importados.
+            </span>
+          </div>
+          <button onClick={() => setAsaasSyncResult(null)} className="text-xs underline hover:text-white">
+            Fechar
+          </button>
+        </div>
+      ) : null}
+
+      {showAsaasHistory ? (
+        <Card className="border-sky-400/20 bg-gradient-to-b from-sky-400/10 to-white/5">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+            <div>
+              <div className="flex items-center gap-2 text-base font-semibold text-white">
+                <Landmark className="h-5 w-5 text-amber-400" />
+                <span>Histórico & Extrato Oficial Asaas</span>
+              </div>
+              {asaasHistory?.account ? (
+                <div className="mt-1 text-xs text-white/60">
+                  {asaasHistory.account.name || 'Conta Asaas'}{' '}
+                  {asaasHistory.account.cpfCnpj ? `· CNPJ: ${asaasHistory.account.cpfCnpj}` : ''}{' '}
+                  {asaasHistory.account.city ? `· ${asaasHistory.account.city}/${asaasHistory.account.state}` : ''}
+                </div>
+              ) : null}
+            </div>
+            {typeof asaasHistory?.account?.walletBalance === 'number' ? (
+              <div className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-right">
+                <div className="text-[10px] uppercase tracking-wider text-emerald-200/70">Saldo em Conta Asaas</div>
+                <div className="text-lg font-bold text-emerald-300 tabular-nums">
+                  {asaasHistory.account.walletBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={() => setAsaasHistoryTab('payments')}
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition ${
+                asaasHistoryTab === 'payments' ? 'bg-amber-400 text-neutral-950' : 'bg-white/5 text-white/70 hover:text-white'
+              }`}
+            >
+              Histórico de Cobranças ({asaasHistory?.payments.length ?? 0})
+            </button>
+            <button
+              onClick={() => setAsaasHistoryTab('statement')}
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition ${
+                asaasHistoryTab === 'statement' ? 'bg-amber-400 text-neutral-950' : 'bg-white/5 text-white/70 hover:text-white'
+              }`}
+            >
+              Extrato da Conta ({asaasHistory?.financialTransactions.length ?? 0})
+            </button>
+            <button
+              onClick={() => setAsaasHistoryTab('transfers')}
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition ${
+                asaasHistoryTab === 'transfers' ? 'bg-amber-400 text-neutral-950' : 'bg-white/5 text-white/70 hover:text-white'
+              }`}
+            >
+              Transferências / Saques ({asaasHistory?.transfers.length ?? 0})
+            </button>
+          </div>
+
+          <div className="mt-4 max-h-96 overflow-y-auto space-y-2 pr-1">
+            {asaasHistoryLoading ? (
+              <div className="py-6 text-center text-sm text-white/60">Consultando histórico diretamente no Asaas…</div>
+            ) : null}
+
+            {!asaasHistoryLoading && asaasHistoryTab === 'payments' ? (
+              (asaasHistory?.payments.length ?? 0) === 0 ? (
+                <div className="py-6 text-center text-sm text-white/50">Nenhuma cobrança registrada no histórico do Asaas.</div>
+              ) : (
+                asaasHistory?.payments.map((p) => (
+                  <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-xs">
+                    <div>
+                      <div className="font-semibold text-white">
+                        {p.description || `Cobrança ${p.billingType}`}{' '}
+                        {p.customerName ? <span className="text-amber-300">· {p.customerName}</span> : null}
+                      </div>
+                      <div className="mt-0.5 text-white/50">
+                        Vencimento: {p.dueDate} · Método: {p.billingType} · Status Asaas: <b>{p.status}</b>
+                        {p.paymentDate ? ` · Pago em: ${p.paymentDate}` : ''}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {p.invoiceUrl ? (
+                        <a href={p.invoiceUrl} target="_blank" rel="noreferrer" className="text-amber-300 hover:underline flex items-center gap-1">
+                          Fatura <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : null}
+                      <span className="font-bold text-white">
+                        {p.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )
+            ) : null}
+
+            {!asaasHistoryLoading && asaasHistoryTab === 'statement' ? (
+              (asaasHistory?.financialTransactions.length ?? 0) === 0 ? (
+                <div className="py-6 text-center text-sm text-white/50">Nenhuma movimentação no extrato financeiro do Asaas.</div>
+              ) : (
+                asaasHistory?.financialTransactions.map((ft) => (
+                  <div key={ft.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-xs">
+                    <div>
+                      <div className="font-semibold text-white">{ft.description || ft.type}</div>
+                      <div className="mt-0.5 text-white/50">
+                        Data: {ft.date} · Tipo: {ft.type} · Saldo após: {ft.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </div>
+                    </div>
+                    <span className={`font-bold ${ft.value >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                      {ft.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span>
+                  </div>
+                ))
+              )
+            ) : null}
+
+            {!asaasHistoryLoading && asaasHistoryTab === 'transfers' ? (
+              (asaasHistory?.transfers.length ?? 0) === 0 ? (
+                <div className="py-6 text-center text-sm text-white/50">Nenhuma transferência ou saque registrado no Asaas.</div>
+              ) : (
+                asaasHistory?.transfers.map((tr) => (
+                  <div key={tr.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-xs">
+                    <div>
+                      <div className="font-semibold text-white">{tr.description || `Transferência (${tr.type})`}</div>
+                      <div className="mt-0.5 text-white/50">
+                        Data: {tr.dateCreated} · Status: {tr.status}
+                      </div>
+                    </div>
+                    <span className="font-bold text-white">
+                      {tr.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </span>
+                  </div>
+                ))
+              )
+            ) : null}
+          </div>
+        </Card>
+      ) : null}
 
       {error ? <div className="text-sm text-red-200">{error}</div> : null}
 
@@ -513,29 +726,51 @@ export function FinancePage() {
           {!loading && filteredRows.length === 0 ? <div className="text-sm text-white/60">Nenhum lançamento encontrado.</div> : null}
 
           <div className="mt-3 grid gap-2">
-            {filteredRows.map((r) => (
+            {filteredRows.map((r) => {
+              const asaas = extractAsaasInfo(r.notes);
+              return (
               <Link key={r.id} to={`/app/financeiro/${r.id}`} className="block rounded-xl border border-white/10 bg-white/5 p-3 hover:bg-white/10">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-white">
-                      {r.description}{' '}
+                    <div className="text-sm font-semibold text-white flex flex-wrap items-center gap-1.5">
+                      <span>{r.description}</span>
                       <span className={r.type === 'income' ? 'badge badge-gold' : 'badge'}>
                         {r.type === 'income' ? 'Receita' : 'Despesa'}
                       </span>
+                      {asaas.isAsaas ? (
+                        <span className="badge border-sky-400/30 bg-sky-400/10 text-sky-200">
+                          Asaas
+                        </span>
+                      ) : null}
                     </div>
                     <div className="mt-1 text-xs text-white/60">
                       Lançamento: {r.occurred_on}
                       {r.due_date ? ` · Venc.: ${r.due_date}` : ''} ·{' '}
                       {r.status === 'paid' ? 'Pago' : r.status === 'planned' ? 'Previsto' : r.status}
-                      {r.payment_method ? ` · ${r.payment_method}` : ''}
+                      {r.payment_method ? ` · ${r.payment_method.toUpperCase()}` : ''}
                       {r.reminder_1d_sent_at ? ' · Aviso 1d: enviado' : ''}
                     </div>
-                    {r.notes ? <div className="mt-1 text-xs text-white/50">Obs: {r.notes}</div> : null}
+                    {asaas.invoiceUrl ? (
+                      <div className="mt-1.5">
+                        <span
+                          onClick={(e) => {
+                            e.preventDefault();
+                            window.open(asaas.invoiceUrl!, '_blank', 'noopener,noreferrer');
+                          }}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-amber-300 hover:underline"
+                        >
+                          Abrir Fatura Asaas <ExternalLink className="h-3 w-3" />
+                        </span>
+                      </div>
+                    ) : r.notes ? (
+                      <div className="mt-1 text-xs text-white/50">Obs: {r.notes}</div>
+                    ) : null}
                   </div>
                   <div className="text-sm font-semibold text-white">{centsToBRL(r.amount_cents)}</div>
                 </div>
               </Link>
-            ))}
+              );
+            })}
           </div>
         </div>
       </Card>
