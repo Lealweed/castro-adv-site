@@ -119,18 +119,18 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'hidden shrink-0 border-r border-white/[0.08] bg-slate-950/75 backdrop-blur-xl transition-all duration-300 md:sticky md:top-0 md:flex md:h-dvh md:flex-col',
+        'hidden shrink-0 border-r border-slate-800/80 bg-[#080d1a] backdrop-blur-xl transition-all duration-300 md:sticky md:top-0 md:flex md:h-dvh md:flex-col',
         collapsed ? 'w-20' : 'w-64',
       )}
     >
       {/* Brand Header */}
       <div
         className={cn(
-          'flex h-16 shrink-0 items-center border-b border-white/[0.08]',
+          'flex h-16 shrink-0 items-center border-b border-slate-800/80',
           collapsed ? 'justify-center px-2' : 'gap-3 px-4',
         )}
       >
-        <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-sky-400/25 bg-slate-900 shadow-[0_0_20px_rgba(56,189,248,0.16)]">
+        <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-sky-400/35 bg-slate-900 shadow-[0_0_20px_rgba(56,189,248,0.18)]">
           <img
             src="/brand/logo.jpg"
             alt="Castro & Oliveira"
@@ -143,7 +143,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
         {!collapsed ? (
           <div className="min-w-0 leading-tight">
             <div className="truncate text-sm font-semibold tracking-tight text-white">Castro & Oliveira</div>
-            <div className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-sky-300/80">
+            <div className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-400">
               <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.85)]" />
               LEGAL OS · CRM
             </div>
@@ -156,14 +156,14 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
         {navGroups.map((group) => (
           <div key={group.title}>
             {!collapsed ? (
-              <div className="mb-1.5 px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">
+              <div className="mb-2 px-3 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-slate-300">
                 {group.title}
               </div>
             ) : (
-              <div className="mx-auto my-2 h-px w-8 bg-white/[0.08]" />
+              <div className="mx-auto my-2 h-px w-8 bg-white/10" />
             )}
 
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {group.items.map((it) => (
                 <NavLink
                   key={it.to}
@@ -171,11 +171,11 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
                   end={it.end}
                   className={({ isActive }) =>
                     cn(
-                      'group relative flex rounded-xl py-2 text-sm font-medium transition-all duration-150',
+                      'group relative flex rounded-xl py-2 text-sm font-semibold transition-all duration-150',
                       collapsed ? 'justify-center px-2 py-2.5' : 'items-center gap-3 px-3',
                       isActive
-                        ? 'bg-sky-400/10 text-white ring-1 ring-sky-400/20'
-                        : 'text-white/65 hover:bg-white/[0.05] hover:text-white',
+                        ? 'bg-sky-500/15 text-white ring-1 ring-sky-400/40 shadow-[0_0_15px_rgba(56,189,248,0.12)]'
+                        : 'text-slate-200 hover:bg-white/[0.08] hover:text-white',
                     )
                   }
                 >
@@ -187,16 +187,16 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
 
                       <it.icon
                         className={cn(
-                          'h-[17px] w-[17px] shrink-0 transition-colors',
-                          isActive ? 'text-sky-300' : 'text-white/55 group-hover:text-sky-300',
+                          'h-[18px] w-[18px] shrink-0 transition-colors',
+                          isActive ? 'text-sky-400' : 'text-slate-300 group-hover:text-sky-300',
                         )}
-                        strokeWidth={1.75}
+                        strokeWidth={1.85}
                       />
 
                       <span className={cn('truncate', collapsed && 'sr-only')}>{it.label}</span>
 
                       {collapsed ? (
-                        <span className="pointer-events-none absolute left-[calc(100%+0.65rem)] top-1/2 z-30 -translate-y-1/2 whitespace-nowrap rounded-lg border border-white/[0.1] bg-slate-900/95 px-2.5 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-[0_12px_30px_rgba(0,0,0,0.45)] transition-all duration-150 group-hover:translate-x-1 group-hover:opacity-100">
+                        <span className="pointer-events-none absolute left-[calc(100%+0.65rem)] top-1/2 z-30 -translate-y-1/2 whitespace-nowrap rounded-lg border border-slate-700 bg-slate-900/95 px-2.5 py-1.5 text-[11px] font-semibold text-white opacity-0 shadow-[0_12px_30px_rgba(0,0,0,0.45)] transition-all duration-150 group-hover:translate-x-1 group-hover:opacity-100">
                           {it.label}
                         </span>
                       ) : null}
@@ -210,10 +210,10 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
       </nav>
 
       {/* Bottom User Tile */}
-      <div className="mt-auto shrink-0 border-t border-white/[0.08] p-3">
+      <div className="mt-auto shrink-0 border-t border-slate-800/80 p-3">
         <div
           className={cn(
-            'rounded-xl border border-white/[0.08] bg-white/[0.04]',
+            'rounded-xl border border-slate-800 bg-slate-900/70',
             collapsed ? 'px-1.5 py-2.5 text-center' : 'flex items-center gap-3 p-2.5',
           )}
         >
@@ -235,7 +235,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-xs font-semibold text-white">{userName}</div>
-                <div className="truncate font-mono text-[10px] uppercase tracking-wider text-sky-300/75">
+                <div className="truncate font-mono text-[10px] font-semibold uppercase tracking-wider text-sky-400">
                   Conectado · Online
                 </div>
               </div>

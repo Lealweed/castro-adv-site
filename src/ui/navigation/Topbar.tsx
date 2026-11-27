@@ -308,14 +308,14 @@ export function Topbar({ sidebarCollapsed = false, onToggleSidebar }: TopbarProp
                   onClick={() => setMenuOpen(false)}
                   className={({ isActive }) =>
                     cn(
-                      'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                      'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors',
                       isActive
-                        ? 'bg-sky-400/10 text-white ring-1 ring-sky-400/20'
-                        : 'text-white/70 hover:bg-white/[0.05] hover:text-white',
+                        ? 'bg-sky-500/15 text-white ring-1 ring-sky-400/40'
+                        : 'text-slate-200 hover:bg-white/10 hover:text-white',
                     )
                   }
                 >
-                  <it.icon className="h-4 w-4 text-sky-300" strokeWidth={1.75} />
+                  <it.icon className="h-4 w-4 text-sky-400" strokeWidth={1.85} />
                   {it.label}
                 </NavLink>
               ))}
