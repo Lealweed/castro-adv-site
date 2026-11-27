@@ -1,10 +1,17 @@
-import { ShieldCheck, SlidersHorizontal, UsersRound } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff, ShieldCheck, SlidersHorizontal, UserPlus, UsersRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Card } from '@/ui/widgets/Card';
 import { PageHeader } from '@/ui/widgets/PageHeader';
 import { acceptOfficeInvite, createOfficeInvite, listMyOfficeInvites } from '@/lib/offices';
+import {
+  createOfficeUser,
+  generateStrongPassword,
+  getOfficeRoleLabel,
+  type CreateOfficeUserResult,
+  type OfficeRole,
+} from '@/lib/officeUsers';
 import { getAuthedUser, requireSupabase } from '@/lib/supabaseDb';
 
 type Office = {
@@ -70,6 +77,19 @@ export function SettingsPage() {
   // new invite flow
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'member' | 'admin' | 'finance' | 'staff'>('member');
+
+  // direct user creation
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserRole, setNewUserRole] = useState<OfficeRole>('member');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [createdResult, setCreatedResult] = useState<{
+    result: CreateOfficeUserResult;
+    initialPassword?: string;
+  } | null>(null);
+  const [copiedNewAccess, setCopiedNewAccess] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [myWhatsapp, setMyWhatsapp] = useState('');
@@ -227,6 +247,70 @@ export function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleCreateUserDirect(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newUserName.trim() || newUserName.trim().length < 2) {
+      setError('Informe o nome completo do novo usuário.');
+      return;
+    }
+    if (!newUserEmail.trim()) {
+      setError('Informe o e-mail do novo usuário.');
+      return;
+    }
+    const pwd = newUserPassword.trim();
+    if (pwd && pwd.length < 6) {
+      setError('A senha inicial deve ter no mínimo 6 caracteres.');
+      return;
+    }
+
+    setCreatingUser(true);
+    setError(null);
+    setCreatedResult(null);
+
+    try {
+      const result = await createOfficeUser({
+        fullName: newUserName.trim(),
+        email: newUserEmail.trim().toLowerCase(),
+        role: newUserRole,
+        password: pwd || undefined,
+        sendRecoveryEmail: !pwd,
+      });
+
+      setCreatedResult({
+        result,
+        initialPassword: result.createdInAuth && pwd ? pwd : undefined,
+      });
+      setNewUserName('');
+      setNewUserEmail('');
+      setNewUserRole('member');
+      setNewUserPassword('');
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao criar usuário.');
+    } finally {
+      setCreatingUser(false);
+    }
+  }
+
+  async function copyNewUserAccess() {
+    if (!createdResult) return;
+    const origin =
+      typeof window !== 'undefined' && window.location.origin
+        ? window.location.origin
+        : 'https://www.castrodeoliveiraadv.org';
+    const lines = [
+      'Acesso ao CRM Castro & Oliveira',
+      `Link: ${origin}/app/login`,
+      `E-mail: ${createdResult.result.user.email}`,
+    ];
+    if (createdResult.initialPassword) {
+      lines.push(`Senha inicial: ${createdResult.initialPassword}`);
+    }
+    await navigator.clipboard.writeText(lines.join('\n'));
+    setCopiedNewAccess(true);
+    setTimeout(() => setCopiedNewAccess(false), 2500);
   }
 
   async function acceptInvite(inviteId: string) {
@@ -399,67 +483,216 @@ export function SettingsPage() {
           ) : null}
 
           {office && isAdmin && !policyBlocked ? (
-            <div className="mt-4 grid gap-6">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-sm font-semibold text-white">Criar convite (por e-mail)</div>
-                <div className="mt-2 text-xs text-white/60">A pessoa precisa fazer login com esse e-mail para conseguir aceitar.</div>
+            <div className="mt-4 grid gap-4">
+              <form
+                onSubmit={handleCreateUserDirect}
+                className="rounded-2xl border border-sky-400/25 bg-sky-400/[0.05] p-4 space-y-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                    <UserPlus className="h-4 w-4 text-sky-400" />
+                    Criar novo usuário (acesso imediato)
+                  </div>
+                  <Link
+                    to="/app/configuracoes/equipe"
+                    className="text-xs font-medium text-sky-300 hover:text-sky-200 hover:underline"
+                  >
+                    OAB, WhatsApp, senhas e contas existentes →
+                  </Link>
+                </div>
+                <p className="text-xs text-white/60 leading-relaxed">
+                  Cria o login no Supabase Auth e já vincula ao escritório. Se deixar a senha em branco, enviaremos um link para o e-mail informado.
+                </p>
 
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                {createdResult ? (
+                  <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-xs text-emerald-100 space-y-2">
+                    <div className="font-semibold text-emerald-300">
+                      {createdResult.result.createdInAuth
+                        ? 'Usuário criado e vinculado ao escritório!'
+                        : 'Usuário vinculado/atualizado no escritório!'}{' '}
+                      ({createdResult.result.user.email} · {getOfficeRoleLabel(createdResult.result.user.role)})
+                    </div>
+                    {createdResult.result.recoveryEmailSent ? (
+                      <div className="text-emerald-200/90">Link de definição de senha enviado por e-mail.</div>
+                    ) : null}
+                    {createdResult.result.recoveryWarning ? (
+                      <div className="text-amber-200/90">Aviso: {createdResult.result.recoveryWarning}</div>
+                    ) : null}
+                    {createdResult.initialPassword ? (
+                      <button
+                        type="button"
+                        onClick={() => void copyNewUserAccess()}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/35 bg-emerald-400/15 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-200 hover:bg-emerald-400/25"
+                      >
+                        {copiedNewAccess ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                        {copiedNewAccess ? 'Dados copiados!' : 'Copiar dados de acesso'}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="text-sm text-white/80">
+                    Nome completo
+                    <input
+                      className="input"
+                      value={newUserName}
+                      onChange={(e) => setNewUserName(e.target.value)}
+                      placeholder="Ex: Dra. Maria Silva"
+                      required
+                    />
+                  </label>
+
                   <label className="text-sm text-white/80">
                     E-mail
                     <input
+                      type="email"
                       className="input"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
+                      value={newUserEmail}
+                      onChange={(e) => setNewUserEmail(e.target.value)}
                       placeholder="email@dominio.com"
+                      required
                     />
                   </label>
 
                   <label className="text-sm text-white/80">
                     Papel
-                    <select className="select" value={inviteRole} onChange={(e) => setInviteRole(e.target.value as 'member' | 'admin' | 'finance' | 'staff')}>
-                      <option value="member">Membro</option>
-                      <option value="staff">Operacional</option>
+                    <select
+                      className="select"
+                      value={newUserRole}
+                      onChange={(e) => setNewUserRole(e.target.value as OfficeRole)}
+                    >
+                      <option value="member">Advogado / Membro</option>
+                      <option value="staff">Operacional / Secretaria</option>
                       <option value="finance">Financeiro</option>
                       <option value="admin">Admin</option>
                     </select>
                   </label>
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button className="btn-primary" disabled={saving} onClick={() => void createInvite()}>
-                    {saving ? 'Salvando…' : 'Criar convite'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="text-sm font-semibold text-white">Adicionar membro direto (legado)</div>
-                <div className="mt-2 text-xs text-white/60">Funciona apenas se a pessoa já tiver logado 1 vez.</div>
-
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  <label className="text-sm text-white/80">
-                    E-mail do usuário
-                    <input className="input" value={addEmail} onChange={(e) => setAddEmail(e.target.value)} placeholder="email@dominio.com" />
-                  </label>
 
                   <label className="text-sm text-white/80">
-                    Papel
-                    <select className="select" value={addRole} onChange={(e) => setAddRole(e.target.value as 'member' | 'admin' | 'finance' | 'staff')}>
-                      <option value="member">Membro</option>
-                      <option value="staff">Operacional</option>
-                      <option value="finance">Financeiro</option>
-                      <option value="admin">Admin</option>
-                    </select>
+                    Senha inicial (opcional)
+                    <div className="mt-1 flex gap-1.5">
+                      <div className="relative flex-1">
+                        <input
+                          type={showNewUserPassword ? 'text' : 'password'}
+                          className="input !mt-0 pr-9"
+                          value={newUserPassword}
+                          onChange={(e) => setNewUserPassword(e.target.value)}
+                          placeholder="Em branco = envia link"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewUserPassword((v) => !v)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
+                          tabIndex={-1}
+                        >
+                          {showNewUserPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewUserPassword(generateStrongPassword());
+                          setShowNewUserPassword(true);
+                        }}
+                        className="btn-ghost !px-3 !py-2 !text-xs shrink-0"
+                      >
+                        Gerar
+                      </button>
+                    </div>
                   </label>
                 </div>
 
-                <div className="mt-3">
-                  <button className="btn-ghost" disabled={saving} onClick={() => void addMember()}>
-                    {saving ? 'Salvando…' : 'Adicionar membro'}
+                <div className="pt-1 flex flex-wrap gap-2">
+                  <button type="submit" className="btn-primary" disabled={creatingUser}>
+                    {creatingUser ? 'Criando acesso…' : 'Criar usuário'}
                   </button>
                 </div>
-              </div>
+              </form>
+
+              <details className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-white/60 hover:text-white">
+                  Convite manual / legado
+                </summary>
+
+                <div className="mt-4 grid gap-4">
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-3.5">
+                    <div className="text-sm font-semibold text-white">Criar convite (por e-mail)</div>
+                    <div className="mt-1 text-xs text-white/60">
+                      A pessoa precisa fazer login com esse e-mail para conseguir aceitar.
+                    </div>
+
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <label className="text-sm text-white/80">
+                        E-mail
+                        <input
+                          className="input"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          placeholder="email@dominio.com"
+                        />
+                      </label>
+
+                      <label className="text-sm text-white/80">
+                        Papel
+                        <select
+                          className="select"
+                          value={inviteRole}
+                          onChange={(e) => setInviteRole(e.target.value as 'member' | 'admin' | 'finance' | 'staff')}
+                        >
+                          <option value="member">Membro</option>
+                          <option value="staff">Operacional</option>
+                          <option value="finance">Financeiro</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </label>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button type="button" className="btn-ghost" disabled={saving} onClick={() => void createInvite()}>
+                        {saving ? 'Salvando…' : 'Criar convite'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-3.5">
+                    <div className="text-sm font-semibold text-white">Adicionar membro direto (legado)</div>
+                    <div className="mt-1 text-xs text-white/60">Funciona apenas se a pessoa já tiver logado 1 vez.</div>
+
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <label className="text-sm text-white/80">
+                        E-mail do usuário
+                        <input
+                          className="input"
+                          value={addEmail}
+                          onChange={(e) => setAddEmail(e.target.value)}
+                          placeholder="email@dominio.com"
+                        />
+                      </label>
+
+                      <label className="text-sm text-white/80">
+                        Papel
+                        <select
+                          className="select"
+                          value={addRole}
+                          onChange={(e) => setAddRole(e.target.value as 'member' | 'admin' | 'finance' | 'staff')}
+                        >
+                          <option value="member">Membro</option>
+                          <option value="staff">Operacional</option>
+                          <option value="finance">Financeiro</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </label>
+                    </div>
+
+                    <div className="mt-3">
+                      <button type="button" className="btn-ghost" disabled={saving} onClick={() => void addMember()}>
+                        {saving ? 'Salvando…' : 'Adicionar membro'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </details>
             </div>
           ) : null}
 
